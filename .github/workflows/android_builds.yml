@@ -27,12 +27,11 @@ on:
         required: true
         type: string
 
-
 # Global Settings
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  SCONSFLAGS: verbose=yes warnings=no werror=no debug_symbols=no progress=no generate_apk=yes module_text_server_fb_enabled=yes
+  SCONSFLAGS: verbose=yes warnings=no progress=no
   BUILD_FLAG: ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }}
   TEMPLATE_TYPE: ${{ github.event.client_payload.production && 'template_release' || 'template_debug' }}
   BUILD_TYPE: ${{ github.event.client_payload.type || 'nightly' }}

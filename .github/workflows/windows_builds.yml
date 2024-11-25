@@ -32,7 +32,7 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  SCONSFLAGS: verbose=yes warnings=no werror=no debug_symbols=no progress=no module_text_server_fb_enabled=yes # d3d12=yes  "mesa_libs=${{github.workspace}}/deps/mesa" "angle_libs=${{github.workspace}}/deps/angle"
+  SCONSFLAGS: verbose=yes warnings=no progress=no # d3d12=yes  "mesa_libs=${{github.workspace}}/deps/mesa" "angle_libs=${{github.workspace}}/deps/angle"
   SCONS_CACHE_MSVC_CONFIG: true
   DEPLOY_TYPE: windows
 

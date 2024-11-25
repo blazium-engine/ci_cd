@@ -31,7 +31,7 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  SCONSFLAGS: verbose=yes warnings=no werror=no debug_symbols=no progress=no
+  SCONSFLAGS: verbose=yes warnings=no progress=no
   EM_VERSION: 3.1.64
   EM_CACHE_FOLDER: "emsdk-cache"
   DEPLOY_TYPE: web-editor
