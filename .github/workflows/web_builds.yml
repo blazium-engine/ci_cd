@@ -94,7 +94,7 @@ jobs:
   build-editors:
     #runs-on: "ubuntu-22.04"
     name: ${{ matrix.name }}
-    runs-on: release-builder-1-8-32-300
+    runs-on: pogr-sponsored
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
