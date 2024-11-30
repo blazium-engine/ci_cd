@@ -1,0 +1,98 @@
+name: Blazium Cerebro Get Run Build Data
+description: Fetches build data for a specific run after deployment or setup completion, downloads the file if available, and returns the full path.
+
+inputs:
+  name:
+    description: The name of the build.
+    required: true
+  cerebro_url:
+    description: The base URL of the Cerebro server.
+    required: true
+  cerebro_auth:
+    description: The authorization key for Cerebro.
+    required: true
+  run_id:
+    description: The ID of the run to retrieve.
+    required: true
+  folder:
+    description: The folder where the file should be saved.
+    required: true
+
+outputs:
+  build_data:
+    description: The build data object returned from Cerebro.
+    value: ${{ steps.fetch_build.outputs.build_data }}
+  file_path:
+    description: The full path to the downloaded file.
+    value: ${{ steps.download_file.outputs.file_path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Fetch Build Data
+      id: fetch_build
+      shell: bash
+      run: |
+        # Fetch build data from Cerebro
+        RESPONSE=$(curl -s -X GET "${{ inputs.cerebro_url }}/api/v1/enginebuilds/${{ inputs.run_id }}/${{ inputs.name }}" \
+          -H "Content-Type: application/json" \
+          -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}")
+
+        echo "## Fetching Build Data" >> $GITHUB_STEP_SUMMARY
+        echo "Run ID: ${{ inputs.run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "Build Name: ${{ inputs.name }}" >> $GITHUB_STEP_SUMMARY
+
+        # Check if the request succeeded
+        if [[ $(echo "$RESPONSE" | jq -r '.success') != "true" ]]; then
+          echo "Error: Failed to fetch build data. Response:\n $RESPONSE" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        # Extract the 'data' object
+        DATA=$(echo "$RESPONSE" | jq -r '.data')
+        if [ -z "$DATA" ] || [ "$DATA" == "null" ]; then
+          echo "Error: 'data' object is missing in the response." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        # Check if completed_at is not null
+        COMPLETED_AT=$(echo "$DATA" | jq -r '.completed_at')
+        if [ "$COMPLETED_AT" == "null" ] || [ -z "$COMPLETED_AT" ]; then
+          echo "Error: Build is not completed yet (completed_at is null)." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        echo "Build data retrieved successfully." >> $GITHUB_STEP_SUMMARY
+        echo "build_data=$DATA" >> $GITHUB_OUTPUT
+
+    - name: Download File
+      id: download_file
+      shell: bash
+      run: |
+        # Extract file URL from the build data
+        FILE_URL=$(echo "${{ steps.fetch_build.outputs.build_data }}" | jq -r '.file_url')
+        if [ -z "$FILE_URL" ] || [ "$FILE_URL" == "null" ]; then
+          echo "Error: No file URL provided in the build data." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        # Ensure the folder exists
+        if [ ! -d "${{ inputs.folder }}" ]; then
+          echo "Folder ${{ inputs.folder }} does not exist. Creating it."
+          mkdir -p "${{ inputs.folder }}"
+        fi
+
+        # Determine the file name and full path
+        FILE_NAME=$(basename "$FILE_URL")
+        FULL_PATH="${{ inputs.folder }}/$FILE_NAME"
+
+        # Download the file
+        echo "Downloading file from $FILE_URL to $FULL_PATH"
+        curl -L -o "$FULL_PATH" "$FILE_URL"
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to download the file from $FILE_URL" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        echo "File downloaded successfully to $FULL_PATH" >> $GITHUB_STEP_SUMMARY
+        echo "file_path=$FULL_PATH" >> $GITHUB_OUTPUT
