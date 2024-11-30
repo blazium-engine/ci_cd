@@ -99,6 +99,12 @@ async function generateChangelog(baseBranch, currentBranch, outputDir = __dirnam
     for (const commit of commits) {
         const commitSha = commit.sha;
         const commitMessage = commit.commit.message;
+        const regex = /#(skip)/ig;
+        const matches = commitMessage.match(regex);
+    
+        if (matches) {
+            continue;
+        }
         const commitDate = new Date(commit.commit.committer.date);
         const commitUser = commit.committer.login; // The username of the person who made the commit
         const prNumber = extractPRNumberFromCommitMessage(commitMessage);
@@ -139,17 +145,17 @@ async function generateChangelog(baseBranch, currentBranch, outputDir = __dirnam
         // Count PRs
         if (prNumber) {
             totalPRs++;
-        } else {
-            if (semVerLabel === "major") {
-                version.major++;
-                version.minor = 0;
-                version.patch = 0;
-            } else if (semVerLabel === "minor") {
-                version.minor++;
-                version.patch = 0;
-            } else {
-                version.patch++;
-            }
+        }
+        
+        if (semVerLabel === "major") {
+            version.major++;
+            version.minor = 0;
+            version.patch = 0;
+        } else if (semVerLabel === "minor") {
+            version.minor++;
+            version.patch = 0;
+        } else if (!prNumber) {
+            version.patch++;
         }
     }
 
