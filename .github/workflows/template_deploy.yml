@@ -24,6 +24,11 @@ jobs:
     runs-on: "ubuntu-20.04"
     name: Example for Template Deploy
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/ci_cd
+          submodules: recursive
 
       - name: Download No. 1 File
         id: download-1
