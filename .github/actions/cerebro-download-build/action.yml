@@ -48,34 +48,41 @@ runs:
           exit 1
         fi
 
-        # Extract the 'data' object
-        DATA=$(echo "$RESPONSE" | jq -r '.data')
-        if [ -z "$DATA" ] || [ "$DATA" == "null" ]; then
-          echo "Error: 'data' object is missing in the response." >> $GITHUB_STEP_SUMMARY
-          exit 1
-        fi
+        # Set the response data to an output for further processing
+        echo "build_data=$(echo "$RESPONSE" | jq -c '.data')" >> $GITHUB_OUTPUT
 
-        # Check if completed_at is not null
-        COMPLETED_AT=$(echo "$DATA" | jq -r '.completed_at')
-        if [ "$COMPLETED_AT" == "null" ] || [ -z "$COMPLETED_AT" ]; then
+    - name: Parse Build Data and Check Completion
+      id: parse_build
+      shell: bash
+      run: |
+        # Parse the build_data JSON using fromJSON
+        build_data=$(echo "${{ steps.fetch_build.outputs.build_data }}" | jq -c '.')
+        completed_at=$(echo "$build_data" | jq -r '.completed_at')
+        file_url=$(echo "$build_data" | jq -r '.file_url')
+
+        echo "## Parsing Build Data" >> $GITHUB_STEP_SUMMARY
+        echo "Completed At: $completed_at" >> $GITHUB_STEP_SUMMARY
+        echo "File URL: $file_url" >> $GITHUB_STEP_SUMMARY
+
+        # Check if completed_at is null
+        if [[ "$completed_at" == "null" || -z "$completed_at" ]]; then
           echo "Error: Build is not completed yet (completed_at is null)." >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
 
-        echo "Build data retrieved successfully." >> $GITHUB_STEP_SUMMARY
-        echo "build_data=$DATA" >> $GITHUB_OUTPUT
+        # Check if file_url is valid
+        if [[ "$file_url" == "null" || -z "$file_url" ]]; then
+          echo "Error: No file URL provided in the build data." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        # Set file_url as output
+        echo "file_url=$file_url" >> $GITHUB_OUTPUT
 
     - name: Download File
       id: download_file
       shell: bash
       run: |
-        # Extract file URL from the build data
-        FILE_URL=$(echo "${{ steps.fetch_build.outputs.build_data }}" | jq -r '.file_url')
-        if [ -z "$FILE_URL" ] || [ "$FILE_URL" == "null" ]; then
-          echo "Error: No file URL provided in the build data." >> $GITHUB_STEP_SUMMARY
-          exit 1
-        fi
-
         # Ensure the folder exists
         if [ ! -d "${{ inputs.folder }}" ]; then
           echo "Folder ${{ inputs.folder }} does not exist. Creating it."
@@ -83,14 +90,14 @@ runs:
         fi
 
         # Determine the file name and full path
-        FILE_NAME=$(basename "$FILE_URL")
+        FILE_NAME=$(basename "${{ steps.parse_build.outputs.file_url }}")
         FULL_PATH="${{ inputs.folder }}/$FILE_NAME"
 
         # Download the file
-        echo "Downloading file from $FILE_URL to $FULL_PATH"
-        curl -L -o "$FULL_PATH" "$FILE_URL"
+        echo "Downloading file from ${{ steps.parse_build.outputs.file_url }} to $FULL_PATH"
+        curl -L -o "$FULL_PATH" "${{ steps.parse_build.outputs.file_url }}"
         if [ $? -ne 0 ]; then
-          echo "Error: Failed to download the file from $FILE_URL" >> $GITHUB_STEP_SUMMARY
+          echo "Error: Failed to download the file from ${{ steps.parse_build.outputs.file_url }}" >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
 
