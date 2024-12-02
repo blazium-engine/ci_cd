@@ -33,18 +33,7 @@ runs:
       id: fetch_build
       shell: bash
       run: |
-        report_error() {
-          local message="$1"
-
-          # Get the line number where the function was called
-          local lineno="${BASH_LINENO[0]}"
-
-          # Get the file name of the script (use $0 if running directly)
-          local file="${BASH_SOURCE[1]##*/}"
-
-          # Trigger GitHub Actions error annotation
-          echo "::error file=$file,line=$lineno::${message}"
-        }
+      
         # Fetch build data from Cerebro
         RESPONSE=$(curl -s -X GET "${{ inputs.cerebro_url }}/api/v1/enginebuilds/${{ inputs.run_id }}/${{ inputs.name }}" \
           -H "Content-Type: application/json" \
@@ -58,29 +47,17 @@ runs:
 
         # Check if the request succeeded
         if [[ $(echo "$RESPONSE" | jq -r '.success') != "true" ]]; then
-          report_error  "Error: Failed to fetch build data. Response: $RESPONSE"
+          echo "Error: Failed to fetch build data. Response: $RESPONSE" >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
 
         # Set the response data to an output for further processing
-        echo "build_data=$(echo \"$RESPONSE\" | jq -c '.data' | sed 's/\"/\\\"/g')" >> $GITHUB_OUTPUT
+        echo "build_data=$(echo "$RESPONSE" | jq -c '.data' | sed 's/\"/\\\"/g')" >> $GITHUB_OUTPUT
 
     - name: Parse Build Data and Check Completion
       id: parse_build
       shell: bash
       run: |
-        report_error() {
-          local message="$1"
-
-          # Get the line number where the function was called
-          local lineno="${BASH_LINENO[0]}"
-
-          # Get the file name of the script (use $0 if running directly)
-          local file="${BASH_SOURCE[1]##*/}"
-
-          # Trigger GitHub Actions error annotation
-          echo "::error file=$file,line=$lineno::${message}"
-        }
         # Parse the build_data JSON using fromJSON
         build_data=$(echo '${{ steps.fetch_build.outputs.build_data }}' | jq -c '.')
         completed_at=$(echo '$build_data' | jq -r '.completed_at')
@@ -92,13 +69,13 @@ runs:
 
         # Check if completed_at is null
         if [[ "$completed_at" == "null" || -z "$completed_at" ]]; then
-          report_error  "Error: Build is not completed yet (completed_at is null)."
+          echo "Error: Build is not completed yet (completed_at is null)." >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
 
         # Check if file_url is valid
         if [[ "$file_url" == "null" || -z "$file_url" ]]; then
-          report_error  "Error: No file URL provided in the build data."
+          echo "Error: No file URL provided in the build data." >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
 
@@ -109,18 +86,6 @@ runs:
       id: download_file
       shell: bash
       run: |
-        report_error() {
-          local message="$1"
-
-          # Get the line number where the function was called
-          local lineno="${BASH_LINENO[0]}"
-
-          # Get the file name of the script (use $0 if running directly)
-          local file="${BASH_SOURCE[1]##*/}"
-
-          # Trigger GitHub Actions error annotation
-          echo "::error file=$file,line=$lineno::${message}"
-        }
         # Ensure the folder exists
         if [ ! -d "${{ inputs.folder }}" ]; then
           echo "Folder ${{ inputs.folder }} does not exist. Creating it."
@@ -135,7 +100,7 @@ runs:
         echo "Downloading file from ${{ steps.parse_build.outputs.file_url }} to $FULL_PATH"
         curl -L -o "$FULL_PATH" "${{ steps.parse_build.outputs.file_url }}"
         if [ $? -ne 0 ]; then
-          report_error "Error: Failed to download the file from ${{ steps.parse_build.outputs.file_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "Error: Failed to download the file from ${{ steps.parse_build.outputs.file_url }}" >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
 
