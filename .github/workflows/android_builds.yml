@@ -50,7 +50,7 @@ jobs:
 
   editor-check:
     name: Checking Editor build.sha
-    if: ${{ github.event.client_payload.build_editors == true }}
+    if: contains(github.event.client_payload.build_type, 'editors')
     runs-on: ubuntu-latest
     outputs:
       compile: ${{ steps.compile.outputs.should_compile }}
@@ -74,7 +74,7 @@ jobs:
 
   template-check:
     name: Checking Templates build.sha
-    if: ${{ github.event.client_payload.build_templates == true }}
+    if: contains(github.event.client_payload.build_type, 'templates')
     runs-on: ubuntu-latest
     outputs:
       compile: ${{ steps.compile.outputs.should_compile == 'true' }}
@@ -169,6 +169,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
@@ -374,7 +377,6 @@ jobs:
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: build.sha
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
-
 
   build-templates:
     runs-on: "ubuntu-20.04"
@@ -642,7 +644,6 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-
 
   template-success:
     name: Template Success

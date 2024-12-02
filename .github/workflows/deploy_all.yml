@@ -63,34 +63,17 @@ jobs:
 
   template-deploy:
     name: 📊 Template Deploy
+    if: contains(github.event.client_payload.deploy, 'templates')
     uses: ./.github/workflows/template_deploy.yml
     secrets: inherit
     with:
       build_sha: ${{ inputs.build_sha }}
       runner_id: ${{ inputs.runner_id }}
 
-  steam-deploy:
-    name: 🌐 Steam Deploy
-    needs: [template-deploy]
-    uses: ./.github/workflows/steam_deploy.yml
-    secrets: inherit
-    with:
-      build_sha: ${{ inputs.build_sha }}
-      runner_id: ${{ inputs.runner_id }}
-
-  play-deploy:
-    name: 🌐 Google Play Deploy
-    needs: [template-deploy]
-    uses: ./.github/workflows/play_deploy.yml
-    secrets: inherit
-    with:
-      build_sha: ${{ inputs.build_sha }}
-      runner_id: ${{ inputs.runner_id }}
-
-  apple-deploy:
-    name: 🌐 Apple Store Deploy
-    needs: [template-deploy]
-    uses: ./.github/workflows/apple_deploy.yml
+  editor-deploy:
+    name: 📊 Template Deploy
+    if: contains(github.event.client_payload.deploy, 'editors')
+    uses: ./.github/workflows/editor_deploy.yml
     secrets: inherit
     with:
       build_sha: ${{ inputs.build_sha }}

@@ -43,7 +43,7 @@ jobs:
 
   template-check:
     name: Checking Templates build.sha
-    if: ${{ github.event.client_payload.build_templates == true }}
+    if: contains(github.event.client_payload.build_type, 'templates')
     runs-on: ubuntu-latest
     outputs:
       compile: ${{ steps.compile.outputs.should_compile == 'true' }}

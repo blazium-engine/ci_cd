@@ -56,9 +56,9 @@ runs:
       shell: bash
       run: |
         # Parse the build_data JSON using fromJSON
-        build_data=$(echo "${{ steps.fetch_build.outputs.build_data }}" | jq -c '.')
-        completed_at=$(echo "$build_data" | jq -r '.completed_at')
-        file_url=$(echo "$build_data" | jq -r '.file_url')
+        build_data=$(echo '${{ steps.fetch_build.outputs.build_data }}' | jq -c '.')
+        completed_at=$(echo '$build_data' | jq -r '.completed_at')
+        file_url=$(echo '$build_data' | jq -r '.file_url')
 
         echo "## Parsing Build Data" >> $GITHUB_STEP_SUMMARY
         echo "Completed At: $completed_at" >> $GITHUB_STEP_SUMMARY

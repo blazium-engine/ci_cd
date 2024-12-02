@@ -77,17 +77,17 @@ jobs:
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
 
   web-build:
     name: 🌐 Web
     needs: [get-latest-sha, static-checks]
-    if: contains(github.event.client_payload.build, 'web')
+    if: contains(github.event.client_payload.build, 'web') && !github.event.client_payload.run_id
     uses: ./.github/workflows/web_builds.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
@@ -96,12 +96,12 @@ jobs:
   monoglue-build:
     name: Mono Glue
     needs: [get-latest-sha, static-checks]
-    if: contains(github.event.client_payload.build, 'monoglue')
+    if: contains(github.event.client_payload.build, 'monoglue') && !github.event.client_payload.run_id
     uses: ./.github/workflows/mono_glue_build.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
@@ -110,12 +110,12 @@ jobs:
   android-build:
     name: 🤖 Android
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'android')
+    if: contains(github.event.client_payload.build, 'android') && !github.event.client_payload.run_id
     uses: ./.github/workflows/android_builds.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
@@ -124,12 +124,12 @@ jobs:
   ios-build:
     name: 🍏 iOS
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'ios')
+    if: contains(github.event.client_payload.build, 'ios') && !github.event.client_payload.run_id
     uses: ./.github/workflows/ios_builds.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
@@ -138,12 +138,12 @@ jobs:
   linux-build:
     name: 🐧 Linux
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'linux')
+    if: contains(github.event.client_payload.build, 'linux') && !github.event.client_payload.run_id
     uses: ./.github/workflows/linux_builds.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
@@ -152,12 +152,12 @@ jobs:
   macos-build:
     name: 🍎 macOS
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'macos')
+    if: contains(github.event.client_payload.build, 'macos') && !github.event.client_payload.run_id
     uses: ./.github/workflows/macos_builds.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
@@ -166,12 +166,12 @@ jobs:
   windows-build:
     name: 🏁 Windows
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'windows')
+    if: contains(github.event.client_payload.build, 'windows') && !github.event.client_payload.run_id
     uses: ./.github/workflows/windows_builds.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
@@ -185,7 +185,7 @@ jobs:
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       monoglue-build: ${{ needs.monoglue-build.result }}
       windows-build: ${{ needs.windows-build.result }}
       macos-build: ${{ needs.macos-build.result }}
@@ -206,7 +206,7 @@ jobs:
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
-      runner_id: ${{ github.run_id }}
+      runner_id: ${{ github.event.client_payload.run_id || github.run_id }}
       monoglue-build: ${{ needs.monoglue-build.result }}
       windows-build: ${{ needs.windows-build.result }}
       macos-build: ${{ needs.macos-build.result }}
