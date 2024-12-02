@@ -43,13 +43,13 @@ runs:
         echo "Build Name: ${{ inputs.name }}" >> $GITHUB_STEP_SUMMARY
 
         # Check if the request succeeded
-        if [[ $(echo "$RESPONSE" | jq -r '.success') != "true" ]]; then
+        if [[ $(echo '$RESPONSE' | jq -r '.success') != "true" ]]; then
           echo "Error: Failed to fetch build data. Response:\n $RESPONSE" >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
 
         # Set the response data to an output for further processing
-        echo "build_data=$(echo "$RESPONSE" | jq -c '.data')" >> $GITHUB_OUTPUT
+        echo "build_data=$(echo '$RESPONSE' | jq -c '.data')" >> $GITHUB_OUTPUT
 
     - name: Parse Build Data and Check Completion
       id: parse_build
