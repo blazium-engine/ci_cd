@@ -58,8 +58,7 @@ runs:
       id: parse_build
       shell: bash
       run: |
-        # Parse the build_data JSON using fromJSON
-        build_data=$(echo '${{ steps.fetch_build.outputs.build_data }}' | jq -c '.')
+        build_data=$(echo '${{ steps.fetch_build.outputs.build_data }}' | sed 's/\\"/"/g' | jq -c '.')
         completed_at=$(echo '$build_data' | jq -r '.completed_at')
         file_url=$(echo '$build_data' | jq -r '.file_url')
 
