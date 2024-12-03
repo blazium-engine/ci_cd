@@ -460,7 +460,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ github.workspace }}/export/${{ env.BASE_NAME }}${{ inputs.new_version }}_export_templates.tpz
+          source: export/${{ env.BASE_NAME }}${{ inputs.new_version }}_export_templates.tpz
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: BetaHuhn/do-spaces-action@v2
@@ -469,7 +469,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ github.workspace }}/export/${{ env.BASE_NAME }}${{ inputs.new_version }}_mono_export_templates.tpz
+          source: export/${{ env.BASE_NAME }}${{ inputs.new_version }}_mono_export_templates.tpz
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: BetaHuhn/do-spaces-action@v2
@@ -478,7 +478,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ github.workspace }}/export/checksum.txt
+          source: export/checksum.txt
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: BetaHuhn/do-spaces-action@v2
@@ -487,7 +487,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ github.workspace }}/export/details.json
+          source: export/details.json
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
 
