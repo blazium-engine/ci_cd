@@ -205,6 +205,16 @@ jobs:
           else
             echo "Directory ${GITHUB_WORKSPACE}/templates does not exist." >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: List Templates/Mono Directory
+        shell: bash
+        run: |
+          if [ -d "${GITHUB_WORKSPACE}/templates/mono" ]; then
+            echo "Contents of the templates/mono directory:" >> $GITHUB_STEP_SUMMARY
+            echo "$(ls -la "${GITHUB_WORKSPACE}/templates/mono")" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Directory ${GITHUB_WORKSPACE}/templates/mono does not exist." >> $GITHUB_STEP_SUMMARY
+          fi
       # - name: Uncompress File
       #   id: new-folder
       #   uses: ./.github/actions/uncompress-tar-gz
