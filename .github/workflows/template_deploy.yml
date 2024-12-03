@@ -68,6 +68,10 @@ jobs:
             web-nothreads-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
             web-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
             web-nothreads-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
+            macos-template-${{ github.event.client_payload.type || 'nightly' }}
+            macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}
+            ios-template-${{ github.event.client_payload.type || 'nightly' }}
+            ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -101,10 +105,14 @@ jobs:
             web-nothreads-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
             web-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
             web-nothreads-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
+            macos-template-${{ github.event.client_payload.type || 'nightly' }}
+            macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}
+            ios-template-${{ github.event.client_payload.type || 'nightly' }}
+            ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
-      - name: Copy & Rename Linux Templates
+      - name: Copy & Rename Web Templates
         uses: ./.github/actions/multi-copy-rename
         with:
           names: |
