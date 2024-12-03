@@ -1,0 +1,49 @@
+name: Generate SHA-256 Checksums
+description: Computes SHA-256 checksums for all files in a specified directory and outputs them to checksum.txt.
+
+inputs:
+  directory:
+    description: The directory containing the files to process.
+    required: true
+
+outputs:
+  checksum_file:
+    description: The path to the generated checksum.txt file.
+    value: ${{ steps.checksum.outputs.checksum_file }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate Checksums
+      id: checksum
+      shell: bash
+      run: |
+        CHECKSUM_DIR="${{ inputs.directory }}"
+        CHECKSUM_FILE="${CHECKSUM_DIR}/checksum.txt"
+
+        # Ensure the directory exists
+        if [ ! -d "$CHECKSUM_DIR" ]; then
+          echo "Error: Directory $CHECKSUM_DIR does not exist." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        # Create or clear the checksum file
+        > "$CHECKSUM_FILE"
+
+        echo "Generating SHA-256 checksums for files in $CHECKSUM_DIR" >> $GITHUB_STEP_SUMMARY
+
+        # Loop through each file and compute checksum
+        for FILE in "$CHECKSUM_DIR"/*; do
+          if [ -f "$FILE" ]; then
+            FILENAME=$(basename "$FILE")
+            CHECKSUM=$(sha256sum "$FILE" | awk '{print $1}')
+            echo "$FILENAME $CHECKSUM" >> "$CHECKSUM_FILE"
+          fi
+        done
+
+        echo "Checksum file created: $CHECKSUM_FILE" >> $GITHUB_STEP_SUMMARY
+        echo "Contents of checksum.txt:" >> $GITHUB_STEP_SUMMARY
+        cat "$CHECKSUM_FILE" >> $GITHUB_STEP_SUMMARY
+
+        # Output the path to the checksum file
+        echo "checksum_file=$CHECKSUM_FILE" >> $GITHUB_OUTPUT
