@@ -52,6 +52,14 @@ jobs:
             linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -69,8 +77,82 @@ jobs:
             linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
+
+      - name: Copy & Rename Windows Templates
+        uses: ./.github/actions/multi-copy-rename
+        with:
+          names: |
+            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          filename_old: |
+            blazium.windows.template_release.x86_64.exe
+            blazium.windows.template_debug.x86_64.exe
+            blazium.windows.template_release.x86_32.exe
+            blazium.windows.template_debug.x86_32.exe
+            blazium.windows.template_release.x86_64.console.exe
+            blazium.windows.template_debug.x86_64.console.exe
+            blazium.windows.template_release.x86_32.console.exe
+            blazium.windows.template_debug.x86_32.console.exe
+          filename_new: |
+            windows_release_x86_64.exe
+            windows_debug_x86_64.exe
+            windows_release_x86_32.exe
+            windows_debug_x86_32.exe
+            windows_release_x86_64_console.exe
+            windows_debug_x86_64_console.exe
+            windows_release_x86_32_console.exe
+            windows_debug_x86_32_console.exe
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/templates
+
+      - name: Copy & Rename Windows Templates (mono)
+        uses: ./.github/actions/multi-copy-rename
+        with:
+          names: |
+            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          filename_old: |
+            blazium.windows.template_release.x86_64.mono.exe
+            blazium.windows.template_debug.x86_64.mono.exe
+            blazium.windows.template_release.x86_32.mono.exe
+            blazium.windows.template_debug.x86_32.mono.exe
+            blazium.windows.template_release.x86_64.mono.console.exe
+            blazium.windows.template_debug.x86_64.mono.console.exe
+            blazium.windows.template_release.x86_32.mono.console.exe
+            blazium.windows.template_debug.x86_32.mono.console.exe
+          filename_new: |
+            windows_release_x86_64.exe
+            windows_debug_x86_64.exe
+            windows_release_x86_32.exe
+            windows_debug_x86_32.exe
+            windows_release_x86_64_console.exe
+            windows_debug_x86_64_console.exe
+            windows_release_x86_32_console.exe
+            windows_debug_x86_32_console.exe
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/templates/mono
 
       - name: Copy & Rename Linux Templates
         uses: ./.github/actions/multi-copy-rename
