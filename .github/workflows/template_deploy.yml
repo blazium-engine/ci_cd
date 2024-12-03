@@ -58,6 +58,22 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
 
+      - name: Uncompress File
+        id: new-folder
+        uses: ./.github/actions/multi-uncompress-tar-gz
+        with:
+          names: |
+            linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          input_dir: ${{ github.workspace }}/downloads
+          output_dir: ${{ github.workspace }}/extracted
+
       # - name: Uncompress File
       #   id: new-folder
       #   uses: ./.github/actions/uncompress-tar-gz
