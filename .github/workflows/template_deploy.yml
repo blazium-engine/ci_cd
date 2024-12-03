@@ -30,22 +30,15 @@ jobs:
           repository: blazium-engine/ci_cd
           submodules: recursive
 
-      - name: Download No. 1 File
-        id: download-1
-        uses: ./.github/actions/cerebro-download-build
-        with:
-          name: linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-          run_id: ${{ inputs.runner_id }}
-          cerebro_url: ${{ secrets.CEREBRO_URL }}
-          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          folder: ${{ github.workspace }}/downloads
-
-      - name: Uncompress File
-        id: new-folder
-        uses: ./.github/actions/uncompress-tar-gz
-        with:
-          file_path: ${{ steps.download-1.outputs.file_path }}
-          output_dir: ${{ github.workspace }}/extracted
+      # - name: Download No. 1 File
+      #   id: download-1
+      #   uses: ./.github/actions/cerebro-download-build
+      #   with:
+      #     name: linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+      #     run_id: ${{ inputs.runner_id }}
+      #     cerebro_url: ${{ secrets.CEREBRO_URL }}
+      #     cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+      #     folder: ${{ github.workspace }}/downloads
 
       - name: Download All Linux Template Files
         id: download-1
@@ -65,14 +58,21 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
 
-      - name: Update File
-        shell: bash
-        run: |
-          # Extract file path from the previous step
-          CUR_FOLDER="${{ steps.new-folder.outputs.target_folder }}"
-          NEW_FOLDER="${{ github.workspace }}/templates"
-          CUR_FILE="blazium.linuxbsd.template_release.x86_64"
-          NEW_FILE="linux_release.x86_64"
+      # - name: Uncompress File
+      #   id: new-folder
+      #   uses: ./.github/actions/uncompress-tar-gz
+      #   with:
+      #     file_path: ${{ steps.download-1.outputs.file_path }}
+      #     output_dir: ${{ github.workspace }}/extracted
 
-          mkdir -r $NEW_FOLDER
-          cp $CUR_FOLDER/$CUR_FILE $NEW_FOLDER/$NEW_FILE
+      # - name: Update File
+      #   shell: bash
+      #   run: |
+      #     # Extract file path from the previous step
+      #     CUR_FOLDER="${{ steps.new-folder.outputs.target_folder }}"
+      #     NEW_FOLDER="${{ github.workspace }}/templates"
+      #     CUR_FILE="blazium.linuxbsd.template_release.x86_64"
+      #     NEW_FILE="linux_release.x86_64"
+
+      #     mkdir -r $NEW_FOLDER
+      #     cp $CUR_FOLDER/$CUR_FILE $NEW_FOLDER/$NEW_FILE
