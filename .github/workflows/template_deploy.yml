@@ -125,14 +125,14 @@ jobs:
         uses: ./.github/actions/multi-copy-rename
         with:
           names: |
-            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
             blazium.windows.template_release.x86_64.mono.exe
             blazium.windows.template_debug.x86_64.mono.exe
