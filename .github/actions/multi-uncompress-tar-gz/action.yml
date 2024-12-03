@@ -1,0 +1,79 @@
+name: Uncompress Files Action
+description: Uncompress multiple .tar.gz files based on a YAML array of names and list their contents.
+
+inputs:
+  names:
+    description: A YAML-formatted array of names, where each name corresponds to a .tar.gz file.
+    required: true
+  input_dir:
+    description: The directory where all the .tar.gz files exist.
+    required: true
+  output_dir:
+    description: The directory where the files will be uncompressed.
+    required: true
+
+outputs:
+  uncompressed_folders:
+    description: An array of paths to the folders where the contents are uncompressed.
+    value: ${{ steps.uncompress_files.outputs.uncompressed_folders }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Uncompress Files
+      id: uncompress_files
+      shell: bash
+      run: |
+        # Parse the names input as a YAML array
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        INPUT_DIR=${{ inputs.input_dir }}
+        OUTPUT_DIR=${{ inputs.output_dir }}
+
+        echo "## Processing Names" >> $GITHUB_STEP_SUMMARY
+        echo "Names to process:" >> $GITHUB_STEP_SUMMARY
+        echo "$NAMES" >> $GITHUB_STEP_SUMMARY
+
+        # Ensure the output directory exists
+        if [ ! -d "$OUTPUT_DIR" ]; then
+          echo "Creating output directory: $OUTPUT_DIR"
+          mkdir -p "$OUTPUT_DIR"
+        fi
+
+        # Initialize an array to store uncompressed folder paths
+        UNCOMPRESSED_FOLDERS=()
+
+        # Loop through each name and process the corresponding file
+        while IFS= read -r NAME; do
+          echo "Processing name: $NAME" >> $GITHUB_STEP_SUMMARY
+
+          # Build file path and target folder
+          TAR_FILE="$INPUT_DIR/$NAME.tar.gz"
+          TARGET_FOLDER="$OUTPUT_DIR/$NAME"
+
+          # Check if the tar.gz file exists
+          if [ ! -f "$TAR_FILE" ]; then
+            echo "Error: File $TAR_FILE does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          # Create the target folder
+          mkdir -p "$TARGET_FOLDER"
+
+          # Uncompress the file
+          echo "Uncompressing $TAR_FILE into $TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
+          if tar -xzvf "$TAR_FILE" -C "$TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY 2>&1; then
+            echo "Successfully uncompressed $TAR_FILE" >> $GITHUB_STEP_SUMMARY
+            UNCOMPRESSED_FOLDERS+=("$TARGET_FOLDER")
+          else
+            echo "Error: Failed to uncompress $TAR_FILE" >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          # List contents of the target folder
+          echo "Contents of $TARGET_FOLDER:" >> $GITHUB_STEP_SUMMARY
+          ls -la "$TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
+        done <<< "$NAMES"
+
+        # Convert the array to JSON and set as output
+        echo "Uncompressed folders: ${UNCOMPRESSED_FOLDERS[@]}" >> $GITHUB_STEP_SUMMARY
+        echo "uncompressed_folders=$(echo "${UNCOMPRESSED_FOLDERS[@]}" | jq -c -R 'split(" ")')" >> $GITHUB_OUTPUT
