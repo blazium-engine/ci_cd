@@ -1,0 +1,62 @@
+name: Uncompress File Action
+description: Uncompress a .tar.gz file and list its contents.
+
+inputs:
+  file_path:
+    description: The path to the .tar.gz file to be uncompressed.
+    required: true
+  output_dir:
+    description: The directory where the file will be uncompressed. Defaults to the GitHub workspace.
+    required: false
+
+outputs:
+  target_folder:
+    description: The path to the folder where the contents are uncompressed.
+    value: ${{ steps.prepare-folder.outputs.target_folder }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate File Path
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.file_path }}" ]; then
+          echo "Error: 'file_path' input is required." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "File path: ${{ inputs.file_path }}" >> $GITHUB_STEP_SUMMARY
+
+    - name: Prepare Target Folder
+      id: prepare-folder
+      shell: bash
+      run: |
+        FILE_PATH="${{ inputs.file_path }}"
+        FILE_NAME=$(basename "$FILE_PATH")
+        FOLDER_NAME="${FILE_NAME%.tar.gz}"
+
+        if [ -n "${{ inputs.output_dir }}" ]; then
+          TARGET_FOLDER="${{ inputs.output_dir }}/$FOLDER_NAME"
+        else
+          TARGET_FOLDER="${{ github.workspace }}/downloads/$FOLDER_NAME"
+        fi
+
+        mkdir -p "$TARGET_FOLDER"
+        echo "Target folder: $TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
+        echo "target_folder=$TARGET_FOLDER" >> $GITHUB_OUTPUT
+
+    - name: Uncompress File
+      shell: bash
+      run: |
+        tar -xzvf "${{ inputs.file_path }}" -C "${{ steps.prepare-folder.outputs.target_folder }}" >> $GITHUB_STEP_SUMMARY 2>&1
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to uncompress ${{ inputs.file_path }}" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "Successfully uncompressed ${{ inputs.file_path }} to ${{ steps.prepare-folder.outputs.target_folder }}" >> $GITHUB_STEP_SUMMARY
+
+    - name: List Contents
+      shell: bash
+      run: |
+        echo "Contents of ${{ steps.prepare-folder.outputs.target_folder }}:" >> $GITHUB_STEP_SUMMARY
+        ls -la "${{ steps.prepare-folder.outputs.target_folder }}" >> $GITHUB_STEP_SUMMARY
+

@@ -1,0 +1,106 @@
+name: Blazium Cerebro Get Multiple Run Build Data
+description: Fetches build data for multiple names, downloads available files, and returns their paths.
+
+inputs:
+  names:
+    description: A YAML-formatted array of build names, with each name on a new line.
+    required: true
+  cerebro_url:
+    description: The base URL of the Cerebro server.
+    required: true
+  cerebro_auth:
+    description: The authorization key for Cerebro.
+    required: true
+  run_id:
+    description: The ID of the run to retrieve.
+    required: true
+  folder:
+    description: The folder where files should be saved.
+    required: true
+
+outputs:
+  downloaded_files:
+    description: An array of the full paths to the downloaded files.
+    value: ${{ steps.process_builds.outputs.downloaded_files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Process Build Names
+      id: process_builds
+      shell: bash
+      run: |
+        # Parse input names as a YAML array
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        FOLDER=${{ inputs.folder }}
+        CEREBRO_URL=${{ inputs.cerebro_url }}
+        CEREBRO_AUTH=${{ inputs.cerebro_auth }}
+        RUN_ID=${{ inputs.run_id }}
+
+        echo "## Processing Build Names" >> $GITHUB_STEP_SUMMARY
+        echo "Names to process:" >> $GITHUB_STEP_SUMMARY
+        echo "$NAMES" >> $GITHUB_STEP_SUMMARY
+
+        # Ensure the folder exists
+        if [ ! -d "$FOLDER" ]; then
+          echo "Creating folder: $FOLDER"
+          mkdir -p "$FOLDER"
+        fi
+
+        # Initialize an array for downloaded file paths
+        FILE_PATHS=()
+
+        # Loop through each name and process
+        while IFS= read -r NAME; do
+          echo "Processing build name: $NAME" >> $GITHUB_STEP_SUMMARY
+
+          # Fetch build data
+          RESPONSE=$(curl -s -X GET "$CEREBRO_URL/api/v1/enginebuilds/$RUN_ID/$NAME" \
+            -H "Content-Type: application/json" \
+            -H "BLAZIUM_AUTH: $CEREBRO_AUTH")
+
+          # Check if request succeeded
+          if [[ $(echo "$RESPONSE" | jq -r '.success') != "true" ]]; then
+            echo "Error: Failed to fetch build data for $NAME. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+          completed_at=$(echo "$RESPONSE" | jq -r '.data.completed_at')
+
+          # Check if completed_at is null
+          if [[ "$completed_at" == "null" || -z "$completed_at" ]]; then
+            echo "Error: Build is not completed yet (completed_at is null). Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          # Parse build data
+          FILE_URL=$(echo "$RESPONSE" | jq -r '.data.file_url')
+          if [[ "$FILE_URL" == "null" || -z "$FILE_URL" ]]; then
+            echo "No file URL provided for $NAME. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          # Determine file name and full path
+          FILE_NAME=$(basename "$FILE_URL")
+          FULL_PATH="$FOLDER/$FILE_NAME"
+
+          # Download the file
+          echo "Downloading $FILE_URL to $FULL_PATH" >> $GITHUB_STEP_SUMMARY
+          curl -L -o "$FULL_PATH" "$FILE_URL"
+          if [ $? -eq 0 ]; then
+            echo "File downloaded successfully for $NAME to $FULL_PATH" >> $GITHUB_STEP_SUMMARY
+            FILE_PATHS+=("$FULL_PATH")
+          else
+            echo "Error: Failed to download the file for $NAME" >> $GITHUB_STEP_SUMMARY
+          fi
+        done <<< "$NAMES"
+
+        # Convert array to JSON and set output
+        echo "Downloaded files: ${FILE_PATHS[@]}" >> $GITHUB_STEP_SUMMARY
+        echo "downloaded_files=$(echo "${FILE_PATHS[@]}" | jq -c -R 'split(" ")')" >> $GITHUB_OUTPUT
+
+    - name: List All Downloaded Files
+      shell: bash
+      run: |
+        FOLDER=${{ inputs.folder }}
+        echo "## Listing All Downloaded Files in $FOLDER" >> $GITHUB_STEP_SUMMARY
+        ls -la "$FOLDER" >> $GITHUB_STEP_SUMMARY

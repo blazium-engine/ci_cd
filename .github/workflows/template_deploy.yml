@@ -40,67 +40,39 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
 
-      - name: Uncompress File and List Contents
+      - name: Uncompress File
+        id: new-folder
+        uses: ./.github/actions/uncompress-tar-gz
+        with:
+          file_path: ${{ steps.download-1.outputs.file_path }}
+          output_dir: ${{ github.workspace }}/extracted
+
+      - name: Download All Linux Template Files
+        id: download-1
+        uses: ./.github/actions/cerebro-download-multi-build
+        with:
+          names: |
+            linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          folder: ${{ github.workspace }}/downloads
+
+      - name: Update File
         shell: bash
         run: |
           # Extract file path from the previous step
-          FILE_PATH="${{ steps.download-1.outputs.file_path }}"
-          if [ -z "$FILE_PATH" ]; then
-            echo "Error: No file path output from the previous step." >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
+          CUR_FOLDER="${{ steps.new-folder.outputs.target_folder }}"
+          NEW_FOLDER="${{ github.workspace }}/templates"
+          CUR_FILE="blazium.linuxbsd.template_release.x86_64"
+          NEW_FILE="linux_release.x86_64"
 
-          echo "File path retrieved: $FILE_PATH" >> $GITHUB_STEP_SUMMARY
-
-          # Extract file name without extension and prepare the target folder
-          FILE_NAME=$(basename "$FILE_PATH")
-          FOLDER_NAME="${FILE_NAME%.tar.gz}"
-          TARGET_FOLDER="${{ github.workspace }}/downloads/$FOLDER_NAME"
-
-          echo "File name: $FILE_NAME" >> $GITHUB_STEP_SUMMARY
-          echo "Target folder: $TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
-
-          echo "Uncompressing $FILE_PATH into $TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
-          mkdir -p "$TARGET_FOLDER"
-
-          # Uncompress the tar.gz file
-          if tar -xzvf "$FILE_PATH" -C "$TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY 2>&1; then
-            echo "Successfully uncompressed $FILE_PATH" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Error: Failed to uncompress $FILE_PATH" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
-          # List the contents of the extracted folder
-          echo "Contents of $TARGET_FOLDER:" >> $GITHUB_STEP_SUMMARY
-          ls -la "$TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
-
-      - name: Download No. 2 File
-        id: download-2
-        uses: ./.github/actions/cerebro-download-build
-        with:
-          name: linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-          run_id: ${{ inputs.runner_id }}
-          cerebro_url: ${{ secrets.CEREBRO_URL }}
-          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          folder: ${{ github.workspace }}/downloads
-
-      - name: Download No. 3 File
-        id: download-3
-        uses: ./.github/actions/cerebro-download-build
-        with:
-          name: linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-          run_id: ${{ inputs.runner_id }}
-          cerebro_url: ${{ secrets.CEREBRO_URL }}
-          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          folder: ${{ github.workspace }}/downloads
-
-      - name: Download No. 4 File
-        id: download-4
-        uses: ./.github/actions/cerebro-download-build
-        with:
-          name: linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-          run_id: ${{ inputs.runner_id }}
-          cerebro_url: ${{ secrets.CEREBRO_URL }}
-          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          folder: ${{ github.workspace }}/downloads
+          mkdir -r $NEW_FOLDER
+          cp $CUR_FOLDER/$CUR_FILE $NEW_FOLDER/$NEW_FILE
