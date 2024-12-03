@@ -41,7 +41,6 @@ jobs:
       #     folder: ${{ github.workspace }}/downloads
 
       - name: Download All Linux Template Files
-        id: download-1
         uses: ./.github/actions/cerebro-download-multi-build
         with:
           names: |
@@ -59,7 +58,6 @@ jobs:
           folder: ${{ github.workspace }}/downloads
 
       - name: Uncompress Linux Templates
-        id: new-folder
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
           names: |
@@ -75,7 +73,6 @@ jobs:
           output_dir: ${{ github.workspace }}/extracted
 
       - name: Copy & Rename Linux Templates
-        id: new-folder
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
           names: |
@@ -97,7 +94,6 @@ jobs:
           output_dir: ${{ github.workspace }}/templates
 
       - name: Copy & Rename Linux Templates (mono)
-        id: new-folder
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
           names: |
