@@ -104,6 +104,39 @@ jobs:
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
+      - name: Copy & Rename Linux Templates
+        uses: ./.github/actions/multi-copy-rename
+        with:
+          names: |
+            web-template-${{ github.event.client_payload.type || 'nightly' }}
+            web-debug-template-${{ github.event.client_payload.type || 'nightly' }}
+            web-nothreads-template-${{ github.event.client_payload.type || 'nightly' }}
+            web-nothreads-debug-template-${{ github.event.client_payload.type || 'nightly' }}
+            web-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
+            web-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
+            web-nothreads-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
+            web-nothreads-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
+          filename_old: |
+            blazium.web.template_release.wasm32.zip
+            blazium.web.template_debug.wasm32.zip
+            blazium.web.template_release.wasm32.nothreads.zip
+            blazium.template_debug.wasm32.nothreads.zip
+            blazium.web.template_release.wasm32.dlink.zip
+            blazium.web.template_debug.wasm32.dlink.zip
+            blazium.web.template_release.wasm32.nothreads.dlink.zip
+            blazium.web.template_debug.wasm32.nothreads.dlink.zip
+          filename_new: |
+            web_release.zip
+            web_debug.zip
+            web_nothreads_release.zip
+            web_nothreads_debug.zip
+            web_dlink_release.zip
+            web_dlink_debug.zip
+            web_dlink_nothreads_release.zip
+            web_dlink_nothreads_debug.zip
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/templates
+
       - name: Copy & Rename Windows Templates
         uses: ./.github/actions/multi-copy-rename
         with:
