@@ -73,7 +73,7 @@ jobs:
           output_dir: ${{ github.workspace }}/extracted
 
       - name: Copy & Rename Linux Templates
-        uses: ./.github/actions/multi-uncompress-tar-gz
+        uses: ./.github/actions/multi-copy-rename
         with:
           names: |
             linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
@@ -94,7 +94,7 @@ jobs:
           output_dir: ${{ github.workspace }}/templates
 
       - name: Copy & Rename Linux Templates (mono)
-        uses: ./.github/actions/multi-uncompress-tar-gz
+        uses: ./.github/actions/multi-copy-rename
         with:
           names: |
             linux-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
