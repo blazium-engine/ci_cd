@@ -40,7 +40,7 @@ jobs:
       #     cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
       #     folder: ${{ github.workspace }}/downloads
 
-      - name: Download All Linux Template Files
+      - name: Download All Template Files
         uses: ./.github/actions/cerebro-download-multi-build
         with:
           names: |
@@ -65,7 +65,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
 
-      - name: Uncompress Linux Templates
+      - name: Uncompress Templates
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
           names: |
@@ -196,6 +196,15 @@ jobs:
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates/mono
 
+      - name: List Templates Directory
+        shell: bash
+        run: |
+          if [ -d "${GITHUB_WORKSPACE}/templates" ]; then
+            echo "Contents of the templates directory:" >> $GITHUB_STEP_SUMMARY
+            echo "$(ls -la "${GITHUB_WORKSPACE}/templates")" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Directory ${GITHUB_WORKSPACE}/templates does not exist." >> $GITHUB_STEP_SUMMARY
+          fi
       # - name: Uncompress File
       #   id: new-folder
       #   uses: ./.github/actions/uncompress-tar-gz
