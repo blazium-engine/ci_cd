@@ -18,6 +18,7 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
+  BASE_NAME: Blazium_v
 
 concurrency:
   group: ci-${{github.actor}}-${{ github.event.client_payload.type || 'nightly' }}-template-deploy
@@ -326,6 +327,169 @@ jobs:
           # Log the action
           echo "New version written to $TARGET_FILE:" >> $GITHUB_STEP_SUMMARY
           cat "$TARGET_FILE" >> $GITHUB_STEP_SUMMARY
+
+      - name: Compress Templates/Mono Directory
+        shell: bash
+        run: |
+          # Define variables
+          TARGET_DIR="${GITHUB_WORKSPACE}/templates/mono"
+          RELDIR="${GITHUB_WORKSPACE}/export"
+          ZIP_FILE="${RELDIR}/${BASE_NAME}${{ inputs.new_version }}_mono_export_templates.tpz"
+
+          # Ensure the target directory exists
+          if [ ! -d "$TARGET_DIR" ]; then
+            echo "Error: Target directory $TARGET_DIR does not exist."
+            exit 1
+          fi
+
+          # Ensure the output directory exists
+          if [ ! -d "$RELDIR" ]; then
+            echo "Creating output directory: $RELDIR"
+            mkdir -p "$RELDIR"
+          fi
+
+          # Create the zip file
+          zip -q -9 -r -D "$ZIP_FILE" "$TARGET_DIR"/*
+
+          # Log the result
+          if [ $? -eq 0 ]; then
+            echo "Zip file created successfully: $ZIP_FILE" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Error: Failed to create the zip file." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+      - name: Delete Templates/Mono Directory
+        shell: bash
+        run: |
+          TARGET_DIR="${GITHUB_WORKSPACE}/templates/mono"
+          rm -rf $TARGET_DIR
+          
+      - name: Compress Templates Directory
+        shell: bash
+        run: |
+          # Define variables
+          TARGET_DIR="${GITHUB_WORKSPACE}/templates"
+          RELDIR="${GITHUB_WORKSPACE}/export"
+          ZIP_FILE="${RELDIR}/${BASE_NAME}${{ inputs.new_version }}_export_templates.tpz"
+
+          # Ensure the target directory exists
+          if [ ! -d "$TARGET_DIR" ]; then
+            echo "Error: Target directory $TARGET_DIR does not exist."
+            exit 1
+          fi
+
+          # Ensure the output directory exists
+          if [ ! -d "$RELDIR" ]; then
+            echo "Creating output directory: $RELDIR"
+            mkdir -p "$RELDIR"
+          fi
+
+          # Create the zip file
+          zip -q -9 -r -D "$ZIP_FILE" "$TARGET_DIR"/*
+
+          # Log the result
+          if [ $? -eq 0 ]; then
+            echo "Zip file created successfully: $ZIP_FILE" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Error: Failed to create the zip file." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Generate Checksums for Packaged Templates
+        uses: ./.github/actions/checksum-txt-generator
+        with:
+          directory: ${{ github.workspace }}/export
+
+      - name: Generate JSON with File Info and Checksums
+        shell: bash
+        env:
+          BASE_NAME: Blazium_v
+          URL_BASE: ${{ secrets.CDN_URL }}/${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+        run: |
+          # Define file paths and output file
+          TARGET_DIR="${GITHUB_WORKSPACE}/export"
+          BASE_FILE="${TARGET_DIR}/${BASE_NAME}${{ inputs.new_version }}_export_templates.tpz"
+          MONO_FILE="${TARGET_DIR}/${BASE_NAME}${{ inputs.new_version }}_mono_export_templates.tpz"
+          OUTPUT_FILE="${TARGET_DIR}/details.json"
+
+          # Ensure files exist
+          if [ ! -f "$BASE_FILE" ]; then
+            echo "Error: File $BASE_FILE does not exist."
+            exit 1
+          fi
+          if [ ! -f "$MONO_FILE" ]; then
+            echo "Error: File $MONO_FILE does not exist."
+            exit 1
+          fi
+
+          # Compute SHA-512 checksums
+          BASE_CHECKSUM=$(sha512sum "$BASE_FILE" | awk '{print $1}')
+          MONO_CHECKSUM=$(sha512sum "$MONO_FILE" | awk '{print $1}')
+
+          # Generate JSON object with jq
+          jq -n \
+            --arg base_filename "$(basename "$BASE_FILE")" \
+            --arg base_checksum "$BASE_CHECKSUM" \
+            --arg base_url "${URL_BASE}/$(basename "$BASE_FILE")" \
+            --arg mono_filename "$(basename "$MONO_FILE")" \
+            --arg mono_checksum "$MONO_CHECKSUM" \
+            --arg mono_url "${URL_BASE}/$(basename "$MONO_FILE")" \
+            '{
+              base: {
+                filename: $base_filename,
+                checksum: $base_checksum,
+                url: $base_url
+              },
+              mono: {
+                filename: $mono_filename,
+                checksum: $mono_checksum,
+                url: $mono_url
+              }
+            }' > "$OUTPUT_FILE"
+
+          # Log the generated JSON
+          echo "Generated JSON file: $OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
+          echo "Contents:" >> $GITHUB_STEP_SUMMARY
+          cat "$OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
+
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ github.workspace }}/export/${{ env.BASE_NAME }}${{ inputs.new_version }}_export_templates.tpz
+          out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ github.workspace }}/export/${{ env.BASE_NAME }}${{ inputs.new_version }}_mono_export_templates.tpz
+          out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ github.workspace }}/export/checksum.txt
+          out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ github.workspace }}/export/details.json
+          out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+
 
 
       # - name: Uncompress File

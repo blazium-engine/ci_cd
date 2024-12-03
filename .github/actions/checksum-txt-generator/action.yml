@@ -30,13 +30,13 @@ runs:
         # Create or clear the checksum file
         > "$CHECKSUM_FILE"
 
-        echo "Generating SHA-256 checksums for files in $CHECKSUM_DIR" >> $GITHUB_STEP_SUMMARY
+        echo "Generating SHA-512 checksums for files in $CHECKSUM_DIR" >> $GITHUB_STEP_SUMMARY
 
         # Loop through each file and compute checksum
         for FILE in "$CHECKSUM_DIR"/*; do
           if [ -f "$FILE" ]; then
             FILENAME=$(basename "$FILE")
-            CHECKSUM=$(sha256sum "$FILE" | awk '{print $1}')
+            CHECKSUM=$(sha512sum "$FILE" | awk '{print $1}')
             echo "$FILENAME $CHECKSUM" >> "$CHECKSUM_FILE"
           fi
         done
