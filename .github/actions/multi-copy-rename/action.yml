@@ -1,0 +1,101 @@
+name: Rename and Copy Files Action
+description: Copies and renames files from input_dir to output_dir based on provided arrays.
+
+inputs:
+  input_dir:
+    description: The directory containing the original files.
+    required: true
+  output_dir:
+    description: The directory where files will be copied and renamed.
+    required: true
+  names:
+    description: A YAML array of directory names to check within input_dir.
+    required: true
+  filename_old:
+    description: A YAML array of old filenames to copy.
+    required: true
+  filename_new:
+    description: A YAML array of new filenames to rename the copied files.
+    required: true
+
+outputs:
+  copied_files:
+    description: A list of paths to the copied and renamed files.
+    value: ${{ steps.process_files.outputs.copied_files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Input Parameters
+      id: validate_inputs
+      shell: bash
+      run: |
+        INPUT_DIR=${{ inputs.input_dir }}
+        OUTPUT_DIR=${{ inputs.output_dir }}
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        FILENAME_OLD=$(echo "${{ inputs.filename_old }}" | awk NF)
+        FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
+
+        # Ensure output directory exists
+        if [ ! -d "$OUTPUT_DIR" ]; then
+          echo "Creating output directory: $OUTPUT_DIR"
+          mkdir -p "$OUTPUT_DIR"
+        fi
+
+        # Check array lengths match
+        LEN_NAMES=$(echo "$NAMES" | wc -l)
+        LEN_OLD=$(echo "$FILENAME_OLD" | wc -l)
+        LEN_NEW=$(echo "$FILENAME_NEW" | wc -l)
+        if [ "$LEN_NAMES" -ne "$LEN_OLD" ] || [ "$LEN_OLD" -ne "$LEN_NEW" ]; then
+          echo "Error: All input arrays must have the same length." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        echo "Input parameters validated successfully." >> $GITHUB_STEP_SUMMARY
+
+    - name: Process Files
+      id: process_files
+      shell: bash
+      run: |
+        INPUT_DIR=${{ inputs.input_dir }}
+        OUTPUT_DIR=${{ inputs.output_dir }}
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        FILENAME_OLD=$(echo "${{ inputs.filename_old }}" | awk NF)
+        FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
+
+        echo "## Listing Input Directory Contents" >> $GITHUB_STEP_SUMMARY
+        ls -la "$INPUT_DIR" >> $GITHUB_STEP_SUMMARY
+
+        # Initialize array to store copied file paths
+        COPIED_FILES=()
+
+        # Process each entry in the arrays
+        paste <(echo "$NAMES") <(echo "$FILENAME_OLD") <(echo "$FILENAME_NEW") | while IFS=$'\t' read -r NAME OLD NEW; do
+          SOURCE_DIR="$INPUT_DIR/$NAME"
+          if [ ! -d "$SOURCE_DIR" ]; then
+            echo "Error: Directory $SOURCE_DIR does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          SOURCE_FILE="$SOURCE_DIR/$OLD"
+          if [ ! -f "$SOURCE_FILE" ]; then
+            echo "Error: File $SOURCE_FILE does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          DEST_FILE="$OUTPUT_DIR/$NEW"
+          cp "$SOURCE_FILE" "$DEST_FILE"
+          if [ $? -eq 0 ]; then
+            echo "Successfully copied $SOURCE_FILE to $DEST_FILE" >> $GITHUB_STEP_SUMMARY
+            COPIED_FILES+=("$DEST_FILE")
+          else
+            echo "Error: Failed to copy $SOURCE_FILE to $DEST_FILE" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+
+        # Convert copied files array to JSON and set output
+        echo "Copied files: ${COPIED_FILES[@]}" >> $GITHUB_STEP_SUMMARY
+        echo "copied_files=$(echo "${COPIED_FILES[@]}" | jq -c -R 'split(" ")')" >> $GITHUB_OUTPUT
+
+        echo "## Listing Output Directory Contents" >> $GITHUB_STEP_SUMMARY
+        ls -la "$OUTPUT_DIR" >> $GITHUB_STEP_SUMMARY

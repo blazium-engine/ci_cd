@@ -58,7 +58,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
 
-      - name: Uncompress File
+      - name: Uncompress Linux Templates
         id: new-folder
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
@@ -73,6 +73,50 @@ jobs:
             linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
+
+      - name: Copy & Rename Linux Templates
+        id: new-folder
+        uses: ./.github/actions/multi-uncompress-tar-gz
+        with:
+          names: |
+            linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          filename_old: |
+            blazium.linuxbsd.template_release.x86_64
+            blazium.linuxbsd.template_debug.x86_64
+            blazium.linuxbsd.template_release.x86_32
+            blazium.linuxbsd.template_debug.x86_32
+          filename_new: |
+            linux_release.x86_64
+            linux_debug.x86_64
+            linux_release.x86_32
+            linux_debug.x86_32
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/templates
+
+      - name: Copy & Rename Linux Templates (mono)
+        id: new-folder
+        uses: ./.github/actions/multi-uncompress-tar-gz
+        with:
+          names: |
+            linux-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          filename_old: |
+            blazium.linuxbsd.template_release.x86_64.mono
+            blazium.linuxbsd.template_debug.x86_64.mono
+            blazium.linuxbsd.template_release.x86_32.mono
+            blazium.linuxbsd.template_debug.x86_32.mono
+          filename_new: |
+            linux_release.x86_64
+            linux_debug.x86_64
+            linux_release.x86_32
+            linux_debug.x86_32
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/templates/mono
 
       # - name: Uncompress File
       #   id: new-folder
