@@ -61,7 +61,7 @@ runs:
 
           # Uncompress the file
           echo "Uncompressing $TAR_FILE into $TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
-          if tar -xzvf "$TAR_FILE" -C "$TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY 2>&1; then
+          if tar -xzf "$TAR_FILE" -C "$TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY 2>&1; then
             echo "Successfully uncompressed $TAR_FILE" >> $GITHUB_STEP_SUMMARY
             UNCOMPRESSED_FOLDERS+=("$TARGET_FOLDER")
           else
