@@ -424,27 +424,47 @@ jobs:
           fi
 
           # Compute SHA-512 checksums
-          BASE_CHECKSUM=$(sha512sum "$BASE_FILE" | awk '{print $1}')
-          MONO_CHECKSUM=$(sha512sum "$MONO_FILE" | awk '{print $1}')
+          BASE_512_CHECKSUM=$(sha512sum "$BASE_FILE" | awk '{print $1}')
+          MONO_512_CHECKSUM=$(sha512sum "$MONO_FILE" | awk '{print $1}')
+          BASE_256_CHECKSUM=$(sha256sum "$BASE_FILE" | awk '{print $1}')
+          MONO_256_CHECKSUM=$(sha256sum "$MONO_FILE" | awk '{print $1}')
+
+          # Generate timestamps
+          BASE_TIMESTAMP=$(date -r "$BASE_FILE" +"%d %B %Y")
+          MONO_TIMESTAMP=$(date -r "$MONO_FILE" +"%d %B %Y")
 
           # Generate JSON object with jq
           jq -n \
             --arg base_filename "$(basename "$BASE_FILE")" \
-            --arg base_checksum "$BASE_CHECKSUM" \
+            --arg base_256_checksum "$BASE_256_CHECKSUM" \
+            --arg base_512_checksum "$BASE_512_CHECKSUM" \
             --arg base_url "${URL_BASE}/$(basename "$BASE_FILE")" \
+            --arg base_timestamp "$BASE_TIMESTAMP" \
             --arg mono_filename "$(basename "$MONO_FILE")" \
-            --arg mono_checksum "$MONO_CHECKSUM" \
+            --arg mono_256_checksum "$MONO_256_CHECKSUM" \
+            --arg mono_512_checksum "$MONO_512_CHECKSUM" \
             --arg mono_url "${URL_BASE}/$(basename "$MONO_FILE")" \
+            --arg mono_timestamp "$MONO_TIMESTAMP" \
             '{
               base: {
+                name: "Official Blazium Templates Mirror",
                 filename: $base_filename,
-                checksum: $base_checksum,
-                url: $base_url
+                checksum: {
+                  512: $base_256_checksum,
+                  256: $base_512_checksum
+                },
+                url: $base_url,
+                timestamp: $base_timestamp
               },
               mono: {
+                name: "Official Blazium Mono Templates Mirror",
                 filename: $mono_filename,
-                checksum: $mono_checksum,
-                url: $mono_url
+                checksum: {
+                  512: $mono_256_checksum,
+                  256: $mono_512_checksum
+                },
+                url: $mono_url,
+                timestamp: $mono_timestamp
               }
             }' > "$OUTPUT_FILE"
 

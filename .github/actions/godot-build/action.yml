@@ -23,6 +23,7 @@ inputs:
     default: "7168"
   build-name:
     description: Build Name
+    default: "blazium"
 runs:
   using: "composite"
   steps:
