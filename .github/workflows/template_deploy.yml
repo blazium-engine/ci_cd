@@ -450,8 +450,8 @@ jobs:
                 name: "Official Blazium Templates Mirror",
                 filename: $base_filename,
                 checksum: {
-                  512: $base_256_checksum,
-                  256: $base_512_checksum
+                  "512": $base_256_checksum,
+                  "256": $base_512_checksum
                 },
                 url: $base_url,
                 timestamp: $base_timestamp
@@ -460,8 +460,8 @@ jobs:
                 name: "Official Blazium Mono Templates Mirror",
                 filename: $mono_filename,
                 checksum: {
-                  512: $mono_256_checksum,
-                  256: $mono_512_checksum
+                  "512": $mono_256_checksum,
+                  "256": $mono_512_checksum
                 },
                 url: $mono_url,
                 timestamp: $mono_timestamp
