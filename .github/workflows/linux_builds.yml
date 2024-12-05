@@ -98,7 +98,6 @@ jobs:
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
-      max-parallel: 1
       fail-fast: false
       matrix:
         include:
