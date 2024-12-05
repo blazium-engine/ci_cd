@@ -130,26 +130,30 @@ jobs:
           - name: Editor (target=editor)
             cache-name: linux-editor-arm64
             target: editor
-            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
           - name: Editor w/ Mono (target=editor)
             cache-name: linux-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
           - name: Editor (target=editor)
             cache-name: linux-editor-arm32
             target: editor
-            sconsflags: arch=arm32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
           - name: Editor w/ Mono (target=editor)
             cache-name: linux-editor-mono-arm32
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
     steps:
       - name: Checkout Repository
@@ -246,6 +250,15 @@ jobs:
             speech-dispatcher \
             fontconfig \
             libfontconfig-dev
+
+      - name: Install llvm-mingw
+        if: matrix.arm
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
+          export MINGW_PREFIX="/root/llvm-mingw"
 
       - name: Free disk space on runner
         run: |
@@ -426,50 +439,58 @@ jobs:
           - name: Template w/ Mono (target=template_release)
             cache-name: linux-template-mono-arm64
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
           - name: Template (target=template_release)
             cache-name: linux-template-arm64
             target: template_release
-            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
           - name: Template w/ Mono (target=template_debug)
             cache-name: linux-debug-template-mono-arm64
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
           - name: Template (target=template_debug)
             cache-name: linux-debug-template-arm64
             target: template_debug
-            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
           - name: Template w/ Mono (target=template_release)
             cache-name: linux-template-mono-arm32
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
           - name: Template (target=template_release)
             cache-name: linux-template-arm32
             target: template_release
-            sconsflags: arch=arm32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
           - name: Template w/ Mono (target=template_debug)
             cache-name: linux-debug-template-mono-arm32
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
           - name: Template (target=template_debug)
             cache-name: linux-debug-template-arm32
             target: template_debug
-            sconsflags: arch=arm32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
     steps:
       - name: Checkout Repository
@@ -566,6 +587,15 @@ jobs:
             speech-dispatcher \
             fontconfig \
             libfontconfig-dev
+
+      - name: Install llvm-mingw
+        if: matrix.arm
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
+          export MINGW_PREFIX="/root/llvm-mingw"
 
 
       - name: Free disk space on runner

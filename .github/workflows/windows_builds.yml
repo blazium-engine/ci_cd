@@ -128,14 +128,16 @@ jobs:
           - name: Editor (target=editor)
             cache-name: windows-editor-arm64
             target: editor
-            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
           - name: Editor w/ Mono (target=editor)
             cache-name: windows-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
     steps:
       - name: Checkout Repository
@@ -262,6 +264,15 @@ jobs:
           sudo apt-get purge -y --auto-remove
           sudo apt-get autoremove
           sudo apt-get clean
+
+      - name: Install llvm-mingw
+        if: matrix.arm
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
+          export MINGW_PREFIX="/root/llvm-mingw"
 
       - name: Download and extract llvm-mingw SDK
         env:
@@ -449,26 +460,30 @@ jobs:
           - name: Template w/ Mono (target=template_release)
             cache-name: windows-template-mono-arm64
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
           - name: Template (target=template_release)
             cache-name: windows-template-arm64
             target: template_release
-            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
           - name: Template w/ Mono (target=template_debug)
             cache-name: windows-debug-template-mono-arm64
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
+            arm: true
 
           - name: Template (target=template_debug)
             cache-name: windows-debug-template-arm64
             target: template_debug
-            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
+            arm: true
 
     steps:
       - name: Checkout Repository
@@ -594,6 +609,15 @@ jobs:
           sudo apt-get purge -y --auto-remove
           sudo apt-get autoremove
           sudo apt-get clean
+
+      - name: Install llvm-mingw
+        if: matrix.arm
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
+          export MINGW_PREFIX="/root/llvm-mingw"
 
 
       - name: Free disk space on runner
