@@ -35,16 +35,6 @@ jobs:
           repository: blazium-engine/ci_cd
           submodules: recursive
 
-      # - name: Download No. 1 File
-      #   id: download-1
-      #   uses: ./.github/actions/cerebro-download-build
-      #   with:
-      #     name: linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-      #     run_id: ${{ inputs.runner_id }}
-      #     cerebro_url: ${{ secrets.CEREBRO_URL }}
-      #     cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-      #     folder: ${{ github.workspace }}/downloads
-
       - name: Download All Template Files
         uses: ./.github/actions/cerebro-download-multi-build
         with:
