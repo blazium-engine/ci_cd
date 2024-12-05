@@ -31,9 +31,7 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  SCONSFLAGS: verbose=yes warnings=no progress=no
-  BUILD_FLAG: ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }}
-  TEMPLATE_TYPE: ${{ github.event.client_payload.production && 'template_release' || 'template_debug' }}
+  SCONSFLAGS: verbose=yes warnings=no progress=no ${{ github.event.client_payload.production && 'production=yes' || '' }}
   BUILD_TYPE: ${{ github.event.client_payload.type || 'nightly' }}
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -99,40 +97,15 @@ jobs:
 
   build-editors:
     runs-on: "ubuntu-20.04"
-    name: Building ${{ matrix.name }}
+    name: Building Android ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
-      max-parallel: 2
       fail-fast: false
       matrix:
         include:
-          - name: Editor (target=editor, arch=arm64, ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }})
-            cache-name: android-editor-arm64
-            target: editor
-            tests: false
-            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }}
-            mono: false
-
-          - name: Editor (target=editor, arch=arm32, ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }})
-            cache-name: android-editor-arm32
-            target: editor
-            tests: false
-            sconsflags: arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }}
-            mono: false
-
-          - name: Editor (target=editor, arch=x86_64, ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }})
-            cache-name: android-editor-x86_64
-            target: editor
-            tests: false
-            sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }}
-            mono: false
-
-          - name: Editor (target=editor, arch=x86_32, ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }})
-            cache-name: android-editor-x86_32
-            target: editor
-            tests: false
-            sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || 'use_static_cpp=yes' }}
+          - name: Editor
+            cache-name: android-editor
             mono: false
 
     steps:
@@ -206,20 +179,33 @@ jobs:
           # Clean up the temporary directory
           rm -rf temp_extract monoglue.tar.gz
 
-      - name: Compilation
+      - name: Compilation (target=editor,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
           platform: android
-          target: ${{ matrix.target }}
-          tests: ${{ matrix.tests }}
+          target: editor
 
-      - name: Building C# Assemblies
-        if: matrix.mono
-        run: |
-          pushd platform/android/java
-          ./gradlew generateGodotMonoTemplates
-          popd
+      - name: Compilation (target=editor,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: editor
+
+      - name: Compilation (target=editor,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: editor
+
+      - name: Compilation (target=editor,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: editor
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
@@ -263,7 +249,7 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
-          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
 
 
       - name: Upload artifact
@@ -277,7 +263,7 @@ jobs:
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
-          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           version: ${{ inputs.new_version }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -310,8 +296,6 @@ jobs:
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
-
-
 
       - name: Generate Godot Meta editor
         run: |
@@ -380,123 +364,19 @@ jobs:
 
   build-templates:
     runs-on: "ubuntu-20.04"
-    name: Building ${{ matrix.name }}
+    name: Building Android ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Template (target=template_release, arch=arm64)
-            cache-name: android-release-template-arm64
-            target: template_release
-            tests: false
-            sconsflags: arch=arm64 
+          - name: Templates
+            cache-name: android-template
             mono: false
 
-          - name: Template (target=template_debug, arch=arm32)
-            cache-name: android-debug-template-arm32
-            target: template_debug
-            tests: false
-            sconsflags: arch=arm32 
-            mono: false
-
-          - name: Template (target=template_debug, arch=arm64)
-            cache-name: android-debug-template-arm64
-            target: template_debug
-            tests: false
-            sconsflags: arch=arm64 
-            mono: false
-
-          - name: Template (target=template_release, arch=arm32)
-            cache-name: android-release-template-arm32
-            target: template_release
-            tests: false
-            sconsflags: arch=arm32 
-            mono: false
-
-          - name: Template (target=template_release, arch=x86_64)
-            cache-name: android-template-x86_64
-            target: template_release
-            tests: false
-            sconsflags: arch=x86_64 
-            mono: false
-
-          - name: Template (target=template_debug, arch=x86_64)
-            cache-name: android-debug-template-x86_64
-            target: template_debug
-            tests: false
-            sconsflags: arch=x86_64 
-            mono: false
-
-          - name: Template (target=template_release, arch=x86_32)
-            cache-name: android-template-x86_32
-            target: template_release
-            tests: false
-            sconsflags: arch=x86_32 
-            mono: false
-
-          - name: Template (target=template_debug, arch=x86_32)
-            cache-name: android-debug-template-x86_32
-            target: template_debug
-            tests: false
-            sconsflags: arch=x86_32 
-            mono: false
-# BREAK FOR MONO
-          - name: Template/w Mono (target=template_release, arch=arm64, module_mono_enabled=yes)
-            cache-name: android-release-template-arm64-mono
-            target: template_release
-            tests: false
-            sconsflags: arch=arm64  module_mono_enabled=yes
-            mono: true
-
-          - name: Template/w Mono (target=template_debug, arch=arm32, module_mono_enabled=yes)
-            cache-name: android-debug-template-arm32-mono
-            target: template_debug
-            tests: false
-            sconsflags: arch=arm32  module_mono_enabled=yes
-            mono: true
-
-          - name: Template/w Mono (target=template_debug, arch=arm64, module_mono_enabled=yes)
-            cache-name: android-debug-template-arm64-mono
-            target: template_debug
-            tests: false
-            sconsflags: arch=arm64  module_mono_enabled=yes
-            mono: true
-
-          - name: Template/w Mono (target=template_release, arch=arm32, module_mono_enabled=yes)
-            cache-name: android-release-template-arm32-mono
-            target: template_release
-            tests: false
-            sconsflags: arch=arm32  module_mono_enabled=yes
-            mono: true
-
-          - name: Template/w Mono (target=template_release, arch=x86_64, module_mono_enabled=yes)
-            cache-name: android-template-x86_64-mono
-            target: template_release
-            tests: false
-            sconsflags: arch=x86_64  module_mono_enabled=yes
-            mono: true
-
-          - name: Template/w Mono (target=template_debug, arch=x86_64, module_mono_enabled=yes)
-            cache-name: android-debug-template-x86_64-mono
-            target: template_debug
-            tests: false
-            sconsflags: arch=x86_64  module_mono_enabled=yes
-            mono: true
-
-          - name: Template/w Mono (target=template_release, arch=x86_32, module_mono_enabled=yes)
-            cache-name: android-template-x86_32-mono
-            target: template_release
-            tests: false
-            sconsflags: arch=x86_32  module_mono_enabled=yes
-            mono: true
-
-          - name: Template/w Mono (target=template_debug, arch=x86_32, module_mono_enabled=yes)
-            cache-name: android-debug-template-x86_32-mono
-            target: template_debug
-            tests: false
-            sconsflags: arch=x86_32  module_mono_enabled=yes
+          - name: Templates/w Mono
+            cache-name: android-template-mono
             mono: true
 
     steps:
@@ -585,14 +465,61 @@ jobs:
           # Clean up the temporary directory
           rm -rf temp_extract monoglue.tar.gz
 
-
-      - name: Compilation
+      - name: Compilation (target=template_release,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
           platform: android
-          target: ${{ matrix.target }}
-          tests: ${{ matrix.tests }}
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
+
+      - name: Compilation (target=template_release,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
+
+      - name: Compilation (target=template_release,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
+
+      - name: Compilation (target=template_release,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
@@ -601,11 +528,21 @@ jobs:
         continue-on-error: true
 
       - name: Generate Godot templates
+        if: ${{ !matrix.mono }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotTemplates
           cd ../../..
           ls -l bin/
+
+      - name: Generate Godot templates
+        if: ${{ matrix.mono }}
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotMonoTemplates
+          cd ../../..
+          ls -l bin/
+
       - name: Create tar.gz Archive
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
@@ -617,7 +554,7 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
-          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/template
 
 
       - name: Upload artifact

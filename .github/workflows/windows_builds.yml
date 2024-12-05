@@ -97,7 +97,6 @@ jobs:
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
-      max-parallel: 1
       fail-fast: false
       matrix:
         include:
@@ -124,6 +123,18 @@ jobs:
             cache-name: windows-editor-mono-32bit
             target: editor
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            
+          - name: Editor (target=editor)
+            cache-name: windows-editor-arm64
+            target: editor
+            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+
+          - name: Editor w/ Mono (target=editor)
+            cache-name: windows-editor-mono-arm64
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
     steps:
@@ -433,6 +444,30 @@ jobs:
             cache-name: windows-debug-template-32bit
             target: template_debug
             sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+
+          - name: Template w/ Mono (target=template_release)
+            cache-name: windows-template-mono-arm64
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+
+          - name: Template (target=template_release)
+            cache-name: windows-template-arm64
+            target: template_release
+            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+
+          - name: Template w/ Mono (target=template_debug)
+            cache-name: windows-debug-template-mono-arm64
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+
+          - name: Template (target=template_debug)
+            cache-name: windows-debug-template-arm64
+            target: template_debug
+            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
     steps:
