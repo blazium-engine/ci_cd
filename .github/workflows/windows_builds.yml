@@ -464,6 +464,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            mingw: /root/llvm-mingw
 
           - name: Template (target=template_release)
             cache-name: windows-template-arm64
@@ -471,6 +472,7 @@ jobs:
             sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            mingw: /root/llvm-mingw
 
           - name: Template w/ Mono (target=template_debug)
             cache-name: windows-debug-template-mono-arm64
@@ -478,6 +480,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            mingw: /root/llvm-mingw
 
           - name: Template (target=template_debug)
             cache-name: windows-debug-template-arm64
@@ -485,6 +488,7 @@ jobs:
             sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            mingw: /root/llvm-mingw
 
     steps:
       - name: Checkout Repository
@@ -617,13 +621,13 @@ jobs:
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
+          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw && \
           export MINGW_PREFIX="/root/llvm-mingw"
 
 
       - name: Free disk space on runner
         run: |
-          echo $MINGW_PREFIX >> $GITHUB_STEP_SUMMARY
+          echo "Mingw_Prefix: $MINGW_PREFIX" >> $GITHUB_STEP_SUMMARY
           echo "Disk usage before:" && df -h
           sudo rm -rf /usr/local/lib/android
           echo "Disk usage after:" && df -h
@@ -687,6 +691,7 @@ jobs:
           platform: windows
           target: ${{ matrix.target }}
           compiler: gcc
+          mingw-prefix: ${{ matrix.mingw || '' }}
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save

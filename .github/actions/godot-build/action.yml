@@ -24,6 +24,8 @@ inputs:
   build-name:
     description: Build Name
     default: "blazium"
+  mingw-prefix:
+    description: Setting of MINGW_PREFIX before running
 runs:
   using: "composite"
   steps:
@@ -39,6 +41,10 @@ runs:
         if [ "${{ inputs.target }}" != "editor" ]; then
           # Ensure we don't include editor code in export template builds.
           rm -rf editor
+        fi
+
+        if [ -n "${{ inputs.mingw-prefix }}" ]; then
+          export MINGW_PREFIX="${{ inputs.mingw-prefix }}"
         fi
 
         if [ -n "${{ inputs.build-name }}" ]; then
