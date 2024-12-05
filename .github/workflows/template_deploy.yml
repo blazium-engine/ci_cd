@@ -302,7 +302,7 @@ jobs:
           fi
 
           # Write the new version to the file
-          echo "${{ inputs.new_version }}" > "$TARGET_FILE"
+          echo "${{ inputs.new_version }}.${{ github.event.client_payload.type || 'nightly' }}" > "$TARGET_FILE"
 
           # Log the action
           echo "New version written to $TARGET_FILE:" >> $GITHUB_STEP_SUMMARY
@@ -322,7 +322,7 @@ jobs:
           fi
 
           # Write the new version to the file
-          echo "${{ inputs.new_version }}.mono" > "$TARGET_FILE"
+          echo "${{ inputs.new_version }}.${{ github.event.client_payload.type || 'nightly' }}.mono" > "$TARGET_FILE"
 
           # Log the action
           echo "New version written to $TARGET_FILE:" >> $GITHUB_STEP_SUMMARY
@@ -349,7 +349,7 @@ jobs:
           fi
 
           # Create the zip file
-          zip -q -9 -r -D "$ZIP_FILE" "$TARGET_DIR"/*
+          (cd "$TARGET_DIR" && zip -q -9 -r -D "$ZIP_FILE" .)
 
           # Log the result
           if [ $? -eq 0 ]; then
@@ -386,7 +386,7 @@ jobs:
           fi
 
           # Create the zip file
-          zip -q -9 -r -D "$ZIP_FILE" "$TARGET_DIR"/*
+          (cd "$TARGET_DIR" && zip -q -9 -r -D "$ZIP_FILE" .)
 
           # Log the result
           if [ $? -eq 0 ]; then
@@ -429,6 +429,10 @@ jobs:
           BASE_256_CHECKSUM=$(sha256sum "$BASE_FILE" | awk '{print $1}')
           MONO_256_CHECKSUM=$(sha256sum "$MONO_FILE" | awk '{print $1}')
 
+          # Get File Sizes due to Content-Length issues on CDN
+          BASE_FILE_SIZE=$(stat -f%z "$BASE_FILE")
+          MONO_FILE_SIZE=$(stat -f%z "$MONO_FILE")
+
           # Generate timestamps
           BASE_TIMESTAMP=$(date -r "$BASE_FILE" +"%d %B %Y")
           MONO_TIMESTAMP=$(date -r "$MONO_FILE" +"%d %B %Y")
@@ -440,18 +444,21 @@ jobs:
             --arg base_512_checksum "$BASE_512_CHECKSUM" \
             --arg base_url "${URL_BASE}/$(basename "$BASE_FILE")" \
             --arg base_timestamp "$BASE_TIMESTAMP" \
+            --arg base_filesize "$BASE_FILE_SIZE" \
             --arg mono_filename "$(basename "$MONO_FILE")" \
             --arg mono_256_checksum "$MONO_256_CHECKSUM" \
             --arg mono_512_checksum "$MONO_512_CHECKSUM" \
             --arg mono_url "${URL_BASE}/$(basename "$MONO_FILE")" \
             --arg mono_timestamp "$MONO_TIMESTAMP" \
+            --arg mono_filesize "$MONO_FILE_SIZE" \
             '{
               base: {
                 name: "Official Blazium Templates Mirror",
                 filename: $base_filename,
+                filesize: $base_filesize,
                 checksum: {
-                  "512": $base_256_checksum,
-                  "256": $base_512_checksum
+                  "512": $base_512_checksum,
+                  "256": $base_256_checksum
                 },
                 url: $base_url,
                 timestamp: $base_timestamp
@@ -459,9 +466,10 @@ jobs:
               mono: {
                 name: "Official Blazium Mono Templates Mirror",
                 filename: $mono_filename,
+                filesize: $mono_filesize,
                 checksum: {
-                  "512": $mono_256_checksum,
-                  "256": $mono_512_checksum
+                  "512": $mono_512_checksum,
+                  "256": $base_256_checksum
                 },
                 url: $mono_url,
                 timestamp: $mono_timestamp
