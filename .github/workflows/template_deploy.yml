@@ -420,8 +420,8 @@ jobs:
           MONO_256_CHECKSUM=$(sha256sum "$MONO_FILE" | awk '{print $1}')
 
           # Get File Sizes due to Content-Length issues on CDN
-          BASE_FILE_SIZE=$(stat -f%z "$BASE_FILE")
-          MONO_FILE_SIZE=$(stat -f%z "$MONO_FILE")
+          BASE_FILE_SIZE=$(stat -c%s "$BASE_FILE")
+          MONO_FILE_SIZE=$(stat -c%s "$MONO_FILE")
 
           # Generate timestamps
           BASE_TIMESTAMP=$(date -r "$BASE_FILE" +"%d %B %Y")

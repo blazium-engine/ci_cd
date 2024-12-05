@@ -623,6 +623,7 @@ jobs:
 
       - name: Free disk space on runner
         run: |
+          echo $MINGW_PREFIX >> $GITHUB_STEP_SUMMARY
           echo "Disk usage before:" && df -h
           sudo rm -rf /usr/local/lib/android
           echo "Disk usage after:" && df -h
