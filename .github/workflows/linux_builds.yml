@@ -96,7 +96,7 @@ jobs:
     runs-on: "ubuntu-20.04"
     name: ${{ matrix.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && !matrix.skip }}
+    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
       fail-fast: false
       matrix:
@@ -159,6 +159,11 @@ jobs:
             skip: true
 
     steps:
+      - name: Skip Action?
+        if: matrix.skip
+        run: |
+          echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
+          exit 0
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -386,7 +391,7 @@ jobs:
     runs-on: "ubuntu-20.04"
     name: ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && !matrix.skip }}
+    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
       fail-fast: false
       matrix:
@@ -504,6 +509,11 @@ jobs:
             skip: true
 
     steps:
+      - name: Skip Action?
+        if: matrix.skip
+        run: |
+          echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
+          exit 0
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
