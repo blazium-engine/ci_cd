@@ -180,7 +180,14 @@ jobs:
   deploy:
     name: Deploy
     needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha]
-    if: always()
+    if: > 
+      (needs.monoglue-build.result == 'success' &&
+      needs.windows-build.result == 'success' &&
+      needs.macos-build.result == 'success' &&
+      needs.linux-build.result == 'success' &&
+      needs.android-build.result == 'success' &&
+      needs.ios-build.result == 'success') ||
+      github.event.client_payload.force == true
     uses: ./.github/workflows/deploy_all.yml
     secrets: inherit
     with:

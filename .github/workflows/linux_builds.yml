@@ -96,7 +96,7 @@ jobs:
     runs-on: "ubuntu-20.04"
     name: ${{ matrix.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && !matrix.skip }}
     strategy:
       fail-fast: false
       matrix:
@@ -132,6 +132,7 @@ jobs:
             sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            skip: true
 
           - name: Editor w/ Mono (target=editor)
             cache-name: linux-editor-mono-arm64
@@ -139,6 +140,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            skip: true
 
           - name: Editor (target=editor)
             cache-name: linux-editor-arm32
@@ -146,6 +148,7 @@ jobs:
             sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            skip: true
 
           - name: Editor w/ Mono (target=editor)
             cache-name: linux-editor-mono-arm32
@@ -153,6 +156,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            skip: true
 
     steps:
       - name: Checkout Repository
@@ -382,7 +386,7 @@ jobs:
     runs-on: "ubuntu-20.04"
     name: ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && !matrix.skip }}
     strategy:
       fail-fast: false
       matrix:
@@ -441,6 +445,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            skip: true
 
           - name: Template (target=template_release)
             cache-name: linux-template-arm64
@@ -448,6 +453,7 @@ jobs:
             sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            skip: true
 
           - name: Template w/ Mono (target=template_debug)
             cache-name: linux-debug-template-mono-arm64
@@ -455,6 +461,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            skip: true
 
           - name: Template (target=template_debug)
             cache-name: linux-debug-template-arm64
@@ -462,6 +469,7 @@ jobs:
             sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            skip: true
 
           - name: Template w/ Mono (target=template_release)
             cache-name: linux-template-mono-arm32
@@ -469,6 +477,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            skip: true
 
           - name: Template (target=template_release)
             cache-name: linux-template-arm32
@@ -476,6 +485,7 @@ jobs:
             sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            skip: true
 
           - name: Template w/ Mono (target=template_debug)
             cache-name: linux-debug-template-mono-arm32
@@ -483,6 +493,7 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             arm: true
+            skip: true
 
           - name: Template (target=template_debug)
             cache-name: linux-debug-template-arm32
@@ -490,6 +501,7 @@ jobs:
             sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             arm: true
+            skip: true
 
     steps:
       - name: Checkout Repository

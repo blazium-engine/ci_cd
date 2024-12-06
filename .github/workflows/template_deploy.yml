@@ -418,7 +418,8 @@ jobs:
           MONO_512_CHECKSUM=$(sha512sum "$MONO_FILE" | awk '{print $1}')
           BASE_256_CHECKSUM=$(sha256sum "$BASE_FILE" | awk '{print $1}')
           MONO_256_CHECKSUM=$(sha256sum "$MONO_FILE" | awk '{print $1}')
-
+          # If this is being pushed to a CDN please remember that Cacheing happens, and if the values do not
+          # show up correctly via the file/cdn its prolly because of Cacheing.....
           # Get File Sizes due to Content-Length issues on CDN
           BASE_FILE_SIZE=$(stat -c%s "$BASE_FILE")
           MONO_FILE_SIZE=$(stat -c%s "$MONO_FILE")
