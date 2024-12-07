@@ -1,0 +1,10 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  testing:
+    name: Testing
+    runs-on: "macos-latest"
+    steps:
+      - run: |
+          ls -la /Applications/ >> $GITHUB_STEP_SUMMARY
