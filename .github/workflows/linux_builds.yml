@@ -590,7 +590,7 @@ jobs:
             libxinerama-dev libxinerama-dev:i386 \
             libgl1-mesa-dev libgl1-mesa-dev:i386 
           sudo apt-get install -y \
-            libglu1-mesa-dev \
+            libglu1-mesa-dev libglu-dev \
             libasound2-dev \
             libpulse-dev \
             libudev-dev \
@@ -608,6 +608,14 @@ jobs:
             speech-dispatcher \
             fontconfig \
             libfontconfig-dev
+
+      # Install Linux dependencies for tests
+      - name: Linux dependencies for tests
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EB8B81E14DA65431D7504EA8F63F0F2B90935439
+          sudo add-apt-repository "deb https://ppa.launchpadcontent.net/kisak/turtle/ubuntu focal main"
+          sudo apt-get install -qq mesa-vulkan-drivers
 
       - name: Install llvm-mingw
         if: matrix.arm
