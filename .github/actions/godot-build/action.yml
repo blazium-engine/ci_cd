@@ -43,7 +43,7 @@ runs:
           rm -rf editor
         fi
 
-        if [ -n "${{ inputs.mingw-prefix }}" ]; then
+        if [ "${{ inputs.mingw-prefix }}" != "" ]; then
           export MINGW_PREFIX="${{ inputs.mingw-prefix }}"
         fi
 
@@ -59,5 +59,10 @@ runs:
           fi
         fi
 
-        scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }}
+        if [ "${{ inputs.mingw-prefix }}" != "" ]; then
+          scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }} use_mingw=yes
+        else
+          scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }}
+        fi
+
         ls -l bin/

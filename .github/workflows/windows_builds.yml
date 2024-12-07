@@ -352,10 +352,9 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: use_mingw=yes ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }}
           platform: windows
           target: ${{ matrix.target }}
-          compiler: gcc
 
       - name: Building C# Assemblies
         if: matrix.mono
@@ -706,7 +705,7 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: use_mingw=yes ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }}
           platform: windows
           target: ${{ matrix.target }}
           compiler: gcc
