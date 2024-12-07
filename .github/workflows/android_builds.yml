@@ -559,7 +559,7 @@ jobs:
         if: ${{ matrix.mono }}
         run: |
           cd platform/android/java
-          ./gradlew generateGodotMonoTemplates
+          ./gradlew generateGodotHorizonOSEditor
           cd ../../..
           ls -l bin/
 
