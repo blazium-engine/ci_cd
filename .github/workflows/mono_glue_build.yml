@@ -189,8 +189,8 @@ jobs:
           mkdir -p combined/GodotSharp
           mkdir -p combined/GodotSharpEditor
 
-          cp -r ./modules/mono/glue/GodotSharp/GodotSharp/Generate/. combined/GodotSharp/
-          cp -r ./modules/mono/glue/GodotSharp/GodotSharpEditor/Generated/. combined/GodotSharpEditor/
+          cp -r ./modules/mono/glue/GodotSharp/GodotSharp/Generate/* combined/GodotSharp/
+          cp -r ./modules/mono/glue/GodotSharp/GodotSharpEditor/Generated/* combined/GodotSharpEditor/
           cd combined
           tar -czvf ../${{ env.DEPLOY_TYPE }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz .
           cd ..
