@@ -311,7 +311,7 @@ jobs:
       - name: Generate Godot Meta editor
         run: |
           cd platform/android/java
-          ./gradlew generateGodotMetaEditor
+          ./gradlew generateGodotHorizonOSEditor
           cd ../../..
           ls -l bin/android_editor_builds/
 
@@ -559,7 +559,7 @@ jobs:
         if: ${{ matrix.mono }}
         run: |
           cd platform/android/java
-          ./gradlew generateGodotHorizonOSEditor
+          ./gradlew generateGodotMonoTemplates
           cd ../../..
           ls -l bin/
 
