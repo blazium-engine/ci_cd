@@ -29,7 +29,7 @@ jobs:
     steps:
       
       - uses: altinukshini/deployment-action@releases/v1
-        if: ${{ inputs.perform_deploy }}
+        if: ${{ inputs.do_deploy }}
         name: Start Processing SDKs
         id: deployment
         with:
@@ -78,7 +78,7 @@ jobs:
 
       - uses: BetaHuhn/do-spaces-action@v2
         name: Deploy to DigitalOcean
-        if: ${{ inputs.perform_deploy }}
+        if: ${{ inputs.do_deploy }}
         id: spaces
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
@@ -89,7 +89,7 @@ jobs:
           out_dir: pipeline
 
       - name: Update Deployment Status
-        if: ${{ success() && inputs.perform_deploy }}
+        if: ${{ success() && inputs.do_deploy }}
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -99,7 +99,7 @@ jobs:
           description: "Successfully Processed & Uploaded SDKs for XCode"
 
       - name: Update Deployment Status
-        if: ${{ failure() || cancelled() && inputs.perform_deploy }}
+        if: ${{ failure() || cancelled() && inputs.do_deploy }}
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
