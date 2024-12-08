@@ -24,7 +24,7 @@ env:
 
 jobs:
   gather:
-    name: Process XCode SDKs ${{ secrets.GITHUB_TOKEN }}
+    name: Process XCode SDKs
     runs-on: "macos-latest"
     steps:
       
@@ -36,7 +36,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           description: Processing SDKs & Uploading
           environment: ${{ inputs.build_type }}
-          
+
       - name: Set up Base Folder
         id: base_folder
         run: |
