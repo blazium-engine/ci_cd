@@ -1,3 +1,4 @@
+name: Testing
 on:
   workflow_dispatch:
 
@@ -8,3 +9,5 @@ jobs:
     steps:
       - run: |
           ls -la /Applications/ >> $GITHUB_STEP_SUMMARY
+          ls -la /Applications/Xcode_15.4.app/Contents/Developer/Platforms/ >> $GITHUB_STEP_SUMMARY
+          ls -la /Applications/Xcode_15.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
