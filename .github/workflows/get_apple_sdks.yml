@@ -1,4 +1,4 @@
-name: Testing
+name: Gather XCode SDKs needed for OSXCROSS development in Godot/Blazium
 on:
   workflow_dispatch:
     inputs:
@@ -12,18 +12,36 @@ on:
         required: true
         type: string
         default: "15.4"
+      build_type:
+        description: nightly, prerelease, release
+        required: true
+        type: string
+        default: "nightly"
 
 env:
   BASE_FOLDER: deps
   XCODE_VERSION: ${{ inputs.xcode_version }}
 
 jobs:
-  testing:
-    name: Testing
+  gather:
+    name: Process XCode SDKs ${{ secrets.GITHUB_TOKEN }}
     runs-on: "macos-latest"
     steps:
+      
+      - uses: altinukshini/deployment-action@releases/v1
+        if: ${{ inputs.perform_deploy }}
+        name: Start Processing SDKs
+        id: deployment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN}}
+          description: Processing SDKs & Uploading
+          environment: ${{ inputs.build_type }}
+          
       - name: Set up Base Folder
-        run: mkdir -p "$(pwd)/$BASE_FOLDER"
+        id: base_folder
+        run: |
+          mkdir -p "$(pwd)/$BASE_FOLDER"
+          echo "base_folder=$(pwd)/$BASE_FOLDER" >> $GITHUB_OUTPUT
 
       - name: List SDKs and Developer Platforms
         run: |
@@ -55,13 +73,13 @@ jobs:
           done
 
       - name: List Base Folder Contents and Add to Summary
-        id: base_folder
         run: |
           ls -la "$(pwd)/$BASE_FOLDER" >> $GITHUB_STEP_SUMMARY
-          echo "base_folder=$(pwd)/$BASE_FOLDER" >> $GITHUB_OUTPUT
 
       - uses: BetaHuhn/do-spaces-action@v2
+        name: Deploy to DigitalOcean
         if: ${{ inputs.perform_deploy }}
+        id: spaces
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -69,4 +87,23 @@ jobs:
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ steps.base_folder.outputs.base_folder }}
           out_dir: pipeline
+
+      - name: Update Deployment Status
+        if: ${{ success() && inputs.perform_deploy }}
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: ${{ job.status }}
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          environment_url: ${{ steps.spaces.outputs.output_url }}
+          description: "Successfully Processed & Uploaded SDKs for XCode"
+
+      - name: Update Deployment Status
+        if: ${{ failure() || cancelled() && inputs.perform_deploy }}
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: ${{ job.status }}
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          description: "Failed to Process or Upload SDKs for XCode"
 
