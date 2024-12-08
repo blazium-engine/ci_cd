@@ -1,5 +1,6 @@
 name: Update Dockerfiles
 on:
+  workflow_dispatch:
   repository_dispatch:
     types: [update_dockerfiles]
   push:
@@ -15,7 +16,7 @@ jobs:
       matrix:
         include: 
           - name: Ubuntu Base Dockerfile
-            file: ./ubuntu/base.Dockerfile
+            file: ./cicd/ubuntu/base.Dockerfile
             tag: base
           # - name: Web Dockerfile
           #   file: ./images/web.Dockerfile
