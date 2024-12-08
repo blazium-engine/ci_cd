@@ -1,4 +1,4 @@
-name: Gather XCode SDKs needed for OSXCROSS development in Godot/Blazium
+name: Gather XCode SDKs for OSXCROSS
 on:
   workflow_dispatch:
     inputs:
