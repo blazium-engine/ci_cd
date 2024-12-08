@@ -50,12 +50,9 @@ jobs:
     needs: base
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include: 
-          - name: Ubuntu Base Dockerfile
-            file: ./cicd/ubuntu/base.Dockerfile
-            tag: base
-            context: cicd/ubuntu/
           - name: Ubuntu Linux Dockerfile (Windows/Linux/Android)
             file: ./cicd/ubuntu/linux.Dockerfile
             tag: linux

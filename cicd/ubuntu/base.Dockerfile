@@ -167,7 +167,7 @@ FROM base AS godot_sdk
 
 WORKDIR /root
 
-ENV INSTALL_DIR /usr/local/bin
+ENV INSTALL_DIR=/usr/local/bin
 
 COPY cmds/install-llvm-mingw.sh $INSTALL_DIR/
 RUN chmod +x $INSTALL_DIR/install-llvm-mingw.sh
