@@ -42,6 +42,8 @@ RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal main" >> /etc/apt/
 
 RUN echo "deb http://security.ubuntu.com/ubuntu xenial-security main" >> /etc/apt/sources.list
 
+RUN echo "deb [trusted=yes] http://security.ubuntu.com/ubuntu bionic-security main" >> /etc/apt/sources.list
+
 RUN wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && \
     dpkg -i packages-microsoft-prod.deb && \
     rm packages-microsoft-prod.deb
@@ -57,13 +59,13 @@ RUN apt-get install -y \
     speech-dispatcher \
     fontconfig \
     dotnet-host dotnet-sdk-8.0 \
-    libfontconfig-dev
+    libfontconfig-dev --no-remove --no-upgrade
 
 RUN apt-get install -y  --no-install-recommends clang-format clang-tidy \
     clang-tools clang clangd libc++-dev libc++1 libc++abi-dev \
     libc++abi1 libclang-dev libclang1 libllvm-ocaml-dev \
     libomp-dev libomp5 lld llvm-dev llvm-runtime llvm python3-clang liblldb-20-dev lldb-20 \
-    python3-lldb-20
+    python3-lldb-20 --no-remove --no-upgrade
 
 RUN apt-get install -y \
     gcc-multilib g++-multilib \
@@ -75,7 +77,7 @@ RUN apt-get install -y \
     libxi-dev libxi-dev:i386 \
     libxrandr-dev libxrandr-dev:i386 \
     libgl1-mesa-dev libgl1-mesa-dev:i386 \
-    libatomic-ops-dev
+    libatomic-ops-dev --no-remove --no-upgrade
 
 RUN apt-get install -y \
     libglu1-mesa-dev \
@@ -87,13 +89,13 @@ RUN apt-get install -y \
     libstdc++6 \
     libatomic1 \
     libfreetype6-dev \
-    libssl-dev libssl1.0.0 \
     libgl-dev \
     liblzma-dev liblzma5 lzma-dev \
     libglu-dev \
     libdbus-1-dev \
     libxml2-dev  \
-    bzip2 \
+    libbz2-dev   --no-remove --no-upgrade
+RUN apt-get install -y \
     libmpc-dev libmpfr-dev libgmp-dev \
     libembree-dev \
     libenet-dev \
@@ -112,19 +114,37 @@ RUN apt-get install -y \
     libzstd-dev \
     libsquish-dev \
     libicu-dev \
-    libdispatch-dev \
+    libdispatch-dev    --no-remove --no-upgrade
+RUN apt-get install -y \
     libltdl-dev libtool libltdl7 uuid-dev \
-    gobjc gobjc++ \
-    #lib32ncurses-dev lib32ncurses6 lib32ncursesw6 lib32tinfo6 lib32c-dev lib32tinfo6 libc6-i386 \
-    lib64ncurses-dev lib64ncurses6 lib64ncursesw6:i386 lib64tinfo6:i386 lib64c-dev:i386 libc6-amd64:i386 lib64tinfo6:i386 \
-    libncurses-dev openjdk-17-jdk
+    gobjc gobjc++    --no-remove --no-upgrade
+RUN apt-get install -y   \
+    openjdk-17-jdk  --no-remove --no-upgrade
+RUN apt-get install -y \
+    libncurses-dev  --no-remove --no-upgrade
 
 
 RUN apt-get install -y \
     mingw-w64 \
     mingw-w64-common \
     mingw-w64-tools \
-    gcc-mingw-w64 g++-mingw-w64 directx-headers-dev 
+    gcc-mingw-w64 g++-mingw-w64 directx-headers-dev   --no-remove --no-upgrade
+
+RUN apt-cache policy libssl1.0-dev
+
+
+
+RUN apt-get install -y libcrypto++ libcrypto++-dev libssl1.0-dev libbz2-dev \
+    lib32z1 lib32c-dev libcrypt1:i386 libminizip-dev lib32z1-dev \
+    libc6-i386 --no-upgrade
+
+RUN apt-mark hold libssl1.0-dev
+
+
+RUN apt-get install -y  -f \
+    lib32ncurses-dev lib32ncurses6 lib32ncursesw6 lib32tinfo6 lib32c-dev lib32tinfo6 libc6-i386 --no-remove --no-upgrade
+
+    
 
 RUN update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix && \
     update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix && \
@@ -181,5 +201,8 @@ COPY cmds/download-apple-files.sh $INSTALL_DIR/
 RUN chmod +x $INSTALL_DIR/download-apple-files.sh
 RUN update-alternatives --install $INSTALL_DIR/download-apple-files download-apple-files $INSTALL_DIR/download-apple-files.sh 10
 
+COPY cmds/download-project-deps.sh $INSTALL_DIR/
+RUN chmod +x $INSTALL_DIR/download-project-deps.sh
+RUN update-alternatives --install $INSTALL_DIR/download-project-deps download-project-deps $INSTALL_DIR/download-project-deps.sh 10
 
 CMD ["/bin/bash"]

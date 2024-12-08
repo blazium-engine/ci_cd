@@ -38,6 +38,8 @@ fi
 log "### Navigating to source directory"
 cd "$INSTALL_DIR/xar" || { log "Failed to navigate to $INSTALL_DIR/xar"; exit 1; }
 
+#sed -i '332s/^.*$/AC_CHECK_LIB([crypto], [OPENSSL_init_crypto], , [have_libcrypto="0"])/' configure.ac;
+
 # Check if configure script exists or run autogen.sh
 if [[ ! -f ./configure ]]; then
     log "Running autogen.sh to generate configure script..."
@@ -50,17 +52,21 @@ fi
 log "### Configuring build"
 ./configure
 
-log "### Building all components"
+make
+
+make install
+
+# log "### Building all components"
 make src_all
 make lib_all
 
-log "### Installing components"
+# log "### Installing components"
 make src_install
 make lib_install
 
-# Optional cleanup
-log "### Cleaning up build artifacts"
-make clean
+# # Optional cleanup
+# log "### Cleaning up build artifacts"
+# make clean
 
 # Verify installation
 log "### Verifying Xar installation"

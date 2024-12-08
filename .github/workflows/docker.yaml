@@ -18,6 +18,15 @@ jobs:
           - name: Ubuntu Base Dockerfile
             file: ./cicd/ubuntu/base.Dockerfile
             tag: base
+            context: cicd/ubuntu/
+          - name: Ubuntu Linux Dockerfile (Windows/Linux/Android)
+            file: ./cicd/ubuntu/linux.Dockerfile
+            tag: linux
+            context: cicd/ubuntu/
+          - name: Ubuntu Apple Dockerfile (MacOS/iOS)
+            file: ./cicd/ubuntu/apple.Dockerfile
+            tag: apple
+            context: cicd/ubuntu/
           # - name: Web Dockerfile
           #   file: ./images/web.Dockerfile
           #   tag: web
@@ -49,6 +58,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           file: ${{ matrix.file }}
-          context: cicd/ubuntu/
+          context: ${{ matrix.context }}
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME_BASE }}-${{ matrix.tag }}:latest

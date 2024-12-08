@@ -45,7 +45,7 @@ log "Checking out commit $PBZX_COMMIT"
 git checkout "$PBZX_COMMIT"
 
 log "### Building pbzx"
-clang -O3 -llzma -lxar -I /usr/local/include pbzx.c -o pbzx
+clang -O3 -llzma -lxar -I /usr/local/include -I /usr/local/src/xar/xar/include pbzx.c -o pbzx
 
 # Step 2: Extract Xcode XIP and build SDK tarballs
 log "### Extracting Xcode XIP"
