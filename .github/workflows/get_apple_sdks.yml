@@ -27,15 +27,6 @@ jobs:
     name: Process XCode SDKs
     runs-on: "macos-latest"
     steps:
-      
-      - uses: altinukshini/deployment-action@releases/v1
-        if: ${{ inputs.do_deploy }}
-        name: Start Processing SDKs
-        id: deployment
-        with:
-          token: ${{ secrets.GITHUB_TOKEN}}
-          description: Processing SDKs & Uploading
-          environment: ${{ inputs.build_type }}
 
       - name: Set up Base Folder
         id: base_folder
@@ -87,23 +78,4 @@ jobs:
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ steps.base_folder.outputs.base_folder }}
           out_dir: pipeline
-
-      - name: Update Deployment Status
-        if: ${{ success() && inputs.do_deploy }}
-        uses: altinukshini/deployment-status@releases/v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          state: ${{ job.status }}
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          environment_url: ${{ steps.spaces.outputs.output_url }}
-          description: "Successfully Processed & Uploaded SDKs for XCode"
-
-      - name: Update Deployment Status
-        if: ${{ failure() || cancelled() && inputs.do_deploy }}
-        uses: altinukshini/deployment-status@releases/v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          state: ${{ job.status }}
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          description: "Failed to Process or Upload SDKs for XCode"
 
