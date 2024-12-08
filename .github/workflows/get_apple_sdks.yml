@@ -76,6 +76,6 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ steps.base_folder.outputs.base_folder }}
+          source: ${{ env.BASE_FOLDER }}
           out_dir: pipeline
 
