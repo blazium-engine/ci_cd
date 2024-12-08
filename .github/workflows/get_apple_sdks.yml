@@ -1,10 +1,21 @@
 name: Testing
 on:
   workflow_dispatch:
+    inputs:
+      do_deploy:
+        description: Does this get deployed to Digital Ocean?
+        required: true
+        type: boolean
+        default: false
+      xcode_version:
+        description: Version of Xcode to copy the SDKs from
+        required: true
+        type: string
+        default: "15.4"
 
 env:
   BASE_FOLDER: deps
-  XCODE_VERSION: "15.4"
+  XCODE_VERSION: ${{ inputs.xcode_version }}
 
 jobs:
   testing:
@@ -44,5 +55,18 @@ jobs:
           done
 
       - name: List Base Folder Contents and Add to Summary
+        id: base_folder
         run: |
           ls -la "$(pwd)/$BASE_FOLDER" >> $GITHUB_STEP_SUMMARY
+          echo "base_folder=$(pwd)/$BASE_FOLDER" >> $GITHUB_OUTPUT
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ inputs.perform_deploy }}
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ steps.base_folder.outputs.base_folder }}
+          out_dir: pipeline
+
