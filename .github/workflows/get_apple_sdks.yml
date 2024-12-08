@@ -2,15 +2,43 @@ name: Testing
 on:
   workflow_dispatch:
 
+env:
+  BASE_FOLDER: deps
+
 jobs:
   testing:
     name: Testing
     runs-on: "macos-latest"
     steps:
-      - run: |
+      - name: Set up Base Folder
+        run: mkdir -p "$(pwd)/$BASE_FOLDER"
+
+      - name: List SDKs and Developer Platforms
+        run: |
           ls -la /Applications/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_15.4.app/Contents/Developer/Platforms/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_15.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_15.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_15.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
 
+      - name: Create tar.xz archives for iPhoneOS directories
+        run: |
+          for j in $(ls | grep iPhoneOS | grep -v iPhoneOS.sdk); do
+            sudo tar -cJvhf "$(pwd)/$BASE_FOLDER/${j}.tar.xz" "$j"
+          done
+
+      - name: Create tar.xz archives for iPhoneSimulator directories
+        run: |
+          for j in $(ls | grep iPhoneSimulator | grep -v iPhoneSimulator.sdk); do
+            sudo tar -cJvhf "$(pwd)/$BASE_FOLDER/${j}.tar.xz" "$j"
+          done
+
+      - name: Create tar.xz archives for MacOSX directories
+        run: |
+          for j in $(ls | grep MacOSX | grep -v MacOSX.sdk); do
+            sudo tar -cJvhf "$(pwd)/$BASE_FOLDER/${j}.tar.xz" "$j"
+          done
+
+      - name: List Base Folder Contents and Add to Summary
+        run: |
+          ls -la "$(pwd)/$BASE_FOLDER" >> $GITHUB_STEP_SUMMARY
