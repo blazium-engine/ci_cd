@@ -184,8 +184,11 @@ jobs:
           mkdir -p modules/mono/glue/GodotSharp/GodotSharpEditor
 
           # Move the extracted folders to their target locations
-          cp -r temp_extract/GodotSharp/. modules/mono/glue/GodotSharp/GodotSharp/
-          cp -r temp_extract/GodotSharpEditor/. modules/mono/glue/GodotSharp/GodotSharpEditor/
+          rsync -av temp_extract/GodotSharp/ modules/mono/glue/GodotSharp/GodotSharp/
+          rsync -av temp_extract/GodotSharpEditor/ modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharp/
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharpEditor/
 
           # Clean up the temporary directory
           rm -rf temp_extract monoglue.tar.gz
@@ -442,8 +445,11 @@ jobs:
           mkdir -p modules/mono/glue/GodotSharp/GodotSharpEditor
 
           # Move the extracted folders to their target locations
-          mv temp_extract/GodotSharp/* modules/mono/glue/GodotSharp/GodotSharp/
-          mv temp_extract/GodotSharpEditor/* modules/mono/glue/GodotSharp/GodotSharpEditor/
+          rsync -av temp_extract/GodotSharp/ modules/mono/glue/GodotSharp/GodotSharp/
+          rsync -av temp_extract/GodotSharpEditor/ modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharp/
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharpEditor/
 
           # Clean up the temporary directory
           rm -rf temp_extract monoglue.tar.gz
