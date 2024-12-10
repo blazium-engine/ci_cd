@@ -239,11 +239,10 @@ jobs:
           cp "./ios/${{ github.event.client_payload.type || 'nightly' }}/templates/libgodot.ios.debug.a" ios_xcode/libgodot.ios.debug.xcframework/ios-arm64/libgodot.a
           cp -r deps/moltenvk/MoltenVK/MoltenVK.xcframework ios_xcode/
           rm -rf ios_xcode/MoltenVK.xcframework/{macos,tvos}*
-          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./ios_xcode .
           cd ios_xcode
-          zip -q -9 -r "${HERE}/ios.zip" *
+          zip -q -9 -r "${HERE}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.zip" *
           cd "${HERE}"
-          rm -rf ios_xcode
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.zip
 
       - uses: BetaHuhn/do-spaces-action@v2
         with:

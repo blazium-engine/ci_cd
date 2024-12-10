@@ -538,7 +538,8 @@ jobs:
           chmod +x Blazium${MONO_SUFFIX}.app/Contents/MacOS/blazium*
 
           # Package the application into a zip file
-          zip -q -9 -r "Blazium_macos.universal${MONO_SUFFIX}.zip" Blazium${MONO_SUFFIX}.app
+          zip -q -9 -r "${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.zip" Blazium${MONO_SUFFIX}.app
+          
       
       - name: Create tar.gz Archive
         run: |
@@ -549,7 +550,7 @@ jobs:
             MONO_SUFFIX="_mono"
           fi
 
-          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz ./Blazium_macos.universal${MONO_SUFFIX}.zip
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz ./${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.zip
 
       - uses: BetaHuhn/do-spaces-action@v2
         with:
