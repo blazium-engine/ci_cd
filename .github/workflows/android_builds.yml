@@ -96,8 +96,8 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    runs-on: pogr-sponsored
-    #runs-on: "ubuntu-20.04"
+    #runs-on: pogr-sponsored
+    runs-on: "ubuntu-20.04"
     name: Building Android ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -110,6 +110,15 @@ jobs:
             mono: false
 
     steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -396,6 +405,15 @@ jobs:
             mono: true
 
     steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
