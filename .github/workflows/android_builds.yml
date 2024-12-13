@@ -96,7 +96,8 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    runs-on: "ubuntu-20.04"
+    runs-on: pogr-sponsored
+    #runs-on: "ubuntu-20.04"
     name: Building Android ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
