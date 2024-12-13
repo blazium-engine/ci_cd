@@ -96,8 +96,8 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    #runs-on: pogr-sponsored
-    runs-on: "ubuntu-20.04"
+    runs-on: pogr-sponsored
+    #runs-on: "ubuntu-20.04"
     name: Building Android ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -166,7 +166,7 @@ jobs:
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: amyu/setup-android@v4
 
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
@@ -388,7 +388,8 @@ jobs:
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
 
   build-templates:
-    runs-on: "ubuntu-20.04"
+    runs-on: pogr-sponsored
+    #runs-on: "ubuntu-20.04"
     name: Building Android ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -474,6 +475,8 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Setup Android SDK
+        uses: amyu/setup-android@v4
 
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
