@@ -80,3 +80,4 @@ jobs:
     with:
       build_sha: ${{ inputs.build_sha }}
       runner_id: ${{ inputs.runner_id }}
+      version_string: ${{ inputs.new_version }}

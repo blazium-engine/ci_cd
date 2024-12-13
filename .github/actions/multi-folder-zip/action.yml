@@ -1,0 +1,100 @@
+name: Rename and Zip Folders Action
+description: Renames folders in input_dir, zips them, and places the zip files in output_dir.
+
+inputs:
+  input_dir:
+    description: The directory containing the original folders.
+    required: true
+  output_dir:
+    description: The directory where zip files will be placed.
+    required: true
+  names:
+    description: A YAML array of directory names to check within input_dir.
+    required: true
+  filename_new:
+    description: A YAML array of new folder names to rename the folders.
+    required: true
+
+outputs:
+  zipped_files:
+    description: A list of paths to the zipped files.
+    value: ${{ steps.process_folders.outputs.zipped_files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Input Parameters
+      id: validate_inputs
+      shell: bash
+      run: |
+        INPUT_DIR=${{ inputs.input_dir }}
+        OUTPUT_DIR=${{ inputs.output_dir }}
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
+
+        # Ensure output directory exists
+        if [ ! -d "$OUTPUT_DIR" ]; then
+          echo "Creating output directory: $OUTPUT_DIR"
+          mkdir -p "$OUTPUT_DIR"
+        fi
+
+        # Check array lengths match
+        LEN_NAMES=$(echo "$NAMES" | wc -l)
+        LEN_NEW=$(echo "$FILENAME_NEW" | wc -l)
+        if [ "$LEN_NAMES" -ne "$LEN_NEW" ]; then
+          echo "Error: The input arrays must have the same length." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        echo "Input parameters validated successfully." >> $GITHUB_STEP_SUMMARY
+
+    - name: Process Folders
+      id: process_folders
+      shell: bash
+      run: |
+        INPUT_DIR=${{ inputs.input_dir }}
+        OUTPUT_DIR=${{ inputs.output_dir }}
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
+
+        echo "## Listing Input Directory Contents" >> $GITHUB_STEP_SUMMARY
+        ls -la "$INPUT_DIR" >> $GITHUB_STEP_SUMMARY
+
+        # Initialize array to store zipped file paths
+        ZIPPED_FILES=()
+
+        # Process each entry in the arrays
+        paste <(echo "$NAMES") <(echo "$FILENAME_NEW") | while IFS=$'\t' read -r OLD_FOLDER_NAME NEW_FOLDER_NAME; do
+          OLD_FOLDER_PATH="$INPUT_DIR/$OLD_FOLDER_NAME"
+          NEW_FOLDER_PATH="$INPUT_DIR/$NEW_FOLDER_NAME"
+
+          if [ ! -d "$OLD_FOLDER_PATH" ]; then
+            echo "Error: Directory $OLD_FOLDER_PATH does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          # Rename the folder
+          mv "$OLD_FOLDER_PATH" "$NEW_FOLDER_PATH"
+          if [ $? -ne 0 ]; then
+            echo "Error: Failed to rename $OLD_FOLDER_PATH to $NEW_FOLDER_PATH" >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+          echo "Successfully renamed $OLD_FOLDER_PATH to $NEW_FOLDER_PATH" >> $GITHUB_STEP_SUMMARY
+
+          # Zip the folder
+          ZIP_FILE="$OUTPUT_DIR/${NEW_FOLDER_NAME}.zip"
+          zip -r "$ZIP_FILE" "$NEW_FOLDER_PATH" > /dev/null
+          if [ $? -eq 0 ]; then
+            echo "Successfully zipped $NEW_FOLDER_PATH to $ZIP_FILE" >> $GITHUB_STEP_SUMMARY
+            ZIPPED_FILES+=("$ZIP_FILE")
+          else
+            echo "Error: Failed to zip $NEW_FOLDER_PATH" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+
+        # Convert zipped files array to JSON and set output
+        echo "Zipped files: ${ZIPPED_FILES[@]}" >> $GITHUB_STEP_SUMMARY
+        echo "zipped_files=$(echo "${ZIPPED_FILES[@]}" | jq -c -R 'split(" ")')" >> $GITHUB_OUTPUT
+
+        echo "## Listing Output Directory Contents" >> $GITHUB_STEP_SUMMARY
+        ls -la "$OUTPUT_DIR" >> $GITHUB_STEP_SUMMARY

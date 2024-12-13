@@ -1,0 +1,90 @@
+name: Rename Files in Place Action
+description: Renames files in the same folder based on provided arrays.
+
+inputs:
+  input_dir:
+    description: The directory containing the original files.
+    required: true
+  names:
+    description: A YAML array of directory names to check within input_dir.
+    required: true
+  filename_old:
+    description: A YAML array of old filenames to rename.
+    required: true
+  filename_new:
+    description: A YAML array of new filenames for the renamed files.
+    required: true
+
+outputs:
+  renamed_files:
+    description: A list of paths to the renamed files.
+    value: ${{ steps.process_files.outputs.renamed_files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Input Parameters
+      id: validate_inputs
+      shell: bash
+      run: |
+        INPUT_DIR=${{ inputs.input_dir }}
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        FILENAME_OLD=$(echo "${{ inputs.filename_old }}" | awk NF)
+        FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
+
+        # Check array lengths match
+        LEN_NAMES=$(echo "$NAMES" | wc -l)
+        LEN_OLD=$(echo "$FILENAME_OLD" | wc -l)
+        LEN_NEW=$(echo "$FILENAME_NEW" | wc -l)
+        if [ "$LEN_NAMES" -ne "$LEN_OLD" ] || [ "$LEN_OLD" -ne "$LEN_NEW" ]; then
+          echo "Error: All input arrays must have the same length." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+
+        echo "Input parameters validated successfully." >> $GITHUB_STEP_SUMMARY
+
+    - name: Rename Files
+      id: process_files
+      shell: bash
+      run: |
+        INPUT_DIR=${{ inputs.input_dir }}
+        NAMES=$(echo "${{ inputs.names }}" | awk NF)
+        FILENAME_OLD=$(echo "${{ inputs.filename_old }}" | awk NF)
+        FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
+
+        echo "## Listing Input Directory Contents" >> $GITHUB_STEP_SUMMARY
+        ls -la "$INPUT_DIR" >> $GITHUB_STEP_SUMMARY
+
+        # Initialize array to store renamed file paths
+        RENAMED_FILES=()
+
+        # Process each entry in the arrays
+        paste <(echo "$NAMES") <(echo "$FILENAME_OLD") <(echo "$FILENAME_NEW") | while IFS=$'\t' read -r NAME OLD NEW; do
+          SOURCE_DIR="$INPUT_DIR/$NAME"
+          if [ ! -d "$SOURCE_DIR" ]; then
+            echo "Error: Directory $SOURCE_DIR does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          SOURCE_FILE="$SOURCE_DIR/$OLD"
+          DEST_FILE="$SOURCE_DIR/$NEW"
+
+          if [ ! -f "$SOURCE_FILE" ]; then
+            echo "Error: File $SOURCE_FILE does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
+          mv "$SOURCE_FILE" "$DEST_FILE"
+          echo "## Listing Directory Contents After Rename" >> $GITHUB_STEP_SUMMARY
+          ls -la "$SOURCE_DIR" >> $GITHUB_STEP_SUMMARY
+          if [ $? -eq 0 ]; then
+            echo "Successfully renamed $SOURCE_FILE to $DEST_FILE" >> $GITHUB_STEP_SUMMARY
+            RENAMED_FILES+=("$DEST_FILE")
+          else
+            echo "Error: Failed to rename $SOURCE_FILE to $DEST_FILE" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+
+        # Convert renamed files array to JSON and set output
+        echo "Renamed files: ${RENAMED_FILES[@]}" >> $GITHUB_STEP_SUMMARY
+        echo "renamed_files=$(echo "${RENAMED_FILES[@]}" | jq -c -R 'split(" ")')" >> $GITHUB_OUTPUT

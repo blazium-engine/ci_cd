@@ -1,0 +1,89 @@
+name: Upload Files to DigitalOcean Spaces
+description: Upload multiple files to DigitalOcean Spaces based on a YAML array input.
+
+inputs:
+  files:
+    description: A YAML array of files to upload with their paths relative to the repository root.
+    required: true
+  space_name:
+    description: The name of the DigitalOcean Space.
+    required: true
+  space_region:
+    description: The region of the DigitalOcean Space.
+    required: true
+  storage_type:
+    description: The storage class to use (e.g., STANDARD).
+    required: false
+    default: STANDARD
+  access_key:
+    description: The access key for DigitalOcean Spaces.
+    required: true
+  secret_key:
+    description: The secret key for DigitalOcean Spaces.
+    required: true
+  space_path:
+    description: The path within the Space where files will be uploaded.
+    required: true
+  acl:
+    description: The Access-Control List (ACL) for the files (e.g., public or private).
+    required: false
+    default: public
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Input Parameters
+      id: validate_inputs
+      shell: bash
+      run: |
+        FILES=$(echo "${{ inputs.files }}" | awk NF)
+        if [ -z "$FILES" ]; then
+          echo "Error: No files specified for upload."
+          exit 1
+        fi
+        echo "Files to upload: $FILES" >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload Files to DigitalOcean Spaces
+      shell: bash
+      env:
+        SPACE: ${{ inputs.space_name }}
+        REGION: ${{ inputs.space_region }}
+        STORAGETYPE: ${{ inputs.storage_type }}
+        KEY: ${{ inputs.access_key }}
+        SECRET: ${{ inputs.secret_key }}
+        SPACE_PATH: ${{ inputs.space_path }}
+        ACL: ${{ inputs.acl }}
+      run: |
+        # Function to upload a file to DigitalOcean Spaces
+        function putS3 {
+          local path=$1
+          local file=$2
+          local space_path=$3
+          local space="${SPACE}"
+          local date=$(date +"%a, %d %b %Y %T %z")
+          local acl="x-amz-acl:${ACL}"
+          local content_type=$(file --mime-type -b "$path/$file")
+          local storage_type="x-amz-storage-class:${STORAGETYPE}"
+          local string="PUT\n\n$content_type\n$date\n$acl\n$storage_type\n/$space$space_path$file"
+          local signature=$(echo -en "${string}" | openssl sha1 -hmac "${SECRET}" -binary | base64)
+          curl -s -X PUT -T "$path/$file" \
+            -H "Host: $space.${REGION}.digitaloceanspaces.com" \
+            -H "Date: $date" \
+            -H "Content-Type: $content_type" \
+            -H "$storage_type" \
+            -H "$acl" \
+            -H "Authorization: AWS ${KEY}:$signature" \
+            "https://$space.${REGION}.digitaloceanspaces.com$space_path$file"
+        }
+
+        # Process and upload each file
+        FILES=$(echo "${{ inputs.files }}" | tr -d '[]' | tr ',' '\n' | sed 's/"//g' | awk NF)
+        for file_path in $FILES; do
+          if [ -f "$file_path" ]; then
+            file_name=$(basename "$file_path")
+            echo "Uploading $file_name to ${SPACE}/${SPACE_PATH}" >> $GITHUB_STEP_SUMMARY
+            putS3 "$(dirname "$file_path")" "$file_name" "/${SPACE_PATH}/"
+          else
+            echo "Warning: File $file_path does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+          fi
+        done

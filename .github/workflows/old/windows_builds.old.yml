@@ -1,0 +1,235 @@
+name: 🏁 Windows Builds
+on:
+  workflow_call:
+    inputs:
+      build_sha:
+        description: "Build commit SHA to use for this job"
+        required: true
+        type: string
+      runner_id:
+        description: "Runner ID of the Parent Runner"
+        required: true
+        type: string
+      new_major:
+        description: "New Major # for Version"
+        required: true
+        type: string
+      new_minor:
+        description: "New Minor # for Version"
+        required: true
+        type: string
+      new_patch:
+        description: "New Patch # for Version"
+        required: true
+        type: string
+      new_version:
+        description: "New Version that'll be Deployed"
+        required: true
+        type: string
+
+# Global Settings
+# SCONS_CACHE for windows must be set in the build environment
+env:
+  # Used for the cache key. Add version suffix to force clean build.
+  GODOT_BASE_BRANCH: blazium-dev
+  SCONSFLAGS: verbose=yes warnings=no werror=no debug_symbols=no progress=no module_text_server_fb_enabled=yes d3d12=yes "mesa_libs=${{github.workspace}}/deps/mesa" "angle_libs=${{github.workspace}}/deps/angle"
+  SCONS_CACHE_MSVC_CONFIG: true
+  DEPLOY_TYPE: windows
+
+concurrency:
+  group: ci-${{github.actor}}-${{github.head_ref || github.run_number}}-${{github.ref}}-windows
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    # Windows 10 with latest image
+    runs-on: "windows-latest"
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Editor (target=editor, tests=yes)
+            cache-name: windows-editor
+            target: editor
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || 'dev_build=yes' }}
+            mono: false
+
+          - name: Editor w/ Mono (target=editor)
+            cache-name: windows-editor-mono
+            target: editor
+            sconsflags: module_mono_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || 'dev_build=yes' }}
+            mono: true
+
+          - name: Template (target=template_release)
+            cache-name: windows-template
+            target: template_release
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || 'dev_build=yes' }}
+            mono: false
+
+          - name: Template (target=template_debug)
+            cache-name: windows-template-debug
+            target: template_debug
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || 'dev_build=yes' }}
+            mono: false
+
+          - name: Template (target=template_release)
+            cache-name: windows-template
+            target: template_release
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || 'dev_build=yes' }}
+            mono: true
+
+          - name: Template (target=template_debug)
+            cache-name: windows-template-debug
+            target: template_debug
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || 'dev_build=yes' }}
+            mono: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/blazium
+          ref: ${{ inputs.build_sha }}
+          submodules: recursive
+          fetch-depth: 2
+
+      - name: Remove existing workflows folder
+        run: |
+          rm -rf .github/workflows
+
+      - name: Pull .github folder from ci_cd repository
+        run: |
+          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          cp -r ci_cd_repo/.github/* .github/
+          rm -rf ci_cd_repo
+
+      - name: Notify Cerebro of Build Starting
+        uses: ./.github/actions/cerebro-started
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
+          mono: ${{ matrix.mono }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          branch: ${{ github.event.client_payload.branch }}
+          build_os: windows
+          checksum: ${{ inputs.build_sha }}
+          production: ${{ github.event.client_payload.production }}
+
+
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+
+      - name: Download ANGLE Libraries
+        uses: ./.github/actions/download-angle-action
+        with:
+          angle_url_base: "https://github.com/godotengine/godot-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
+          angle_folder: "${{ github.workspace }}/deps/angle"
+
+      - name: Download Mesa Libraries
+        uses: ./.github/actions/download-mesa-action
+        with:
+          mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
+          mesa_folder: "${{ github.workspace }}/deps/mesa"
+
+      - name: Download pre-built ANGLE static libraries
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-x86_64-${{ matrix.compiler == 'gcc' && 'gcc' || 'msvc' }}-release.zip
+          target: angle/angle.zip
+
+      - name: Extract pre-built ANGLE static libraries
+        run: Expand-Archive -Force angle/angle.zip ${{github.workspace}}/
+
+      - name: Setup MSVC problem matcher
+        if: matrix.compiler == 'msvc'
+        uses: ammaraskar/msvc-problem-matcher@master
+
+      - name: Setup GCC problem matcher
+        if: matrix.compiler != 'msvc'
+        uses: ammaraskar/gcc-problem-matcher@master
+
+      - name: Compilation
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
+          platform: windows
+          target: ${{ matrix.target }}
+          tests: ${{ matrix.tests }}
+
+      - name: Download and extract mono-glue
+        if: matrix.mono
+        run: |
+          TYPE=${{ github.event.client_payload.type || 'nightly' }}
+          URL="https://cdn.blazium.app/${TYPE}/monoglue/monoglue-${TYPE}.tar.gz"
+          
+          # Download the file
+          curl -L $URL -o monoglue.tar.gz
+
+          # Create target directories if they don't exist
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharp
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharpEditor
+
+          # Extract the specific directories from the tar.gz file to their target locations
+          tar -xzvf monoglue.tar.gz --strip-components=1 -C modules/mono/glue/GodotSharp/GodotSharp GodotSharp
+          tar -xzvf monoglue.tar.gz --strip-components=1 -C modules/mono/glue/GodotSharp/GodotSharpEditor GodotSharpEditor
+
+      - name: Build GodotSharp
+        if: matrix.mono
+        run: python modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin
+
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Create tar.gz Archive
+        run: |
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+
+
+      - name: Upload artifact
+        uses: ./.github/actions/upload-artifact
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+
+      - name: Notify Cerebro of Build Success
+        if: success() # Only runs if the job was successful
+        uses: ./.github/actions/cerebro-completed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          version: ""
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Notify Cerebro of Build Failure
+        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        uses: ./.github/actions/cerebro-failed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}

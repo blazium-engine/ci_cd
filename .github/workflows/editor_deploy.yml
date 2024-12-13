@@ -10,22 +10,271 @@ on:
         description: "Runner ID of the Parent Runner"
         required: true
         type: string
+      new_version:
+        description: "New Version that'll be Deployed"
+        required: true
+        type: string
 # Global Settings
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
+  BASE_NAME: BlaziumEditor_v${{ inputs.new_version }}
 
 concurrency:
   group: ci-${{github.actor}}-${{ github.event.client_payload.type || 'nightly' }}-editor-deploy
   cancel-in-progress: true
 
 jobs:
-  build-monoglue:
+  deploy-editors:
     runs-on: "ubuntu-20.04"
-    name: Example for Editor Deploy
+    name: Editor Deploy
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           repository: blazium-engine/ci_cd
           submodules: recursive
+
+      - name: Download All Template Files
+        uses: ./.github/actions/cerebro-download-multi-build
+        with:
+          names: |
+            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            web-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          folder: ${{ github.workspace }}/downloads
+
+      - name: Uncompress Templates
+        uses: ./.github/actions/multi-uncompress-tar-gz
+        with:
+          names: |
+            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            web-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+          input_dir: ${{ github.workspace }}/downloads
+          output_dir: ${{ github.workspace }}/extracted
+
+      - name: Edit Editor Filenames in-Place
+        uses: ./.github/actions/multi-rename-inplace
+        with:
+          names: |
+            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            web-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+          filename_old: |
+            blazium.linuxbsd.editor.x86_64
+            blazium.linuxbsd.editor.x86_64.mono
+            blazium.linuxbsd.editor.x86_32.mono
+            blazium.linuxbsd.editor.x86_32
+            blazium.windows.editor.x86_64.mono.exe
+            blazium.windows.editor.x86_64.mono.console.exe
+            blazium.windows.editor.x86_64.exe
+            blazium.windows.editor.x86_64.console.exe
+            blazium.windows.editor.x86_32.mono.exe
+            blazium.windows.editor.x86_32.mono.console.exe
+            blazium.windows.editor.x86_32.exe
+            blazium.windows.editor.x86_32.console.exe
+            blazium.web.editor.wasm32.zip
+            Blazium_macos.universal.zip
+            Blazium_macos.universal.zip
+            android_editor-android-debug.aab
+            android_editor-android-debug.apk
+            android_editor-horizonos-debug.aab
+            android_editor-horizonos-debug.apk
+          filename_new: |
+            ${{ env.BASE_NAME }}_linux.x86_64
+            ${{ env.BASE_NAME }}_linux.mono.x86_64
+            ${{ env.BASE_NAME }}_linux.mono.x86_32
+            ${{ env.BASE_NAME }}_linux.x86_32
+            ${{ env.BASE_NAME }}_windows.mono.64bit.exe
+            ${{ env.BASE_NAME }}_windows_console.mono.64bit.exe
+            ${{ env.BASE_NAME }}_windows.64bit.exe
+            ${{ env.BASE_NAME }}_windows_console.64bit.exe
+            ${{ env.BASE_NAME }}_windows.mono.32bit.exe
+            ${{ env.BASE_NAME }}_windows_console.mono.32bit.exe
+            ${{ env.BASE_NAME }}_windows.32bit.exe
+            ${{ env.BASE_NAME }}_windows_console.32bit.exe
+            ${{ env.BASE_NAME }}_web.wasm32.zip
+            ${{ env.BASE_NAME }}_macos.universal.zip
+            ${{ env.BASE_NAME }}_macos.universal.mono.zip
+            ${{ env.BASE_NAME }}_android.aab
+            ${{ env.BASE_NAME }}_android.apk
+            ${{ env.BASE_NAME }}_android.meta.aab
+            ${{ env.BASE_NAME }}_android.meta.apk
+          input_dir: ${{ github.workspace }}/extracted
+
+      - name: Rename Folders then Zip/Move Folders
+        uses: ./.github/actions/multi-folder-zip
+        with:
+          names: |
+            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            web-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+          filename_new: |
+            ${{ env.BASE_NAME }}_linux.x86_64.zip
+            ${{ env.BASE_NAME }}_linux.mono.x86_64.zip
+            ${{ env.BASE_NAME }}_linux.mono.x86_32.zip
+            ${{ env.BASE_NAME }}_linux.x86_32.zip
+            ${{ env.BASE_NAME }}_windows.mono.64bit.zip
+            ${{ env.BASE_NAME }}_windows.64bit.zip
+            ${{ env.BASE_NAME }}_windows.mono.32bit.zip
+            ${{ env.BASE_NAME }}_windows.32bit.zip
+            ${{ env.BASE_NAME }}_web.zip
+            ${{ env.BASE_NAME }}_macos.zip
+            ${{ env.BASE_NAME }}_macos.mono.zip
+            ${{ env.BASE_NAME }}_android.zip
+            ${{ env.BASE_NAME }}_android.meta.zip
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/editors
+
+      - name: Generate Checksums for Editors
+        uses: ./.github/actions/checksum-txt-generator
+        with:
+          directory: ${{ github.workspace }}/editors
+
+      - name: Generate JSON with File Info and Checksums
+        shell: bash
+        env:
+          BASE_NAME: ${{ env.BASE_NAME }}
+          URL_BASE: ${{ secrets.CDN_URL }}/${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+        run: |
+          # Define the editors directory and output file
+          EDITORS_DIR="${GITHUB_WORKSPACE}/editors"
+          OUTPUT_FILE="${EDITORS_DIR}/editors.json"
+
+          # Ensure the directory exists
+          if [ ! -d "$EDITORS_DIR" ]; then
+            echo "Error: Directory $EDITORS_DIR does not exist."
+            exit 1
+          fi
+
+          # Initialize JSON array
+          JSON_ARRAY="[]"
+
+          # List of files to process
+          FILE_NAMES=(
+            "${BASE_NAME}_linux.x86_64.zip"
+            "${BASE_NAME}_linux.mono.x86_64.zip"
+            "${BASE_NAME}_linux.mono.x86_32.zip"
+            "${BASE_NAME}_linux.x86_32.zip"
+            "${BASE_NAME}_windows.mono.64bit.zip"
+            "${BASE_NAME}_windows.64bit.zip"
+            "${BASE_NAME}_windows.mono.32bit.zip"
+            "${BASE_NAME}_windows.32bit.zip"
+            "${BASE_NAME}_web.zip"
+            "${BASE_NAME}_macos.zip"
+            "${BASE_NAME}_macos.mono.zip"
+            "${BASE_NAME}_android.zip"
+            "${BASE_NAME}_android.meta.zip"
+          )
+
+          # Process each file
+          for FILE_NAME in "${FILE_NAMES[@]}"; do
+            FILE_PATH="${EDITORS_DIR}/${FILE_NAME}"
+
+            if [ -f "$FILE_PATH" ]; then
+              # Compute file details
+              FILE_SHA512=$(sha512sum "$FILE_PATH" | awk '{print $1}')
+              FILE_SHA256=$(sha256sum "$FILE_PATH" | awk '{print $1}')
+              FILE_SIZE=$(stat -c%s "$FILE_PATH")
+              FILE_TIMESTAMP=$(date -r "$FILE_PATH" +"%Y-%m-%dT%H:%M:%SZ")
+
+              # Append details to JSON array
+              JSON_ARRAY=$(echo "$JSON_ARRAY" | jq \
+                --arg name "$FILE_NAME" \
+                --arg sha512 "$FILE_SHA512" \
+                --arg sha256 "$FILE_SHA256" \
+                --arg size "$FILE_SIZE" \
+                --arg timestamp "$FILE_TIMESTAMP" \
+                '. + [{
+                  "filename": $name,
+                  "sha512": $sha512,
+                  "sha256": $sha256,
+                  "size": ($size | tonumber),
+                  "timestamp": $timestamp
+                }]'
+              )
+            else
+              echo "Warning: File $FILE_PATH does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          # Save JSON array to file
+          echo "$JSON_ARRAY" > "$OUTPUT_FILE"
+
+          # Log the generated JSON
+          echo "Generated JSON file: $OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
+          echo "Contents:" >> $GITHUB_STEP_SUMMARY
+          cat "$OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
+
+      - uses: ./.github/actions/multi-do-upload
+        with:
+          files: |
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_32.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_32.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.64bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.32bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.32bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_web.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.meta.zip
+            ${{ github.workspace }}/editors/editors.json
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_path: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
