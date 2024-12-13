@@ -128,6 +128,11 @@ jobs:
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
+      - name: install Deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install p7zip-full
+
       - name: Update new Version Information to version.py
         uses: ./.github/actions/set-repos-version
         with:
