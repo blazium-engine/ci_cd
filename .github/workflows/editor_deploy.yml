@@ -285,11 +285,11 @@ jobs:
                 --arg sha512 "$FILE_SHA512" \
                 --arg sha256 "$FILE_SHA256" \
                 --arg size "$FILE_SIZE" \
-                --arg base_url "${URL_BASE}" \
+                --arg url "${URL_BASE}/$FILE_NAME" \
                 --arg timestamp "$FILE_TIMESTAMP" \
                 '. + [{
                   "filename": $name,
-                  "download_url": $base_url/$name,
+                  "download_url": $url,
                   "sha512": $sha512,
                   "sha256": $sha256,
                   "size": ($size | tonumber),
