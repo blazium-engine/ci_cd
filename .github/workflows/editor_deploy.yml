@@ -211,19 +211,19 @@ jobs:
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
           filename_new: |
-            ${{ env.BASE_NAME }}_linux.x86_64.zip
-            ${{ env.BASE_NAME }}_linux.mono.x86_64.zip
-            ${{ env.BASE_NAME }}_linux.mono.x86_32.zip
-            ${{ env.BASE_NAME }}_linux.x86_32.zip
-            ${{ env.BASE_NAME }}_windows.mono.64bit.zip
-            ${{ env.BASE_NAME }}_windows.64bit.zip
-            ${{ env.BASE_NAME }}_windows.mono.32bit.zip
-            ${{ env.BASE_NAME }}_windows.32bit.zip
-            ${{ env.BASE_NAME }}_web.zip
-            ${{ env.BASE_NAME }}_macos.zip
-            ${{ env.BASE_NAME }}_macos.mono.zip
-            ${{ env.BASE_NAME }}_android.zip
-            ${{ env.BASE_NAME }}_android.meta.zip
+            ${{ env.BASE_NAME }}_linux.x86_64
+            ${{ env.BASE_NAME }}_linux.mono.x86_64
+            ${{ env.BASE_NAME }}_linux.mono.x86_32
+            ${{ env.BASE_NAME }}_linux.x86_32
+            ${{ env.BASE_NAME }}_windows.mono.64bit
+            ${{ env.BASE_NAME }}_windows.64bit
+            ${{ env.BASE_NAME }}_windows.mono.32bit
+            ${{ env.BASE_NAME }}_windows.32bit
+            ${{ env.BASE_NAME }}_web
+            ${{ env.BASE_NAME }}_macos
+            ${{ env.BASE_NAME }}_macos.mono
+            ${{ env.BASE_NAME }}_android
+            ${{ env.BASE_NAME }}_android.meta
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/editors
 
