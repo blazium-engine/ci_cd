@@ -264,9 +264,9 @@ jobs:
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
-          export MINGW_PREFIX="/root/llvm-mingw"
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64
+          echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
 
       - name: Free disk space on runner
         run: |
@@ -399,117 +399,117 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Template w/ Mono (target=template_release)
+          - name: Release Template w/ Mono (64bit)
             cache-name: linux-template-mono-64bit
             target: template_release
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_release)
+          - name: Release Template (64bit)
             cache-name: linux-template-64bit
             target: template_release
             sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Template w/ Mono (target=template_debug)
+          - name: Debug Template w/ Mono (64bit)
             cache-name: linux-debug-template-mono-64bit
             target: template_debug
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_debug)
+          - name: Debug Template (64bit)
             cache-name: linux-debug-template-64bit
             target: template_debug
             sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Template w/ Mono (target=template_release)
+          - name: Release Template w/ Mono (32bit)
             cache-name: linux-template-mono-32bit
             target: template_release
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_release)
+          - name: Release Template (32bit)
             cache-name: linux-template-32bit
             target: template_release
             sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Template w/ Mono (target=template_debug)
+          - name: Debug Template w/ Mono (32bit)
             cache-name: linux-debug-template-mono-32bit
             target: template_debug
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_debug)
+          - name: Debug Template (32bit)
             cache-name: linux-debug-template-32bit
             target: template_debug
             sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          # - name: Template w/ Mono (target=template_release)
-          #   cache-name: linux-template-mono-arm64
-          #   target: template_release
-          #   sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   skip: true
+          - name: Release Template w/ Mono (arm64)
+            cache-name: linux-template-mono-arm64
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
+            skip: true
 
-          # - name: Template (target=template_release)
-          #   cache-name: linux-template-arm64
-          #   target: template_release
-          #   sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   skip: true
+          - name: Release Template (arm64)
+            cache-name: linux-template-arm64
+            target: template_release
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+            skip: true
 
-          # - name: Template w/ Mono (target=template_debug)
-          #   cache-name: linux-debug-template-mono-arm64
-          #   target: template_debug
-          #   sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   skip: true
+          - name: Debug Template w/ Mono (arm64)
+            cache-name: linux-debug-template-mono-arm64
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
+            skip: true
 
-          # - name: Template (target=template_debug)
-          #   cache-name: linux-debug-template-arm64
-          #   target: template_debug
-          #   sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   skip: true
+          - name: Debug Template (arm64)
+            cache-name: linux-debug-template-arm64
+            target: template_debug
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+            skip: true
 
-          # - name: Template w/ Mono (target=template_release)
-          #   cache-name: linux-template-mono-arm32
-          #   target: template_release
-          #   sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   skip: true
+          - name: Release Template w/ Mono (arm32)
+            cache-name: linux-template-mono-arm32
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
+            skip: true
 
-          # - name: Template (target=template_release)
-          #   cache-name: linux-template-arm32
-          #   target: template_release
-          #   sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   skip: true
+          - name: Release Template (arm32)
+            cache-name: linux-template-arm32
+            target: template_release
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+            skip: true
 
-          # - name: Template w/ Mono (target=template_debug)
-          #   cache-name: linux-debug-template-mono-arm32
-          #   target: template_debug
-          #   sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   skip: true
+          - name: Debug Template w/ Mono (arm32)
+            cache-name: linux-debug-template-mono-arm32
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
+            skip: true
 
-          # - name: Template (target=template_debug)
-          #   cache-name: linux-debug-template-arm32
-          #   target: template_debug
-          #   sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   skip: true
+          - name: Debug Template (arm32)
+            cache-name: linux-debug-template-arm32
+            target: template_debug
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+            skip: true
 
     steps:
       - name: Skip Action?
@@ -625,9 +625,9 @@ jobs:
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
-          export MINGW_PREFIX="/root/llvm-mingw"
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64
+          echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
 
 
       - name: Free disk space on runner
