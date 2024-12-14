@@ -25,9 +25,9 @@ inputs:
     description: The path within the Space where files will be uploaded.
     required: true
   acl:
-    description: The Access-Control List (ACL) for the files (e.g., public or private).
+    description: The Access-Control List (ACL) for the files (e.g., public-read or private).
     required: false
-    default: public
+    default: public-read
 
 runs:
   using: "composite"
