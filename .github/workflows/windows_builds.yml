@@ -279,7 +279,7 @@ jobs:
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
+          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw && \
           export MINGW_PREFIX="/root/llvm-mingw"
 
       - name: Download and extract llvm-mingw SDK
