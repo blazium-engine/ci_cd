@@ -205,7 +205,10 @@ jobs:
     name: Deploy
     needs: [do-we-deploy-lol]
     #needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha]
-    if: needs.do-we-deploy-lol.outputs.proceed == 'true'
+    if: >
+      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
+      needs.do-we-deploy-lol.outputs.proceed == true
+
     uses: ./.github/workflows/deploy_all.yml
     secrets: inherit
     with:
