@@ -74,7 +74,9 @@ jobs:
   deploy-editors:
     runs-on: "ubuntu-20.04"
     needs: do-we-deploy-lol
-    if: needs.do-we-deploy-lol.outputs.proceed == 'true'
+    if: >
+      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
+      needs.do-we-deploy-lol.outputs.proceed == true
     name: Editor Deploy
     steps:
       - name: Checkout Repository
