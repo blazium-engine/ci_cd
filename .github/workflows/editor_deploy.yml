@@ -14,6 +14,30 @@ on:
         description: "New Version that'll be Deployed"
         required: true
         type: string
+      monoglue-build:
+        description: "Build Status for Monoglue"
+        required: true
+        type: string
+      windows-build:
+        description: "Build Status for Windows"
+        required: true
+        type: string
+      macos-build:
+        description: "Build Status for MacOS"
+        required: true
+        type: string
+      linux-build:
+        description: "Build Status for Linux"
+        required: true
+        type: string
+      android-build:
+        description: "Build Status for Android"
+        required: true
+        type: string
+      ios-build:
+        description: "Build Status for iOS"
+        required: true
+        type: string
 # Global Settings
 env:
   # Used for the cache key. Add version suffix to force clean build.
@@ -25,8 +49,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  do-we-deploy-lol:
+    name: Should we Deploy?
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.evaluate.outputs.proceed }}
+    steps:
+      - name: Are we Deploying?
+        id: evaluate
+        run: |
+          if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
+            echo "proceed=true"
+          elif [[ "${{ inputs.monoglue-build }}" == "success" && 
+                  "${{ inputs.windows-build }}" == "success" && 
+                  "${{ inputs.macos-build }}" == "success" && 
+                  "${{ inputs.linux-build }}" == "success" && 
+                  "${{ inputs.android-build }}" == "success" && 
+                  "${{ inputs.ios-build }}" == "success" ]]; then
+            echo "proceed=true"
+          else
+            echo "proceed=false"
+          fi
+          echo "proceed=${proceed}" >> $GITHUB_OUTPUT
   deploy-editors:
     runs-on: "ubuntu-20.04"
+    needs: do-we-deploy-lol
+    if: needs.do-we-deploy-lol.outputs.proceed == 'true'
     name: Editor Deploy
     steps:
       - name: Checkout Repository

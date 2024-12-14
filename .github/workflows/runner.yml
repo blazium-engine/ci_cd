@@ -176,39 +176,11 @@ jobs:
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
       new_version: ${{ needs.get-latest-sha.outputs.version_string }}
-
-  do-we-deploy-lol:
-    name: Should we Deploy?
-    runs-on: ubuntu-latest
-    if: ${{ always() }}
-    needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha]
-    outputs:
-      proceed: ${{ steps.evaluate.outputs.proceed }}
-    steps:
-      - name: Are we Deploying?
-        id: evaluate
-        run: |
-          if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
-            echo "proceed=true"
-          elif [[ "${{ needs.monoglue-build.result }}" == "success" && 
-                  "${{ needs.windows-build.result }}" == "success" && 
-                  "${{ needs.macos-build.result }}" == "success" && 
-                  "${{ needs.linux-build.result }}" == "success" && 
-                  "${{ needs.android-build.result }}" == "success" && 
-                  "${{ needs.ios-build.result }}" == "success" ]]; then
-            echo "proceed=true"
-          else
-            echo "proceed=false"
-          fi
-          echo "proceed=${proceed}" >> $GITHUB_OUTPUT
+      
   deploy:
     name: Deploy
-    needs: [do-we-deploy-lol]
-    #needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha]
-    if: >
-      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
-      needs.do-we-deploy-lol.outputs.proceed == true
-
+    needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha]
+    if: ${{ always() }}
     uses: ./.github/workflows/deploy_all.yml
     secrets: inherit
     with:
