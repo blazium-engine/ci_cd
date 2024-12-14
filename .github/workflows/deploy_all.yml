@@ -81,3 +81,9 @@ jobs:
       build_sha: ${{ inputs.build_sha }}
       runner_id: ${{ inputs.runner_id }}
       new_version: ${{ inputs.new_version }}
+      monoglue-build: ${{ inputs.monoglue-build }}
+      windows-build: ${{ inputs.windows-build }}
+      macos-build: ${{ inputs.macos-build }}
+      linux-build: ${{ inputs.linux-build }}
+      android-build: ${{ inputs.android-build }}
+      ios-build: ${{ inputs.ios-build }}
