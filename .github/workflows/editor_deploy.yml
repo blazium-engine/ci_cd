@@ -59,18 +59,19 @@ jobs:
         id: evaluate
         run: |
           if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
-            echo "proceed=true"
+            echo "proceed=true" >> $GITHUB_OUTPUT
           elif [[ "${{ inputs.monoglue-build }}" == "success" && 
                   "${{ inputs.windows-build }}" == "success" && 
                   "${{ inputs.macos-build }}" == "success" && 
                   "${{ inputs.linux-build }}" == "success" && 
                   "${{ inputs.android-build }}" == "success" && 
                   "${{ inputs.ios-build }}" == "success" ]]; then
-            echo "proceed=true"
+            echo "proceed=true" >> $GITHUB_OUTPUT
           else
-            echo "proceed=false"
+            echo "proceed=false" >> $GITHUB_OUTPUT
           fi
-          echo "proceed=${proceed}" >> $GITHUB_OUTPUT
+      - name: Debug Output
+        run: echo "Proceed- ${{ steps.evaluate.outputs.proceed }}"
   deploy-editors:
     runs-on: "ubuntu-20.04"
     needs: do-we-deploy-lol
