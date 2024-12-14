@@ -289,7 +289,7 @@ jobs:
                 --arg timestamp "$FILE_TIMESTAMP" \
                 '. + [{
                   "filename": $name,
-                  "download_url": $base_url/$name
+                  "download_url": $base_url/$name,
                   "sha512": $sha512,
                   "sha256": $sha256,
                   "size": ($size | tonumber),
