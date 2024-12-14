@@ -285,7 +285,7 @@ jobs:
                 --arg sha512 "$FILE_SHA512" \
                 --arg sha256 "$FILE_SHA256" \
                 --arg size "$FILE_SIZE" \
-                --arg base_url "${URL_BASE}"
+                --arg base_url "${URL_BASE}" \
                 --arg timestamp "$FILE_TIMESTAMP" \
                 '. + [{
                   "filename": $name,
