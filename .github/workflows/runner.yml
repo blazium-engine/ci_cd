@@ -181,6 +181,7 @@ jobs:
     name: Deploy
     needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha]
     if: >  
+      github.event.client_payload.force == 'true' ||
       github.event.client_payload.force == true ||
       (needs.monoglue-build.result == 'success' &&
       needs.windows-build.result == 'success' &&
