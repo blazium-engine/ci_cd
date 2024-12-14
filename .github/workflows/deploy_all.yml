@@ -73,7 +73,7 @@ jobs:
 
 
   editor-deploy:
-    name: 📊 Template Deploy
+    name: 📊 Editor Deploy
     if: contains(github.event.client_payload.deploy, 'editors')
     uses: ./.github/workflows/editor_deploy.yml
     secrets: inherit

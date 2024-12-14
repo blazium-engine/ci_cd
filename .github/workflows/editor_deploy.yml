@@ -257,6 +257,7 @@ jobs:
           cat "$OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
 
       - uses: ./.github/actions/multi-do-upload
+        name: Upload Editors
         with:
           files: |
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
