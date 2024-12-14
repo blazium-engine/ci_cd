@@ -45,7 +45,7 @@ jobs:
   editor-check:
     name: Checking Editor build.sha
     if: contains(github.event.client_payload.build_type, 'editors')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       compile: ${{ steps.compile.outputs.should_compile }}
     steps:
@@ -125,21 +125,21 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             
-          # - name: Editor (target=editor)
-          #   cache-name: windows-editor-arm64
-          #   target: editor
-          #   sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   skip: true
+          - name: Editor (target=editor)
+            cache-name: windows-editor-arm64
+            target: editor
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+            skip: true
 
-          # - name: Editor w/ Mono (target=editor)
-          #   cache-name: windows-editor-mono-arm64
-          #   target: editor
-          #   sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   skip: true
+          - name: Editor w/ Mono (target=editor)
+            cache-name: windows-editor-mono-arm64
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
+            skip: true
 
     steps:
       - name: Skip Action?
@@ -278,9 +278,9 @@ jobs:
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw
-          export MINGW_PREFIX="/root/llvm-mingw"
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64
+          echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
 
       - name: Download and extract llvm-mingw SDK
         env:
@@ -641,9 +641,9 @@ jobs:
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
-          sudo mv -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64 /root/llvm-mingw && \
-          export MINGW_PREFIX="/root/llvm-mingw"
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64
+          echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
 
 
       - name: Free disk space on runner
