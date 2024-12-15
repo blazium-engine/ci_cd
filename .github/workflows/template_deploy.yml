@@ -25,7 +25,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  do-we-deploy-lol:
+    name: Should we Deploy?
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.evaluate.outputs.proceed }}
+    steps:
+      - name: Print Inputs and Initial Debugging
+        run: |
+          echo "Client Payload Force: ${{ github.event.client_payload.force }}"
+          echo "Inputs:"
+          echo "  - monoglue-build: ${{ inputs.monoglue-build }}"
+          echo "  - windows-build: ${{ inputs.windows-build }}"
+          echo "  - macos-build: ${{ inputs.macos-build }}"
+          echo "  - linux-build: ${{ inputs.linux-build }}"
+          echo "  - android-build: ${{ inputs.android-build }}"
+          echo "  - ios-build: ${{ inputs.ios-build }}"
+          echo "--- End of Inputs ---"
+
+      - name: Are we Deploying?
+        id: evaluate
+        run: |
+          echo "Evaluating Deployment Condition..."  >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
+            echo "Force deploy is true. Proceeding."  >> $GITHUB_STEP_SUMMARY
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.monoglue-build }}" == "success" && 
+                  "${{ inputs.windows-build }}" == "success" && 
+                  "${{ inputs.macos-build }}" == "success" && 
+                  "${{ inputs.linux-build }}" == "success" && 
+                  "${{ inputs.android-build }}" == "success" && 
+                  "${{ inputs.ios-build }}" == "success" ]]; then
+            echo "All builds succeeded. Proceeding."  >> $GITHUB_STEP_SUMMARY
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Conditions not met. Skipping deploy."  >> $GITHUB_STEP_SUMMARY
+            echo "proceed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log Outputs to Step Summary
+        run: |
+          echo "### Debugging Outputs" >> $GITHUB_STEP_SUMMARY
+          echo "Client Payload Force: ${{ github.event.client_payload.force }}" >> $GITHUB_STEP_SUMMARY
+          echo "Inputs:" >> $GITHUB_STEP_SUMMARY
+          echo "  - monoglue-build: ${{ inputs.monoglue-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - windows-build: ${{ inputs.windows-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - macos-build: ${{ inputs.macos-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - linux-build: ${{ inputs.linux-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - android-build: ${{ inputs.android-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - ios-build: ${{ inputs.ios-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Final Debug Output
+        run: |
+          echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}"
   deploy-templates:
+    needs: do-we-deploy-lol
+    if: >
+      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
+      needs.do-we-deploy-lol.outputs.proceed == true
     runs-on: "ubuntu-20.04"
     name: Template Deploy
     steps:
