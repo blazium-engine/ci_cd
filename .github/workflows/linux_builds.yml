@@ -102,61 +102,57 @@ jobs:
       matrix:
         include:
 
-          - name: Editor (target=editor)
+          - name: Editor (64bit)
             cache-name: linux-editor-64bit
             target: editor
             sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Editor w/ Mono (target=editor)
+          - name: Editor w/ Mono (64bit)
             cache-name: linux-editor-mono-64bit
             target: editor
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             
-          - name: Editor (target=editor)
+          - name: Editor (32bit)
             cache-name: linux-editor-32bit
             target: editor
             sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Editor w/ Mono (target=editor)
+          - name: Editor w/ Mono (32bit)
             cache-name: linux-editor-mono-32bit
             target: editor
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          # - name: Editor (target=editor)
-          #   cache-name: linux-editor-arm64
-          #   target: editor
-          #   sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   skip: true
+          - name: Editor (arm64)
+            cache-name: linux-editor-arm64
+            target: editor
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
 
-          # - name: Editor w/ Mono (target=editor)
-          #   cache-name: linux-editor-mono-arm64
-          #   target: editor
-          #   sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   skip: true
+          - name: Editor w/ Mono (arm64)
+            cache-name: linux-editor-mono-arm64
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
 
-          # - name: Editor (target=editor)
-          #   cache-name: linux-editor-arm32
-          #   target: editor
-          #   sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   skip: true
+          - name: Editor (arm32)
+            cache-name: linux-editor-arm32
+            target: editor
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
 
-          # - name: Editor w/ Mono (target=editor)
-          #   cache-name: linux-editor-mono-arm32
-          #   target: editor
-          #   sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   skip: true
+          - name: Editor w/ Mono (arm32)
+            cache-name: linux-editor-mono-arm32
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
 
     steps:
       - name: Skip Action?

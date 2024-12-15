@@ -436,89 +436,110 @@ jobs:
       matrix:
         include:
 
-          - name: Template w/ Mono (target=template_release)
+          - name: Template w/ Mono (64bit)
             cache-name: windows-template-mono-64bit
             target: template_release
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_release)
+          - name: Template (64bit)
             cache-name: windows-template-64bit
             target: template_release
             sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Template w/ Mono (target=template_debug)
+          - name: Template w/ Mono (64bit)
             cache-name: windows-debug-template-mono-64bit
             target: template_debug
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_debug)
+          - name: Template (64bit)
             cache-name: windows-debug-template-64bit
             target: template_debug
             sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Template w/ Mono (target=template_release)
+          - name: Template w/ Mono (32bit)
             cache-name: windows-template-mono-32bit
             target: template_release
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_release)
+          - name: Template (32bit)
             cache-name: windows-template-32bit
             target: template_release
             sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          - name: Template w/ Mono (target=template_debug)
+          - name: Template w/ Mono (32bit)
             cache-name: windows-debug-template-mono-32bit
             target: template_debug
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
 
-          - name: Template (target=template_debug)
+          - name: Template (32bit)
             cache-name: windows-debug-template-32bit
             target: template_debug
             sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
 
-          # - name: Template w/ Mono (target=template_release)
-          #   cache-name: windows-template-mono-arm64
-          #   target: template_release
-          #   sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   mingw: /root/llvm-mingw
-          #   skip: true
+          - name: Template w/ Mono (arm64)
+            cache-name: windows-template-mono-arm64
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
 
-          # - name: Template (target=template_release)
-          #   cache-name: windows-template-arm64
-          #   target: template_release
-          #   sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   mingw: /root/llvm-mingw
-          #   skip: true
+          - name: Template (arm64)
+            cache-name: windows-template-arm64
+            target: template_release
+            sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
 
-          # - name: Template w/ Mono (target=template_debug)
-          #   cache-name: windows-debug-template-mono-arm64
-          #   target: template_debug
-          #   sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: true
-          #   arm: true
-          #   mingw: /root/llvm-mingw
-          #   skip: true
+          - name: Template w/ Mono (arm64)
+            cache-name: windows-debug-template-mono-arm64
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
 
-          # - name: Template (target=template_debug)
-          #   cache-name: windows-debug-template-arm64
-          #   target: template_debug
-          #   sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
-          #   mono: false
-          #   arm: true
-          #   mingw: /root/llvm-mingw
-          #   skip: true
+          - name: Template (arm64)
+            cache-name: windows-debug-template-arm64
+            target: template_debug
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+
+          - name: Template w/ Mono (arm32)
+            cache-name: windows-template-mono-arm32
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
+
+          - name: Template (arm32)
+            cache-name: windows-template-arm32
+            target: template_release
+            sconsflags: arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+
+          - name: Template w/ Mono (arm32)
+            cache-name: windows-debug-template-mono-arm32
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            arm: true
+
+          - name: Template (arm32)
+            cache-name: windows-debug-template-arm32
+            target: template_debug
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            arm: true
+
 
     steps:
       - name: Skip Action?
