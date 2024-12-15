@@ -67,6 +67,22 @@ jobs:
             macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}
             ios-template-${{ github.event.client_payload.type || 'nightly' }}
             ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -104,6 +120,22 @@ jobs:
             macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}
             ios-template-${{ github.event.client_payload.type || 'nightly' }}
             ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 

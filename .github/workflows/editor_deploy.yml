@@ -103,6 +103,14 @@ jobs:
             macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -125,6 +133,14 @@ jobs:
             macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
