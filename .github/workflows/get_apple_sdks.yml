@@ -32,6 +32,14 @@ jobs:
     name: Process XCode SDKs
     runs-on: "macos-latest"
     steps:
+      - name: Reinstall XCode
+        id: base_folder
+        run: |
+          sudo rm -rf $(xcode-select -print-path)
+          xcode-select --install
+          xcodebuild -license
+
+
 
       - name: Set up Base Folder
         id: base_folder
