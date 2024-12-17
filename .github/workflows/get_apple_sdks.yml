@@ -41,9 +41,12 @@ jobs:
 
       - name: List SDKs and Developer Platforms
         run: |
+          echo '### Base Directory'  >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/ >> $GITHUB_STEP_SUMMARY
+          echo '### Toolchains Directory'  >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/ >> $GITHUB_STEP_SUMMARY
+          echo '### Platforms Directory'  >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
