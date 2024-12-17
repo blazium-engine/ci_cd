@@ -33,7 +33,6 @@ jobs:
     runs-on: "macos-latest"
     steps:
       - name: Reinstall XCode
-        id: base_folder
         run: |
           sudo rm -rf $(xcode-select -print-path)
           xcode-select --install
