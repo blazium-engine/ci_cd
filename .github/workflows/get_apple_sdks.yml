@@ -43,6 +43,7 @@ jobs:
 
       - name:  XCode
         run: |
+          xcode-select --print-path  >> $GITHUB_STEP_SUMMARY
           sudo xcodebuild -license accept
 
       - name: List SDKs and Developer Platforms
