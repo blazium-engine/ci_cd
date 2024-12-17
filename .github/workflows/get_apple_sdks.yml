@@ -7,6 +7,11 @@ on:
         required: true
         type: boolean
         default: false
+      tar_files:
+        description: Do you want to Tar Files?
+        required: true
+        type: boolean
+        default: false
       xcode_version:
         description: Version of Xcode to copy the SDKs from
         required: true
@@ -45,6 +50,7 @@ jobs:
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
 
       - name: Create tar.xz archives for iPhoneOS directories
+        if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs"
           for sdk in $(ls "$SDK_PATH" | grep iPhoneOS | grep -v iPhoneOS.sdk); do
@@ -52,6 +58,7 @@ jobs:
           done
 
       - name: Create tar.xz archives for iPhoneSimulator directories
+        if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs"
           for sdk in $(ls "$SDK_PATH" | grep iPhoneSimulator | grep -v iPhoneSimulator.sdk); do
@@ -59,6 +66,7 @@ jobs:
           done
 
       - name: Create tar.xz archives for MacOSX directories
+        if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
           for sdk in $(ls "$SDK_PATH" | grep MacOSX | grep -v MacOSX.sdk); do
@@ -66,6 +74,7 @@ jobs:
           done
 
       - name: List Base Folder Contents and Add to Summary
+        if: ${{ inputs.tar_files }}
         run: |
           ls -la "$(pwd)/$BASE_FOLDER" >> $GITHUB_STEP_SUMMARY
 
