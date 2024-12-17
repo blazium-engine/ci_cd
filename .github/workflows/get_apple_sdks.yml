@@ -32,11 +32,6 @@ jobs:
     name: Process XCode SDKs
     runs-on: "macos-latest"
     steps:
-      - name: Reinstall XCode
-        run: |
-          sudo rm -rf $(xcode-select -print-path)
-          xcode-select --install
-          xcodebuild -license
 
 
 
@@ -46,6 +41,9 @@ jobs:
           mkdir -p "$(pwd)/$BASE_FOLDER"
           echo "base_folder=$(pwd)/$BASE_FOLDER" >> $GITHUB_OUTPUT
 
+      - name:  XCode
+        run: |
+          xcodebuild -license
       - name: List SDKs and Developer Platforms
         run: |
           echo '### Base Directory'  >> $GITHUB_STEP_SUMMARY
@@ -53,6 +51,7 @@ jobs:
           echo '### Toolchains Directory'  >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/ >> $GITHUB_STEP_SUMMARY
+          cat /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/ToolchainInfo.plist >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include >> $GITHUB_STEP_SUMMARY
           echo '### Platforms Directory'  >> $GITHUB_STEP_SUMMARY
@@ -60,6 +59,7 @@ jobs:
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
+
 
       - name: Create tar.xz archives for iPhoneOS directories
         if: ${{ inputs.tar_files }}
