@@ -43,27 +43,36 @@ jobs:
         run: |
           git clone https://github.com/tpoechtrager/osxcross.git ${{ github.workspace }}/osxcross
           cd ${{ github.workspace }}/osxcross
+          mkdir ${{ github.workspace }}/output
+          mkdir ${{ github.workspace }}/sdk
           echo "✅ osxcross repository cloned." >> $GITHUB_STEP_SUMMARY
 
       - name: Generate SDK Package
         run: |
-          XCODE_VERSION=15.4
+          cd ${{ github.workspace }}/output
           ${{ github.workspace }}/osxcross/tools/gen_sdk_package.sh
           ls -la
           cp ${{ github.workspace }}/MacOSX14.5.sdk.tar.xz ${{ github.workspace }}/osxcross/tarballs
           echo "✅ SDK package generated using gen_sdk_package.sh." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload osxcross SDK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-sdk-packaged
+          path: ${{ github.workspace }}/output
+
       - name: Build osxcross
         run: |
           cd ${{ github.workspace }}/osxcross
           export OSXCROSS_ENABLE_WERROR_IMPLICIT_FUNCTION_DECLARATION=1
           export OSXCROSS_GCC_NO_STATIC_RUNTIME=1
-          UNATTENDED=1 TARGET_DIR=/usr/local/osxcross ./build.sh
+          UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/sdk ./build.sh
           echo "✅ osxcross built successfully." >> $GITHUB_STEP_SUMMARY
 
       - name: Validate osxcross Installation
         run: |
-          /usr/local/osxcross/bin/x86_64-apple-darwin20.2-clang --version
-          /usr/local/osxcross/bin/x86_64-apple-darwin20.2-gcc --version
+          ${{ github.workspace }}/sdk/bin/x86_64-apple-darwin20.2-clang --version
+          ${{ github.workspace }}/sdk/bin/x86_64-apple-darwin20.2-gcc --version
           echo "✅ osxcross installation validated." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload osxcross SDK as Artifact
