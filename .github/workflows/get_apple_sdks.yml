@@ -28,8 +28,88 @@ env:
   XCODE_VERSION: ${{ inputs.xcode_version }}
 
 jobs:
+  build-osxcross-sdk:
+    name: Build osxcross SDK for Linux
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Required Dependencies
+        run: |
+          brew update
+          brew install cmake wget coreutils llvm
+          echo "✅ Dependencies installed successfully." >> $GITHUB_STEP_SUMMARY
+
+      - name: Clone and Setup osxcross
+        run: |
+          git clone https://github.com/tpoechtrager/osxcross.git ~/osxcross
+          cd ~/osxcross
+          echo "✅ osxcross repository cloned." >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate SDK Package
+        run: |
+          cd ~/osxcross
+          XCODE_VERSION=15.4
+          ./tools/gen_sdk_package.sh "/Applications/Xcode_$XCODE_VERSION.app"
+          echo "✅ SDK package generated using gen_sdk_package.sh." >> $GITHUB_STEP_SUMMARY
+
+      - name: Build Clang
+        run: |
+          cd ~/osxcross
+          ./build_clang.sh
+          echo "✅ Clang built successfully." >> $GITHUB_STEP_SUMMARY
+
+      - name: Build GCC
+        run: |
+          cd ~/osxcross
+          GCC_VERSION=12.2.0 ENABLE_FORTRAN=1 ./build_gcc.sh
+          echo "✅ GCC built successfully (version 12.2.0 with Fortran enabled)." >> $GITHUB_STEP_SUMMARY
+
+      - name: Build osxcross
+        run: |
+          cd ~/osxcross
+          export OSXCROSS_ENABLE_WERROR_IMPLICIT_FUNCTION_DECLARATION=1
+          export OSXCROSS_GCC_NO_STATIC_RUNTIME=1
+          UNATTENDED=1 TARGET_DIR=/usr/local/osxcross ./build.sh
+          echo "✅ osxcross built successfully." >> $GITHUB_STEP_SUMMARY
+
+      - name: Validate osxcross Installation
+        run: |
+          /usr/local/osxcross/bin/x86_64-apple-darwin20.2-clang --version
+          /usr/local/osxcross/bin/x86_64-apple-darwin20.2-gcc --version
+          echo "✅ osxcross installation validated." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload osxcross SDK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osxcross-sdk-linux
+          path: /usr/local/osxcross/
+        
+      - name: Summary of Process
+        run: |
+          echo "### osxcross SDK Build Process Summary" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Dependencies**: Installed cmake, wget, coreutils, and llvm." >> $GITHUB_STEP_SUMMARY
+          echo "2. **SDK Package Generation**: Used gen_sdk_package.sh with Xcode 15.4." >> $GITHUB_STEP_SUMMARY
+          echo "3. **Clang Setup**: Built Clang for osxcross." >> $GITHUB_STEP_SUMMARY
+          echo "4. **GCC Setup**: Built GCC version 12.2.0 with Fortran support." >> $GITHUB_STEP_SUMMARY
+          echo "5. **osxcross Setup**: Built osxcross using the generated SDK package and installed to /usr/local/osxcross." >> $GITHUB_STEP_SUMMARY
+          echo "6. **Environment**: Enabled -Werror=implicit-function-declaration and disabled static linking for libgcc/libstdc++." >> $GITHUB_STEP_SUMMARY
+          echo "7. **Validation**: Verified both Clang and GCC cross-compilers." >> $GITHUB_STEP_SUMMARY
+          echo "8. **Artifact**: osxcross SDK uploaded for Linux." >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf ~/osxcross
+          echo "✅ Cleanup completed." >> $GITHUB_STEP_SUMMARY
+
+
+
   gather:
     name: Process XCode SDKs
+    if: false
     runs-on: "macos-latest"
     steps:
 

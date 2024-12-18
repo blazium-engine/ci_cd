@@ -235,31 +235,55 @@ jobs:
         with:
           names: |
             windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
             windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
             windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
             windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
             windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
             blazium.windows.template_release.x86_64.exe
-            blazium.windows.template_debug.x86_64.exe
-            blazium.windows.template_release.x86_32.exe
-            blazium.windows.template_debug.x86_32.exe
             blazium.windows.template_release.x86_64.console.exe
+            blazium.windows.template_debug.x86_64.exe
             blazium.windows.template_debug.x86_64.console.exe
+            blazium.windows.template_release.x86_32.exe
             blazium.windows.template_release.x86_32.console.exe
+            blazium.windows.template_debug.x86_32.exe
             blazium.windows.template_debug.x86_32.console.exe
+            blazium.windows.template_release.arm64.exe
+            blazium.windows.template_release.arm64.console.exe
+            blazium.windows.template_debug.arm64.exe
+            blazium.windows.template_debug.arm64.console.exe
+            blazium.windows.template_release.arm32.exe
+            blazium.windows.template_release.arm32.console.exe
+            blazium.windows.template_debug.arm32.exe
+            blazium.windows.template_debug.arm32.console.exe
           filename_new: |
             windows_release_x86_64.exe
-            windows_debug_x86_64.exe
-            windows_release_x86_32.exe
-            windows_debug_x86_32.exe
             windows_release_x86_64_console.exe
+            windows_debug_x86_64.exe
             windows_debug_x86_64_console.exe
+            windows_release_x86_32.exe
             windows_release_x86_32_console.exe
+            windows_debug_x86_32.exe
             windows_debug_x86_32_console.exe
+            windows_release_arm64.exe
+            windows_release_arm64_console.exe
+            windows_debug_arm64.exe
+            windows_debug_arm64_console.exe
+            windows_release_arm32.exe
+            windows_release_arm32_console.exe
+            windows_debug_arm32.exe
+            windows_debug_arm32_console.exe
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates
 
@@ -275,6 +299,14 @@ jobs:
             windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
             windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
             windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
             blazium.windows.template_release.x86_64.mono.exe
             blazium.windows.template_debug.x86_64.mono.exe
@@ -284,6 +316,14 @@ jobs:
             blazium.windows.template_debug.x86_64.mono.console.exe
             blazium.windows.template_release.x86_32.mono.console.exe
             blazium.windows.template_debug.x86_32.mono.console.exe
+            blazium.windows.template_release.arm64.mono.exe
+            blazium.windows.template_release.arm64.mono.console.exe
+            blazium.windows.template_debug.arm64.mono.exe
+            blazium.windows.template_debug.arm64.mono.console.exe
+            blazium.windows.template_release.arm32.mono.exe
+            blazium.windows.template_release.arm32.mono.console.exe
+            blazium.windows.template_debug.arm32.mono.exe
+            blazium.windows.template_debug.arm32.mono.console.exe
           filename_new: |
             windows_release_x86_64.exe
             windows_debug_x86_64.exe
@@ -293,6 +333,14 @@ jobs:
             windows_debug_x86_64_console.exe
             windows_release_x86_32_console.exe
             windows_debug_x86_32_console.exe
+            windows_release_arm64.exe
+            windows_release_arm64_console.exe
+            windows_debug_arm64.exe
+            windows_debug_arm64_console.exe
+            windows_release_arm32.exe
+            windows_release_arm32_console.exe
+            windows_debug_arm32.exe
+            windows_debug_arm32_console.exe
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates/mono
 
@@ -304,16 +352,30 @@ jobs:
             linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
+
+            
+            linux-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
             blazium.linuxbsd.template_release.x86_64
             blazium.linuxbsd.template_debug.x86_64
             blazium.linuxbsd.template_release.x86_32
             blazium.linuxbsd.template_debug.x86_32
+            blazium.linuxbsd.template_release.arm64
+            blazium.linuxbsd.template_debug.arm64
+            blazium.linuxbsd.template_release.arm32
+            blazium.linuxbsd.template_debug.arm32
           filename_new: |
             linux_release.x86_64
             linux_debug.x86_64
             linux_release.x86_32
             linux_debug.x86_32
+            linux_release.arm64
+            linux_debug.arm64
+            linux_release.arm32
+            linux_debug.arm32
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates
 
@@ -325,16 +387,28 @@ jobs:
             linux-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
             linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
             blazium.linuxbsd.template_release.x86_64.mono
             blazium.linuxbsd.template_debug.x86_64.mono
             blazium.linuxbsd.template_release.x86_32.mono
             blazium.linuxbsd.template_debug.x86_32.mono
+            blazium.linuxbsd.template_release.arm64.mono
+            blazium.linuxbsd.template_debug.arm64.mono
+            blazium.linuxbsd.template_release.arm32.mono
+            blazium.linuxbsd.template_debug.arm32.mono
           filename_new: |
             linux_release.x86_64
             linux_debug.x86_64
             linux_release.x86_32
             linux_debug.x86_32
+            linux_release.arm64
+            linux_debug.arm64
+            linux_release.arm32
+            linux_debug.arm32
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates/mono
 
