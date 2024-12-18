@@ -52,7 +52,7 @@ jobs:
           cd ${{ github.workspace }}/output
           ${{ github.workspace }}/osxcross/tools/gen_sdk_package.sh
           ls -la
-          cp ${{ github.workspace }}/MacOSX14.5.sdk.tar.xz ${{ github.workspace }}/osxcross/tarballs
+          cp ${{ github.workspace }}/output/MacOSX14.5.sdk.tar.xz ${{ github.workspace }}/osxcross/tarballs
           echo "✅ SDK package generated using gen_sdk_package.sh." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload osxcross SDK as Artifact
