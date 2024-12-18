@@ -47,9 +47,9 @@ jobs:
 
       - name: Generate SDK Package
         run: |
-          cd ~/osxcross
           XCODE_VERSION=15.4
-          ./tools/gen_sdk_package.sh "/Applications/Xcode_$XCODE_VERSION.app"
+          ./osxcross/tools/gen_sdk_package.sh "/Applications/Xcode_$XCODE_VERSION.app"
+          ls -la
           echo "✅ SDK package generated using gen_sdk_package.sh." >> $GITHUB_STEP_SUMMARY
       - name: Build osxcross
         run: |
