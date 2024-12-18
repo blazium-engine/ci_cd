@@ -135,11 +135,8 @@ jobs:
           ls -la /Applications/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/ >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/ >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/usr/ >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/usr/include/ >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/usr/lib/ >> $GITHUB_STEP_SUMMARY
+          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr >> $GITHUB_STEP_SUMMARY
+
           echo '### Toolchains Directory'  >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr >> $GITHUB_STEP_SUMMARY
