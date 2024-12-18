@@ -154,7 +154,7 @@ jobs:
 
           LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
           LIBCXXDIR2="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
-          LIBCXXDIR3="/Applications/Xcode_$XCODE_VERSION.app/usr/include/c++/v1"
+          LIBCXXDIR3="usr/include/c++/v1"
           MANDIR="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
 
           echo "Looking for libc++ headers for iPhoneOS SDK..." >> $GITHUB_STEP_SUMMARY
