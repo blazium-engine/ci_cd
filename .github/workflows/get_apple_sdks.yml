@@ -163,9 +163,9 @@ jobs:
               # Resolve symbolic link
               local resolved_src="$(rreadlink "$src")"
               echo "Resolved symlink: $src -> $resolved_src" >> $GITHUB_STEP_SUMMARY
-              cp -R "$resolved_src" "$dest"
+              cp -R "$resolved_src/"* "$dest"
             else
-              cp -R "$src" "$dest"
+              cp -R "$src/"* "$dest"
             fi
           }
 
@@ -240,9 +240,9 @@ jobs:
               # Resolve symbolic link
               local resolved_src="$(rreadlink "$src")"
               echo "Resolved symlink: $src -> $resolved_src" >> $GITHUB_STEP_SUMMARY
-              cp -R "$resolved_src/*" "$dest"
+              cp -R "$resolved_src/"* "$dest"
             else
-              cp -R "$src/*" "$dest"
+              cp -R "$src/"* "$dest"
             fi
           }
 
@@ -318,9 +318,9 @@ jobs:
               # Resolve symbolic link
               local resolved_src="$(rreadlink "$src")"
               echo "Resolved symlink: $src -> $resolved_src" >> $GITHUB_STEP_SUMMARY
-              cp -R "$resolved_src" "$dest"
+              cp -R "$resolved_src/"* "$dest"
             else
-              cp -R "$src" "$dest"
+              cp -R "$src/"* "$dest"
             fi
           }
 
