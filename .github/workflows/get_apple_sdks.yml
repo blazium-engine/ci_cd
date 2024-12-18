@@ -7,6 +7,11 @@ on:
         required: true
         type: boolean
         default: false
+      artifact:
+        description: Create a artifact?
+        required: true
+        type: boolean
+        default: false
       tar_files:
         description: Do you want to Tar Files?
         required: true
@@ -112,8 +117,6 @@ jobs:
     name: Process XCode SDKs
     runs-on: "macos-latest"
     steps:
-
-
 
       - name: Set up Base Folder
         id: base_folder
@@ -273,7 +276,8 @@ jobs:
         run: |
           ls -la "$(pwd)/$BASE_FOLDER" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload osxcross SDK as Artifact
+      - name: Upload SDKs as Artifact
+        if: ${{ inputs.artifact }}
         uses: actions/upload-artifact@v4
         with:
           name: macos-sdks-packaged
