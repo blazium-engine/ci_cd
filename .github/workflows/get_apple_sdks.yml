@@ -249,6 +249,12 @@ jobs:
         run: |
           ls -la "$(pwd)/$BASE_FOLDER" >> $GITHUB_STEP_SUMMARY
 
+      - name: Upload osxcross SDK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-sdks-packaged
+          path: ${{ env.BASE_FOLDER }}
+
       - uses: BetaHuhn/do-spaces-action@v2
         name: Deploy to DigitalOcean
         if: ${{ inputs.do_deploy }}
