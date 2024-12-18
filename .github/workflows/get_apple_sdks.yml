@@ -155,6 +155,20 @@ jobs:
           echo "Working in directory: $(pwd)" >> $GITHUB_STEP_SUMMARY
           echo "SDK Path: $SDK_PATH" >> $GITHUB_STEP_SUMMARY
 
+          function copy_linked_dirs()
+          {
+            local src="$1"
+            local dest="$2"
+            if [ -h "$src" ]; then
+              # Resolve symbolic link
+              local resolved_src="$(rreadlink "$src")"
+              echo "Resolved symlink: $src -> $resolved_src" >> $GITHUB_STEP_SUMMARY
+              cp -R "$resolved_src" "$dest"
+            else
+              cp -R "$src" "$dest"
+            fi
+          }
+
           function rreadlink()
           {
             if [ ! -h "$1" ]; then
@@ -179,7 +193,7 @@ jobs:
             echo "Temporary directory created: $TMP_DIR" >> $GITHUB_STEP_SUMMARY
 
             mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
-            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || echo "Error copying $sdk" >> $GITHUB_STEP_SUMMARY
+            copy_linked_dirs "$(rreadlink "$SDK_PATH/$sdk")" "$TMP_DIR/$sdk"
 
             # Copy libc++ headers
             if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
@@ -200,7 +214,7 @@ jobs:
             # Copy manual directory if it exists
             if [ -d $MANDIR ]; then
               mkdir -p "$TMP_DIR/$sdk/usr/share/man"
-              cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
+              copy_linked_dirs $MANDIR "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
 
@@ -217,6 +231,21 @@ jobs:
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs"
           echo "Working in directory: $(pwd)" >> $GITHUB_STEP_SUMMARY
           echo "SDK Path: $SDK_PATH" >> $GITHUB_STEP_SUMMARY
+
+          function copy_linked_dirs()
+          {
+            local src="$1"
+            local dest="$2"
+            if [ -h "$src" ]; then
+              # Resolve symbolic link
+              local resolved_src="$(rreadlink "$src")"
+              echo "Resolved symlink: $src -> $resolved_src" >> $GITHUB_STEP_SUMMARY
+              cp -R "$resolved_src" "$dest"
+            else
+              cp -R "$src" "$dest"
+            fi
+          }
+
 
           function rreadlink()
           {
@@ -242,7 +271,7 @@ jobs:
             echo "Temporary directory created: $TMP_DIR" >> $GITHUB_STEP_SUMMARY
 
             mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
-            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || echo "Error copying $sdk" >> $GITHUB_STEP_SUMMARY
+            copy_linked_dirs "$(rreadlink "$SDK_PATH/$sdk")" "$TMP_DIR/$sdk"
 
             # Copy libc++ headers
             if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
@@ -263,7 +292,7 @@ jobs:
             # Copy manual directory if it exists
             if [ -d $MANDIR ]; then
               mkdir -p "$TMP_DIR/$sdk/usr/share/man"
-              cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
+              copy_linked_dirs $MANDIR "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
 
@@ -280,6 +309,20 @@ jobs:
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
           echo "Working in directory: $(pwd)" >> $GITHUB_STEP_SUMMARY
           echo "SDK Path: $SDK_PATH" >> $GITHUB_STEP_SUMMARY
+
+          function copy_linked_dirs()
+          {
+            local src="$1"
+            local dest="$2"
+            if [ -h "$src" ]; then
+              # Resolve symbolic link
+              local resolved_src="$(rreadlink "$src")"
+              echo "Resolved symlink: $src -> $resolved_src" >> $GITHUB_STEP_SUMMARY
+              cp -R "$resolved_src" "$dest"
+            else
+              cp -R "$src" "$dest"
+            fi
+          }
 
           function rreadlink()
           {
@@ -305,7 +348,7 @@ jobs:
             echo "Temporary directory created: $TMP_DIR" >> $GITHUB_STEP_SUMMARY
 
             mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
-            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || echo "Error copying $sdk" >> $GITHUB_STEP_SUMMARY
+            copy_linked_dirs "$(rreadlink "$SDK_PATH/$sdk")" "$TMP_DIR/$sdk"
 
             # Copy libc++ headers
             if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
@@ -326,7 +369,7 @@ jobs:
             # Copy manual directory if it exists
             if [ -d $MANDIR ]; then
               mkdir -p "$TMP_DIR/$sdk/usr/share/man"
-              cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
+              copy_linked_dirs $MANDIR "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
 
