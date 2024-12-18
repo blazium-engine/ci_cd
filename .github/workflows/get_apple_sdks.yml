@@ -186,6 +186,7 @@ jobs:
               cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
+            ls -la $TMP_DIR/$sdk
 
             sudo tar -cJf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$TMP_DIR/$sdk"
           done
@@ -197,7 +198,7 @@ jobs:
 
           LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
           LIBCXXDIR2="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
-          LIBCXXDIR3="/Applications/Xcode_$XCODE_VERSION.app/usr/include/c++/v1"
+          LIBCXXDIR3="usr/include/c++/v1"
           MANDIR="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
 
           echo "Looking for libc++ headers for iPhoneSimulator SDK..." >> $GITHUB_STEP_SUMMARY
@@ -229,7 +230,7 @@ jobs:
               cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
-
+            ls -la $TMP_DIR/$sdk
             sudo tar -cJf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$TMP_DIR/$sdk"
           done
 
@@ -241,7 +242,7 @@ jobs:
 
           LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
           LIBCXXDIR2="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
-          LIBCXXDIR3="/Applications/Xcode_$XCODE_VERSION.app/usr/include/c++/v1"
+          LIBCXXDIR3="usr/include/c++/v1"
           MANDIR="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
 
           echo "Looking for libc++ headers for MacOSX SDK..." >> $GITHUB_STEP_SUMMARY
@@ -273,6 +274,7 @@ jobs:
               cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
+            ls -la $TMP_DIR/$sdk
 
             sudo tar -cJf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$TMP_DIR/$sdk"
           done
