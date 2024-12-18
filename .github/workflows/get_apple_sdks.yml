@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Required Dependencies
         run: |
-          brew install cmake wget coreutils llvm
+          brew install coreutils llvm xz
           echo "✅ Dependencies installed successfully." >> $GITHUB_STEP_SUMMARY
 
       - name: Clone and Setup osxcross
