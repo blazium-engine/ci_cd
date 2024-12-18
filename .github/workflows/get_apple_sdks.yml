@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Required Dependencies
         run: |
-          brew install coreutils llvm xz
+          brew install coreutils readline llvm xz
           echo "✅ Dependencies installed successfully." >> $GITHUB_STEP_SUMMARY
 
       - name: Clone and Setup osxcross
@@ -53,6 +53,13 @@ jobs:
           ${{ github.workspace }}/osxcross/tools/gen_sdk_package.sh
           ls -la
           cp ${{ github.workspace }}/output/MacOSX14.5.sdk.tar.xz ${{ github.workspace }}/osxcross/tarballs
+          echo "✅ SDK package generated using gen_sdk_package.sh." >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate Tools Package
+        run: |
+          cd ${{ github.workspace }}/output
+          XCODE_TOOLS=1 ${{ github.workspace }}/osxcross/tools/gen_sdk_package.sh
+          ls -la
           echo "✅ SDK package generated using gen_sdk_package.sh." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload osxcross SDK as Artifact
