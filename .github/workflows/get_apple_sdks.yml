@@ -158,8 +158,8 @@ jobs:
           echo "Looking for libc++ headers for iPhoneOS SDK..." >> $GITHUB_STEP_SUMMARY
 
           for sdk in $(ls "$SDK_PATH" | grep iPhoneOS | grep -v iPhoneOS.sdk); do
-            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
             TMP_DIR=$(mktemp -d)
+            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
             cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || true
 
             # Copy libc++ headers
@@ -201,8 +201,8 @@ jobs:
           echo "Looking for libc++ headers for iPhoneSimulator SDK..." >> $GITHUB_STEP_SUMMARY
 
           for sdk in $(ls "$SDK_PATH" | grep iPhoneSimulator | grep -v iPhoneSimulator.sdk); do
-            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
             TMP_DIR=$(mktemp -d)
+            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
             cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || true
 
             # Copy libc++ headers
@@ -245,8 +245,8 @@ jobs:
           echo "Looking for libc++ headers for MacOSX SDK..." >> $GITHUB_STEP_SUMMARY
 
           for sdk in $(ls "$SDK_PATH" | grep MacOSX | grep -v MacOSX.sdk); do
-            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
             TMP_DIR=$(mktemp -d)
+            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
             cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || true
 
             # Copy libc++ headers
