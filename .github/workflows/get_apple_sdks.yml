@@ -135,9 +135,7 @@ jobs:
           ls -la /Applications/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/ >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib >> $GITHUB_STEP_SUMMARY
-          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include >> $GITHUB_STEP_SUMMARY
+          ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++ >> $GITHUB_STEP_SUMMARY
 
           echo '### Toolchains Directory'  >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/ >> $GITHUB_STEP_SUMMARY
@@ -154,6 +152,17 @@ jobs:
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs"
+
+          function rreadlink()
+          {
+            if [ ! -h "$1" ]; then
+              echo "$1"
+            else
+              local link="$(expr "$(command ls -ld -- "$1")" : '.*-> \(.*\)$')"
+              cd $(dirname $1)
+              rreadlink "$link" | sed "s|^\([^/].*\)\$|$(dirname $1)/\1|"
+            fi
+          }
 
           LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
           LIBCXXDIR2="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
@@ -199,6 +208,17 @@ jobs:
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs"
 
+          function rreadlink()
+          {
+            if [ ! -h "$1" ]; then
+              echo "$1"
+            else
+              local link="$(expr "$(command ls -ld -- "$1")" : '.*-> \(.*\)$')"
+              cd $(dirname $1)
+              rreadlink "$link" | sed "s|^\([^/].*\)\$|$(dirname $1)/\1|"
+            fi
+          }
+
           LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
           LIBCXXDIR2="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
           LIBCXXDIR3="usr/include/c++/v1"
@@ -241,6 +261,17 @@ jobs:
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
+
+          function rreadlink()
+          {
+            if [ ! -h "$1" ]; then
+              echo "$1"
+            else
+              local link="$(expr "$(command ls -ld -- "$1")" : '.*-> \(.*\)$')"
+              cd $(dirname $1)
+              rreadlink "$link" | sed "s|^\([^/].*\)\$|$(dirname $1)/\1|"
+            fi
+          }
 
 
           LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
