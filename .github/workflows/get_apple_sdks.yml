@@ -36,7 +36,6 @@ jobs:
 
       - name: Install Required Dependencies
         run: |
-          brew update
           brew install cmake wget coreutils llvm
           echo "✅ Dependencies installed successfully." >> $GITHUB_STEP_SUMMARY
 
