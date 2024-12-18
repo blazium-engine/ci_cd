@@ -51,19 +51,6 @@ jobs:
           XCODE_VERSION=15.4
           ./tools/gen_sdk_package.sh "/Applications/Xcode_$XCODE_VERSION.app"
           echo "✅ SDK package generated using gen_sdk_package.sh." >> $GITHUB_STEP_SUMMARY
-
-      - name: Build Clang
-        run: |
-          cd ~/osxcross
-          ./build_clang.sh
-          echo "✅ Clang built successfully." >> $GITHUB_STEP_SUMMARY
-
-      - name: Build GCC
-        run: |
-          cd ~/osxcross
-          GCC_VERSION=12.2.0 ENABLE_FORTRAN=1 ./build_gcc.sh
-          echo "✅ GCC built successfully (version 12.2.0 with Fortran enabled)." >> $GITHUB_STEP_SUMMARY
-
       - name: Build osxcross
         run: |
           cd ~/osxcross
@@ -77,6 +64,19 @@ jobs:
           /usr/local/osxcross/bin/x86_64-apple-darwin20.2-clang --version
           /usr/local/osxcross/bin/x86_64-apple-darwin20.2-gcc --version
           echo "✅ osxcross installation validated." >> $GITHUB_STEP_SUMMARY
+
+      - name: Build Clang
+        run: |
+          cd ~/osxcross
+          OCDEBUG=1 ./build_clang.sh
+          echo "✅ Clang built successfully." >> $GITHUB_STEP_SUMMARY
+
+      - name: Build GCC
+        run: |
+          cd ~/osxcross
+          GCC_VERSION=12.2.0 ENABLE_FORTRAN=1 ./build_gcc.sh
+          echo "✅ GCC built successfully (version 12.2.0 with Fortran enabled)." >> $GITHUB_STEP_SUMMARY
+
 
       - name: Upload osxcross SDK as Artifact
         uses: actions/upload-artifact@v4
