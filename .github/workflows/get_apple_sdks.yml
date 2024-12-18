@@ -152,6 +152,8 @@ jobs:
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs"
+          echo "Working in directory: $(pwd)" >> $GITHUB_STEP_SUMMARY
+          echo "SDK Path: $SDK_PATH" >> $GITHUB_STEP_SUMMARY
 
           function rreadlink()
           {
@@ -172,9 +174,12 @@ jobs:
           echo "Looking for libc++ headers for iPhoneOS SDK..." >> $GITHUB_STEP_SUMMARY
 
           for sdk in $(ls "$SDK_PATH" | grep iPhoneOS | grep -v iPhoneOS.sdk); do
+            echo "Processing SDK: $sdk" >> $GITHUB_STEP_SUMMARY
             TMP_DIR=$(mktemp -d)
+            echo "Temporary directory created: $TMP_DIR" >> $GITHUB_STEP_SUMMARY
+
             mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
-            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || true
+            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || echo "Error copying $sdk" >> $GITHUB_STEP_SUMMARY
 
             # Copy libc++ headers
             if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
@@ -198,15 +203,20 @@ jobs:
               cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
-            ls -la $TMP_DIR/$sdk
+
+            echo "Contents of $TMP_DIR/$sdk:" >> $GITHUB_STEP_SUMMARY
+            ls -la $TMP_DIR/$sdk >> $GITHUB_STEP_SUMMARY
 
             sudo tar -cJf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$TMP_DIR/$sdk"
+            echo "Archive created: $(pwd)/$BASE_FOLDER/${sdk}.tar.xz" >> $GITHUB_STEP_SUMMARY
           done
-
+      
       - name: Create tar.xz archives for iPhoneSimulator directories
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs"
+          echo "Working in directory: $(pwd)" >> $GITHUB_STEP_SUMMARY
+          echo "SDK Path: $SDK_PATH" >> $GITHUB_STEP_SUMMARY
 
           function rreadlink()
           {
@@ -227,9 +237,12 @@ jobs:
           echo "Looking for libc++ headers for iPhoneSimulator SDK..." >> $GITHUB_STEP_SUMMARY
 
           for sdk in $(ls "$SDK_PATH" | grep iPhoneSimulator | grep -v iPhoneSimulator.sdk); do
+            echo "Processing SDK: $sdk" >> $GITHUB_STEP_SUMMARY
             TMP_DIR=$(mktemp -d)
+            echo "Temporary directory created: $TMP_DIR" >> $GITHUB_STEP_SUMMARY
+
             mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
-            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || true
+            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || echo "Error copying $sdk" >> $GITHUB_STEP_SUMMARY
 
             # Copy libc++ headers
             if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
@@ -253,14 +266,20 @@ jobs:
               cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
-            ls -la $TMP_DIR/$sdk
+
+            echo "Contents of $TMP_DIR/$sdk:" >> $GITHUB_STEP_SUMMARY
+            ls -la $TMP_DIR/$sdk >> $GITHUB_STEP_SUMMARY
+
             sudo tar -cJf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$TMP_DIR/$sdk"
+            echo "Archive created: $(pwd)/$BASE_FOLDER/${sdk}.tar.xz" >> $GITHUB_STEP_SUMMARY
           done
 
       - name: Create tar.xz archives for MacOSX directories
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
+          echo "Working in directory: $(pwd)" >> $GITHUB_STEP_SUMMARY
+          echo "SDK Path: $SDK_PATH" >> $GITHUB_STEP_SUMMARY
 
           function rreadlink()
           {
@@ -273,7 +292,6 @@ jobs:
             fi
           }
 
-
           LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
           LIBCXXDIR2="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
           LIBCXXDIR3="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1"
@@ -282,9 +300,12 @@ jobs:
           echo "Looking for libc++ headers for MacOSX SDK..." >> $GITHUB_STEP_SUMMARY
 
           for sdk in $(ls "$SDK_PATH" | grep MacOSX | grep -v MacOSX.sdk); do
+            echo "Processing SDK: $sdk" >> $GITHUB_STEP_SUMMARY
             TMP_DIR=$(mktemp -d)
+            echo "Temporary directory created: $TMP_DIR" >> $GITHUB_STEP_SUMMARY
+
             mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
-            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || true
+            cp -r $(rreadlink $sdk) $TMP_DIR/$sdk &>/dev/null || echo "Error copying $sdk" >> $GITHUB_STEP_SUMMARY
 
             # Copy libc++ headers
             if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
@@ -308,9 +329,12 @@ jobs:
               cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
               echo "Manual directory copied for $sdk" >> $GITHUB_STEP_SUMMARY
             fi
-            ls -la $TMP_DIR/$sdk
+
+            echo "Contents of $TMP_DIR/$sdk:" >> $GITHUB_STEP_SUMMARY
+            ls -la $TMP_DIR/$sdk >> $GITHUB_STEP_SUMMARY
 
             sudo tar -cJf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$TMP_DIR/$sdk"
+            echo "Archive created: $(pwd)/$BASE_FOLDER/${sdk}.tar.xz" >> $GITHUB_STEP_SUMMARY
           done
 
       - name: List Base Folder Contents and Add to Summary
