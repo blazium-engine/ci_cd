@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Required Dependencies
         run: |
-          brew install coreutils readline llvm xz
+          brew install coreutils llvm
           echo "✅ Dependencies installed successfully." >> $GITHUB_STEP_SUMMARY
 
       - name: Clone and Setup osxcross
@@ -68,37 +68,37 @@ jobs:
           name: macos-sdk-packaged
           path: ${{ github.workspace }}/output
 
-      - name: Build osxcross
-        run: |
-          cd ${{ github.workspace }}/osxcross
-          export OSXCROSS_ENABLE_WERROR_IMPLICIT_FUNCTION_DECLARATION=1
-          export OSXCROSS_GCC_NO_STATIC_RUNTIME=1
-          UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/sdk ./build.sh
-          echo "✅ osxcross built successfully." >> $GITHUB_STEP_SUMMARY
+      # - name: Build osxcross
+      #   run: |
+      #     cd ${{ github.workspace }}/osxcross
+      #     export OSXCROSS_ENABLE_WERROR_IMPLICIT_FUNCTION_DECLARATION=1
+      #     export OSXCROSS_GCC_NO_STATIC_RUNTIME=1
+      #     UNATTENDED=1 TARGET_DIR=${{ github.workspace }}/sdk ./build.sh
+      #     echo "✅ osxcross built successfully." >> $GITHUB_STEP_SUMMARY
 
-      - name: Validate osxcross Installation
-        run: |
-          ${{ github.workspace }}/sdk/bin/x86_64-apple-darwin20.2-clang --version
-          ${{ github.workspace }}/sdk/bin/x86_64-apple-darwin20.2-gcc --version
-          echo "✅ osxcross installation validated." >> $GITHUB_STEP_SUMMARY
+      # - name: Validate osxcross Installation
+      #   run: |
+      #     ${{ github.workspace }}/sdk/bin/x86_64-apple-darwin20.2-clang --version
+      #     ${{ github.workspace }}/sdk/bin/x86_64-apple-darwin20.2-gcc --version
+      #     echo "✅ osxcross installation validated." >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload osxcross SDK as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: osxcross-sdk-linux
-          path: /usr/local/osxcross/
+      # - name: Upload osxcross SDK as Artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: osxcross-sdk-linux
+      #     path: /usr/local/osxcross/
         
       - name: Summary of Process
         run: |
           echo "### osxcross SDK Build Process Summary" >> $GITHUB_STEP_SUMMARY
           echo "1. **Dependencies**: Installed cmake, wget, coreutils, and llvm." >> $GITHUB_STEP_SUMMARY
           echo "2. **SDK Package Generation**: Used gen_sdk_package.sh with Xcode 15.4." >> $GITHUB_STEP_SUMMARY
-          echo "3. **Clang Setup**: Built Clang for osxcross." >> $GITHUB_STEP_SUMMARY
-          echo "4. **GCC Setup**: Built GCC version 12.2.0 with Fortran support." >> $GITHUB_STEP_SUMMARY
-          echo "5. **osxcross Setup**: Built osxcross using the generated SDK package and installed to /usr/local/osxcross." >> $GITHUB_STEP_SUMMARY
-          echo "6. **Environment**: Enabled -Werror=implicit-function-declaration and disabled static linking for libgcc/libstdc++." >> $GITHUB_STEP_SUMMARY
-          echo "7. **Validation**: Verified both Clang and GCC cross-compilers." >> $GITHUB_STEP_SUMMARY
-          echo "8. **Artifact**: osxcross SDK uploaded for Linux." >> $GITHUB_STEP_SUMMARY
+          # echo "3. **Clang Setup**: Built Clang for osxcross." >> $GITHUB_STEP_SUMMARY
+          # echo "4. **GCC Setup**: Built GCC version 12.2.0 with Fortran support." >> $GITHUB_STEP_SUMMARY
+          # echo "5. **osxcross Setup**: Built osxcross using the generated SDK package and installed to /usr/local/osxcross." >> $GITHUB_STEP_SUMMARY
+          # echo "6. **Environment**: Enabled -Werror=implicit-function-declaration and disabled static linking for libgcc/libstdc++." >> $GITHUB_STEP_SUMMARY
+          # echo "7. **Validation**: Verified both Clang and GCC cross-compilers." >> $GITHUB_STEP_SUMMARY
+          # echo "8. **Artifact**: osxcross SDK uploaded for Linux." >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup
         if: always()
@@ -110,7 +110,6 @@ jobs:
 
   gather:
     name: Process XCode SDKs
-    if: false
     runs-on: "macos-latest"
     steps:
 
@@ -143,12 +142,37 @@ jobs:
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
           ls -la /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs >> $GITHUB_STEP_SUMMARY
 
-
       - name: Create tar.xz archives for iPhoneOS directories
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs"
+          TMP_DIR=$(mktemp -d)
+
+          LIBCXXDIR1="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
+          LIBCXXDIR2="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
+          LIBCXXDIR3="usr/include/c++/v1"
+          MANDIR="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
+
           for sdk in $(ls "$SDK_PATH" | grep iPhoneOS | grep -v iPhoneOS.sdk); do
+            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
+            
+            # Copy libc++ headers
+            if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
+              if [ -d $LIBCXXDIR1 ]; then
+                cp -rf $LIBCXXDIR1 "$TMP_DIR/$sdk/usr/include/c++"
+              elif [ -d $LIBCXXDIR2 ]; then
+                cp -rf $LIBCXXDIR2 "$TMP_DIR/$sdk/usr/include/c++"
+              elif [ -d $LIBCXXDIR3 ]; then
+                cp -rf $LIBCXXDIR3 "$TMP_DIR/$sdk/usr/include/c++"
+              fi
+            fi
+
+            # Copy manual directory if it exists
+            if [ -d $MANDIR ]; then
+              mkdir -p "$TMP_DIR/$sdk/usr/share/man"
+              cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
+            fi
+
             sudo tar -cJvhf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$SDK_PATH/$sdk"
           done
 
@@ -156,7 +180,33 @@ jobs:
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs"
+          TMP_DIR=$(mktemp -d)
+
+          LIBCXXDIR1="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
+          LIBCXXDIR2="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
+          LIBCXXDIR3="usr/include/c++/v1"
+          MANDIR="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
+
           for sdk in $(ls "$SDK_PATH" | grep iPhoneSimulator | grep -v iPhoneSimulator.sdk); do
+            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
+
+            # Copy libc++ headers
+            if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
+              if [ -d $LIBCXXDIR1 ]; then
+                cp -rf $LIBCXXDIR1 "$TMP_DIR/$sdk/usr/include/c++"
+              elif [ -d $LIBCXXDIR2 ]; then
+                cp -rf $LIBCXXDIR2 "$TMP_DIR/$sdk/usr/include/c++"
+              elif [ -d $LIBCXXDIR3 ]; then
+                cp -rf $LIBCXXDIR3 "$TMP_DIR/$sdk/usr/include/c++"
+              fi
+            fi
+
+            # Copy manual directory if it exists
+            if [ -d $MANDIR ]; then
+              mkdir -p "$TMP_DIR/$sdk/usr/share/man"
+              cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
+            fi
+
             sudo tar -cJvhf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$SDK_PATH/$sdk"
           done
 
@@ -164,7 +214,33 @@ jobs:
         if: ${{ inputs.tar_files }}
         run: |
           SDK_PATH="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
+          TMP_DIR=$(mktemp -d)
+
+          LIBCXXDIR1="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/c++/v1"
+          LIBCXXDIR2="/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
+          LIBCXXDIR3="/Applications/Xcode_$XCODE_VERSION.app/usr/include/c++/v1"
+          MANDIR="Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/man"
+
           for sdk in $(ls "$SDK_PATH" | grep MacOSX | grep -v MacOSX.sdk); do
+            mkdir -p "$TMP_DIR/$sdk/usr/include/c++"
+
+            # Copy libc++ headers
+            if [ ! -f "$TMP_DIR/$sdk/usr/include/c++/v1/version" ]; then
+              if [ -d $LIBCXXDIR1 ]; then
+                cp -rf $LIBCXXDIR1 "$TMP_DIR/$sdk/usr/include/c++"
+              elif [ -d $LIBCXXDIR2 ]; then
+                cp -rf $LIBCXXDIR2 "$TMP_DIR/$sdk/usr/include/c++"
+              elif [ -d $LIBCXXDIR3 ]; then
+                cp -rf $LIBCXXDIR3 "$TMP_DIR/$sdk/usr/include/c++"
+              fi
+            fi
+
+            # Copy manual directory if it exists
+            if [ -d $MANDIR ]; then
+              mkdir -p "$TMP_DIR/$sdk/usr/share/man"
+              cp -rf $MANDIR/* "$TMP_DIR/$sdk/usr/share/man"
+            fi
+
             sudo tar -cJvhf "$(pwd)/$BASE_FOLDER/${sdk}.tar.xz" "$SDK_PATH/$sdk"
           done
 
