@@ -4,6 +4,685 @@
 
 Actions below are all things needed for the CI/CD to work.
 
+# CI/CD Workflows
+
+## Blazium Engine Runner Workflow - GitHub Action
+
+This GitHub Action, **Blazium Engine Runner Workflow**, orchestrates builds, deployments, and cleanups for the Blazium Engine across multiple operating systems and configurations. It triggers jobs based on a custom payload, enabling tailored workflows for nightly, template, or editor builds, with support for dynamic branching, versioning, and deployment management.
+
+### Features:
+- **Multi-Platform Support**: Handles builds for Linux, macOS, Windows, Android, iOS, Web, and Mono Glue configurations.
+- **Dynamic Version Management**: Extracts and manages version details from `version.py` and `changelog.json`.
+- **Concurrent Job Management**: Ensures efficient job execution with concurrency groups.
+- **Custom Payload Triggering**: Uses a repository dispatch event with client payload for tailored job execution.
+- **Full Lifecycle Management**: Includes static checks, builds, deployments, and cleanup.
+
+### Trigger Payload:
+Example payload to trigger the workflow:
+```json
+{
+  "production": false,
+  "type": "nightly",
+  "branch": "blazium-dev",
+  "build_type": ["templates", "editors"],
+  "force": false,
+  "build": ["linux", "monoglue", "ios", "macos", "android", "web", "windows"],
+  "deploy": ["templates", "editors"]
+}
+```
+
+### Jobs:
+1. **Get Latest SHA & Base Version**: Fetches the latest commit SHA, parses version details, and generates a changelog.
+2. **Static Checks**: Runs static checks to ensure code quality.
+3. **Build Jobs**: Executes platform-specific builds for all selected targets:
+   - 🌐 **Web**
+   - 🐧 **Linux**
+   - 🍎 **macOS**
+   - 🏁 **Windows**
+   - 🤖 **Android**
+   - 🍏 **iOS**
+   - **Mono Glue**
+4. **Deployment**: Deploys all successful builds to their respective targets.
+5. **Cleanup**: Ensures clean termination and resource cleanup in case of failures or cancellations.
+
+### Usage:
+To trigger this workflow, send a repository dispatch event with the required payload:
+```bash
+curl -X POST -H "Accept: application/vnd.github.everest-preview+json" \
+-H "Authorization: token <YOUR_PERSONAL_ACCESS_TOKEN>" \
+https://api.github.com/repos/<OWNER>/<REPO>/dispatches \
+-d '{"event_type": "trigger_build", "client_payload": {"production":false,"type":"nightly","branch":"blazium-dev","build_type":["templates","editors"],"force":false,"build":["linux","monoglue","ios","macos","android","web","windows"],"deploy":["templates","editors"]}}'
+```
+
+## 🌐 Web Builds - GitHub Action
+
+The **Web Builds** GitHub Action manages the entire build and deployment lifecycle for web-based components of the Blazium Engine. It supports both editors and templates, ensuring compatibility with nightly, prerelease, and release workflows. This action uses Emscripten to compile and optimize the web build, integrates with DigitalOcean Spaces for artifact storage, and notifies **Cerebro** for build tracking and deployment.
+
+---
+
+### Features:
+- **Dynamic Version Management**: Updates version information in `version.py` and communicates with Cerebro to track build status.
+- **Comprehensive Builds**: Supports multiple configurations for templates and editors with custom `scons` flags.
+- **Artifact Storage**: Automatically creates and uploads `.tar.gz` artifacts to DigitalOcean Spaces.
+- **Containerization**: Builds Docker images for the web editor, tagged with the latest version and pushed to Docker Hub.
+- **Error Handling**: Notifies Cerebro of build success or failure.
+- **Streamlined Deployment**: Deploys artifacts to specific environments (`nightly`, `prerelease`, `release`) and creates a web-ready structure.
+
+---
+
+### Inputs:
+- **`build_sha`** (required): Commit SHA used to identify the source for the build.
+- **`runner_id`** (required): Identifier for the parent runner process.
+- **`new_major`** (required): New major version number.
+- **`new_minor`** (required): New minor version number.
+- **`new_patch`** (required): New patch version number.
+- **`new_version`** (required): Full version string (`X.X.X`) for the current build.
+
+---
+
+### Workflow Steps:
+1. **Pre-Build Checks**:
+   - Verify if a build is required by comparing SHAs (`build.sha`) in the current workflow.
+   - Skip builds if `force` is not enabled and the SHA matches the existing artifact.
+
+2. **Editor Builds**:
+   - Compiles the web-based editor using Emscripten with custom `scons` flags.
+   - Creates tarball archives and uploads artifacts to DigitalOcean Spaces.
+
+3. **Template Builds**:
+   - Supports multiple configurations (e.g., with/without threads, `dlink_enabled`).
+   - Handles caching for efficient builds.
+
+4. **Deployment**:
+   - Creates Docker images for the web editor and pushes them to Docker Hub.
+   - Extracts and deploys builds to environments using the `nightly`, `prerelease`, or `release` tags.
+
+5. **Notifications**:
+   - Notifies Cerebro at all stages (start, success, failure) for centralized tracking.
+
+---
+
+### Usage:
+```yaml
+jobs:
+  web-build:
+    uses: ./.github/workflows/web_builds.yml
+    with:
+      build_sha: "abc123def456"
+      runner_id: "runner-001"
+      new_major: "1"
+      new_minor: "0"
+      new_patch: "2"
+      new_version: "1.0.2"
+```
+
+## 🏁 Windows Builds - GitHub Action
+
+The **Windows Builds** GitHub Action is designed to handle the complete build lifecycle for the Windows platform in the Blazium Engine. This action supports the compilation of both editors and templates, including Mono-enabled builds, for various architectures such as `x86_64`, `x86_32`, `arm64`, and `arm32`. It integrates with Cerebro for build notifications, leverages DigitalOcean Spaces for artifact storage, and ensures robust build and deployment workflows.
+
+---
+
+### Features:
+- **Flexible Build Configurations**: Supports multiple architectures and configurations, including Mono-enabled builds for both editors and templates.
+- **Efficient Build Management**:
+  - Checks existing `build.sha` files to determine if a new build is necessary.
+  - Uses caching for faster rebuilds.
+- **Cross-Platform Dependency Setup**: Installs necessary libraries and SDKs, such as Direct3D, Mesa, and ANGLE, for building Windows-specific targets.
+- **Artifact Management**: Automatically creates `.tar.gz` archives of build outputs and uploads them to DigitalOcean Spaces.
+- **Version Management**: Updates `version.py` with new version details and integrates seamlessly with Cerebro for build tracking and reporting.
+- **Error Handling**: Notifies Cerebro of both build successes and failures, ensuring traceability and debugging capabilities.
+
+---
+
+### Inputs:
+- **`build_sha`** (required): Commit SHA used to identify the source for the build.
+- **`runner_id`** (required): Unique identifier for the runner process.
+- **`new_major`** (required): Major version number.
+- **`new_minor`** (required): Minor version number.
+- **`new_patch`** (required): Patch version number.
+- **`new_version`** (required): Full version string (`X.X.X`) for the current build.
+
+---
+
+### Workflow Overview:
+1. **Pre-Build Checks**:
+   - Verifies whether a build is necessary by comparing `build.sha` files.
+   - Provides granular control for forcing builds regardless of SHA comparison.
+
+2. **Editor Builds**:
+   - Compiles editor binaries for `x86_64`, `x86_32`, `arm64`, and `arm32` architectures.
+   - Supports Mono-enabled builds for enhanced compatibility with C#.
+
+3. **Template Builds**:
+   - Builds release and debug templates with optional Mono support.
+   - Configurable for various architectures, including ARM.
+
+4. **Dependency Management**:
+   - Installs required Windows-specific libraries, SDKs, and toolchains.
+   - Downloads and configures Mono glue and graphics libraries like ANGLE and Mesa.
+
+5. **Artifact Handling**:
+   - Packages build outputs into `.tar.gz` archives for easy distribution.
+   - Uploads artifacts to DigitalOcean Spaces for storage and retrieval.
+
+6. **Notifications**:
+   - Integrates with Cerebro for tracking build progress, success, and failure.
+
+---
+
+### Example Usage:
+```yaml
+jobs:
+  windows-build:
+    uses: ./.github/workflows/windows_builds.yml
+    with:
+      build_sha: "abc123def456"
+      runner_id: "runner-001"
+      new_major: "1"
+      new_minor: "0"
+      new_patch: "2"
+      new_version: "1.0.2"
+```
+
+## Mono Glue Build - GitHub Action
+
+The **Mono Glue Build** GitHub Action is a specialized workflow designed to generate and package Mono glue for the Blazium Engine. This action builds Mono-enabled editor components, creates NuGet packages, and archives Mono glue files for deployment. It integrates with Cerebro for build tracking and uses DigitalOcean Spaces for artifact storage, ensuring a smooth and efficient build process for Mono support in the engine.
+
+---
+
+### Features:
+- **Efficient Build Management**:
+  - Checks existing `build.sha` files to avoid unnecessary builds.
+  - Supports forced builds for complete flexibility.
+- **Mono Glue Generation**:
+  - Compiles the editor with Mono support for `linuxbsd`.
+  - Generates Mono glue and packages it into distributable archives.
+- **NuGet Integration**:
+  - Builds C# assemblies and pushes them to NuGet.
+  - Supports signed NuGet packages for secure distribution.
+- **Artifact Management**:
+  - Creates `.tar.gz` archives of Mono glue files.
+  - Uploads build outputs and `build.sha` files to DigitalOcean Spaces.
+- **Notification System**:
+  - Notifies Cerebro of build progress, success, and failure.
+  - Tracks build details, including version, checksum, and deployment type.
+
+---
+
+### Inputs:
+- **`build_sha`** (required): The commit SHA for the source code used in the build.
+- **`runner_id`** (required): A unique identifier for the runner.
+- **`new_major`** (required): Major version number.
+- **`new_minor`** (required): Minor version number.
+- **`new_patch`** (required): Patch version number.
+- **`new_version`** (required): Full version string (`X.X.X`) for the current build.
+
+---
+
+### Workflow Overview:
+1. **Pre-Build Checks**:
+   - Verifies the necessity of a new build using `build.sha`.
+   - Allows forced builds for testing or updates.
+
+2. **Mono Glue Compilation**:
+   - Restores dependencies and prepares the build environment.
+   - Compiles the editor with Mono support and generates Mono glue files.
+
+3. **NuGet Packaging**:
+   - Builds C# assemblies and pushes them to NuGet with authentication.
+   - Supports signed packages for enhanced security.
+
+4. **Artifact Creation and Upload**:
+   - Archives Mono glue files and uploads them to DigitalOcean Spaces.
+   - Ensures accessibility and storage for deployment purposes.
+
+5. **Notifications**:
+   - Tracks and reports build status (success or failure) via Cerebro.
+
+---
+
+### Example Usage:
+```yaml
+jobs:
+  monoglue-build:
+    uses: ./.github/workflows/monoglue_build.yml
+    with:
+      build_sha: "abc123def456"
+      runner_id: "runner-001"
+      new_major: "1"
+      new_minor: "0"
+      new_patch: "2"
+      new_version: "1.0.2"
+```
+
+## 🐧 Linux Builds GitHub Action
+
+This workflow manages the Linux builds for the Blazium Engine, supporting both editor and template builds across multiple architectures and configurations. It is triggered via `workflow_call` and integrates version tracking, dependency management, caching, and artifact uploading. The workflow ensures builds are efficient, robust, and properly reported to the Cerebro system.
+
+---
+
+### Features
+
+- **Supports multiple architectures and configurations:**
+  - x86_64, x86_32, arm64, arm32.
+  - Mono-enabled and standard builds.
+  - Debug and release templates.
+
+- **Dependency Management:**
+  - Ensures required libraries and tools are installed.
+  - Installs architecture-specific dependencies dynamically.
+
+- **Build Cache Integration:**
+  - Restores and saves build caches to optimize performance.
+
+- **Artifact Management:**
+  - Creates `.tar.gz` archives for build outputs.
+  - Uploads artifacts to DigitalOcean Spaces for distribution.
+
+- **Version Control:**
+  - Updates `version.py` with new build version details.
+  - Tracks `build.sha` for validation and reusability.
+
+- **Notifications:**
+  - Sends build progress and status updates to the Cerebro system.
+  - Reports success or failure with detailed metadata.
+
+---
+
+### Inputs
+
+| Name          | Description                                    | Required | Type   |
+|---------------|------------------------------------------------|----------|--------|
+| `build_sha`   | Build commit SHA to use for this job           | ✅       | String |
+| `runner_id`   | Runner ID of the parent runner                 | ✅       | String |
+| `new_major`   | New major version number                       | ✅       | String |
+| `new_minor`   | New minor version number                       | ✅       | String |
+| `new_patch`   | New patch version number                       | ✅       | String |
+| `new_version` | Full version string for this build             | ✅       | String |
+
+---
+
+### Jobs Overview
+
+#### `editor-check`
+Verifies whether the editor needs to be rebuilt based on `build.sha` or if a forced build is requested.
+
+#### `template-check`
+Checks if templates require a rebuild, similar to `editor-check`.
+
+#### `build-editors`
+Compiles editor builds across architectures:
+- Handles x86_64, x86_32, arm64, and arm32 builds.
+- Supports Mono-enabled builds.
+- Skips builds marked with `skip: true`.
+
+#### `build-templates`
+Compiles templates across configurations:
+- Supports debug and release builds.
+- Handles Mono-enabled and standard builds.
+
+#### `template-success` & `editor-success`
+Uploads `build.sha` for version verification and reports success to Cerebro.
+
+---
+
+## Steps
+
+### 1. **Dependency Installation**
+Installs necessary dependencies for Linux builds, including 32-bit architecture support and Vulkan drivers.
+
+### 2. **Cache Management**
+Restores previously saved build caches and saves new caches post-build.
+
+### 3. **Compilation**
+Uses the `godot-build` action to compile the editor or templates with architecture-specific configurations.
+
+### 4. **Artifact Creation**
+Creates `.tar.gz` archives for the compiled binaries.
+
+### 5. **Artifact Upload**
+Uploads build artifacts to DigitalOcean Spaces, organized by deployment type.
+
+### 6. **Cerebro Integration**
+Notifies Cerebro of build start, success, or failure, ensuring transparency and traceability.
+
+---
+
+## Example Usage
+
+```yaml
+jobs:
+  linux-build:
+    uses: ./.github/workflows/linux_builds.yml
+    with:
+      build_sha: "abc123def456"
+      runner_id: "runner-001"
+      new_major: "1"
+      new_minor: "0"
+      new_patch: "3"
+      new_version: "1.0.3"
+```
+
+# 🍎 macOS Builds GitHub Action
+
+This workflow automates the process of building and packaging the Blazium Engine for macOS, supporting both editor and template builds with Mono and non-Mono configurations. It integrates version tracking, caching, artifact management, and internal service notifications via the **Cerebro** system.
+
+---
+
+## Features
+
+### ✅ Multi-Architecture Support
+- Builds for both **x86_64** and **arm64** architectures.
+- Creates **universal binaries** using `lipo`.
+
+### ✅ Configuration Support
+- Handles Mono-enabled and standard builds.
+- Supports `template_release` and `template_debug` targets for templates.
+- Builds with and without production optimizations.
+
+### ✅ Artifact Management
+- Generates `.tar.gz` and `.zip` packages for editor and template builds.
+- Uploads artifacts to DigitalOcean Spaces.
+
+### ✅ Caching
+- Restores and saves build caches for efficient builds.
+
+### ✅ Version Tracking
+- Updates version information in `version.py`.
+- Tracks `build.sha` for validation.
+
+### ✅ Notifications
+- Integrates with **Cerebro**, the internal service for Blazium Engine, to notify about build progress, success, and failures.
+
+---
+
+## Inputs
+
+| **Input Name**  | **Description**                     | **Required** | **Type**  |
+|------------------|-------------------------------------|--------------|-----------|
+| `build_sha`      | Build commit SHA for the job.       | ✅            | `string`  |
+| `runner_id`      | Runner ID of the parent runner.     | ✅            | `string`  |
+| `new_major`      | New major version number.           | ✅            | `string`  |
+| `new_minor`      | New minor version number.           | ✅            | `string`  |
+| `new_patch`      | New patch version number.           | ✅            | `string`  |
+| `new_version`    | Full version string to deploy.      | ✅            | `string`  |
+
+---
+
+## Workflow Jobs
+
+### **`editor-check`**
+- Verifies if an editor rebuild is necessary based on `build.sha`.
+- Skips compilation if no changes are detected and `force` is not set.
+
+### **`template-check`**
+- Similar to `editor-check`, but for templates.
+- Ensures unnecessary builds are avoided.
+
+### **`build-editors`**
+- Builds the editor for macOS:
+  - Supports Mono-enabled and standard builds.
+  - Handles `x86_64` and `arm64` architectures.
+  - Merges architectures into universal binaries.
+- Signs and packages the editor application.
+
+### **`build-templates`**
+- Compiles `template_release` and `template_debug` for macOS:
+  - Mono and non-Mono builds supported.
+  - Creates universal binaries for `x86_64` and `arm64`.
+
+### **`editor-success` & `template-success`**
+- Uploads `build.sha` for future validation.
+- Reports success to Cerebro.
+
+---
+
+## Steps Overview
+
+### 1. **Checkout and Version Update**
+- Pulls the latest code and submodules.
+- Updates `version.py` with the new version details.
+
+### 2. **Dependency Setup**
+- Installs necessary dependencies, including Mono, Python, and Vulkan SDK for macOS builds.
+
+### 3. **Build Process**
+- Compiles editor and templates for both `x86_64` and `arm64`.
+- Combines builds into universal binaries using `lipo`.
+
+### 4. **Packaging and Signing**
+- Packages the editor and templates into `.app` bundles.
+- Signs the applications using macOS code signing.
+
+### 5. **Artifact Management**
+- Archives builds into `.tar.gz` and `.zip` files.
+- Uploads to DigitalOcean Spaces.
+
+### 6. **Cerebro Notifications**
+- Sends build progress, success, or failure notifications to the internal **Cerebro** system.
+
+---
+
+## Example Usage
+
+```yaml
+jobs:
+  macos-build:
+    uses: ./.github/workflows/macos_builds.yml
+    with:
+      build_sha: "abc123def456"
+      runner_id: "runner-001"
+      new_major: "1"
+      new_minor: "0"
+      new_patch: "3"
+      new_version: "1.0.3"
+```
+
+# 🍏 iOS Builds GitHub Action
+
+This workflow automates the process of building and packaging Blazium Engine templates for iOS, supporting Mono and non-Mono configurations, and creating XCFrameworks for release and debug templates. It integrates with the internal **Cerebro** service for build notifications and includes caching, artifact management, and dependency setup.
+
+---
+
+## Features
+
+### ✅ Multi-Architecture Support
+- **ARM64** builds for iOS devices.
+- **x86_64** builds for iOS simulators.
+- Combines architecture-specific builds into **XCFrameworks**.
+
+### ✅ Configurable Build Types
+- Supports `template_release` and `template_debug` targets.
+- Allows Mono and non-Mono builds.
+- Supports production builds with optional LTO (Link-Time Optimization).
+
+### ✅ Caching and Artifacts
+- Restores and saves build caches to improve efficiency.
+- Creates `.tar.gz` and `.zip` artifacts for templates.
+
+### ✅ Notifications
+- Sends build progress, success, and failure updates to the **Cerebro** service.
+
+---
+
+## Inputs
+
+| **Input Name**  | **Description**                     | **Required** | **Type**  |
+|------------------|-------------------------------------|--------------|-----------|
+| `build_sha`      | Build commit SHA for the job.       | ✅            | `string`  |
+| `runner_id`      | Runner ID of the parent runner.     | ✅            | `string`  |
+| `new_major`      | New major version number.           | ✅            | `string`  |
+| `new_minor`      | New minor version number.           | ✅            | `string`  |
+| `new_patch`      | New patch version number.           | ✅            | `string`  |
+| `new_version`    | Full version string to deploy.      | ✅            | `string`  |
+
+---
+
+## Workflow Jobs
+
+### **`template-check`**
+- Verifies if a rebuild is necessary by comparing the `build.sha`.
+- Skips unnecessary builds unless `force` is set.
+
+### **`build-templates`**
+- Builds templates for iOS, creating the following artifacts:
+  - **ARM64** libraries for devices.
+  - **x86_64** libraries for simulators.
+  - Combines these into **XCFrameworks** for `template_release` and `template_debug`.
+
+### **`template-success`**
+- Uploads the `build.sha` for validation.
+- Reports success to the **Cerebro** service.
+
+---
+
+## Steps Overview
+
+### 1. **Checkout and Version Update**
+- Clones the repository and checks out the specified `build_sha`.
+- Updates version details in `version.py`.
+
+### 2. **Dependency Setup**
+- Downloads and extracts **MoltenVK** for Vulkan support.
+- Installs Vulkan SDK and Python dependencies.
+
+### 3. **Compilation**
+- Builds the `template_release` and `template_debug` targets for:
+  - **ARM64** (iOS devices).
+  - **x86_64** (iOS simulators).
+- Utilizes `SCons` for the build process.
+
+### 4. **XCFramework Creation**
+- Combines architecture-specific builds into **XCFrameworks**.
+- Packages frameworks and Vulkan dependencies.
+
+### 5. **Artifact Management**
+- Archives XCFrameworks and uploads them to DigitalOcean Spaces.
+
+### 6. **Cerebro Notifications**
+- Sends updates on build progress, success, or failure to **Cerebro**.
+
+---
+
+## Example Usage
+
+```yaml
+jobs:
+  ios-build:
+    uses: ./.github/workflows/ios_builds.yml
+    with:
+      build_sha: "abc123def456"
+      runner_id: "runner-001"
+      new_major: "1"
+      new_minor: "0"
+      new_patch: "3"
+      new_version: "1.0.3"
+```
+
+# 🤖 Android Builds GitHub Action
+
+This GitHub Action automates the building and packaging process for Android editors and templates for the **Blazium Engine**. It supports multiple architectures and Mono configurations while integrating with **Cerebro** for build notifications and leveraging advanced caching mechanisms.
+
+---
+
+## Features
+
+### ✅ Multi-Architecture Support
+- **ARM32**, **ARM64**, **x86_32**, and **x86_64** architectures supported.
+- Separate configurations for Android templates and editors.
+
+### ✅ Mono and Non-Mono Builds
+- Builds with and without Mono support for both editors and templates.
+
+### ✅ Automated Caching and Artifact Management
+- Restores and saves build caches to improve efficiency.
+- Generates `.tar.gz` archives for easy distribution.
+- Uploads artifacts to DigitalOcean Spaces for persistent storage.
+
+### ✅ Integration with **Cerebro**
+- Sends real-time build progress, success, and failure notifications to the internal Cerebro service.
+
+---
+
+## Inputs
+
+| **Input Name**  | **Description**                     | **Required** | **Type**  |
+|------------------|-------------------------------------|--------------|-----------|
+| `build_sha`      | Build commit SHA for the job.       | ✅            | `string`  |
+| `runner_id`      | Runner ID of the parent runner.     | ✅            | `string`  |
+| `new_major`      | New major version number.           | ✅            | `string`  |
+| `new_minor`      | New minor version number.           | ✅            | `string`  |
+| `new_patch`      | New patch version number.           | ✅            | `string`  |
+| `new_version`    | Full version string to deploy.      | ✅            | `string`  |
+
+---
+
+## Workflow Jobs
+
+### **`editor-check`**
+- Validates whether a rebuild is necessary for Android editors by comparing the `build.sha`.
+
+### **`template-check`**
+- Verifies if Android templates need to be rebuilt.
+
+### **`build-editors`**
+- Builds Android editors for supported architectures:
+  - **ARM32**
+  - **ARM64**
+  - **x86_32**
+  - **x86_64**
+
+### **`build-templates`**
+- Builds Android templates with and without Mono support.
+- Generates separate builds for `template_release` and `template_debug`.
+
+### **`template-success`**
+- Handles success notifications and uploads the `build.sha` for future validation.
+
+---
+
+## Steps Overview
+
+### 1. **Repository Checkout and Version Update**
+- Clones the Blazium Engine repository at the specified `build_sha`.
+- Updates version details in `version.py`.
+
+### 2. **Dependency Setup**
+- Downloads and configures:
+  - Android SDK and Java 17.
+  - Pre-built **Swappy Frame Pacing Library**.
+  - Vulkan dependencies (for Android).
+  - Python and SCons.
+
+### 3. **Compilation**
+- Compiles Android editors and templates for all supported architectures using `SCons`.
+- Supports `template_release` and `template_debug` targets.
+
+### 4. **Template and Editor Packaging**
+- Packages editors and templates into `.tar.gz` archives.
+- Uploads artifacts to DigitalOcean Spaces for distribution.
+
+### 5. **Integration with Cerebro**
+- Sends build progress updates to Cerebro for real-time monitoring.
+- Notifies Cerebro of build success or failure.
+
+---
+
+## Example Usage
+
+```yaml
+jobs:
+  android-build:
+    uses: ./.github/workflows/android_build.yml
+    with:
+      build_sha: "abc123def456"
+      runner_id: "runner-001"
+      new_major: "1"
+      new_minor: "0"
+      new_patch: "3"
+      new_version: "1.0.3"
+```
+
 
 # Github Actions
 
