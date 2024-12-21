@@ -1,6 +1,4 @@
 # This is the Official CI/CD for Blazium Engine
-## Note: All Documentation is just thrown in here cause I was yelled at by Dragos......
-### If you think it could be better, make a PR god damnit.
 
 Actions below are all things needed for the CI/CD to work.
 
