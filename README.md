@@ -2,6 +2,10 @@
 
 Actions needed to build engine and templates for the Blazium Engine, as well as deploy them.
 
+# Design Decisions
+
+Dockerfile for macos will not work because of the build size of the container on the github runners (including XCode built, about 20GB), and it will not start build because of the memory limit of the runners.
+
 # Table of contents
 
 1. [Features](#features)
@@ -17,6 +21,8 @@ Actions needed to build engine and templates for the Blazium Engine, as well as 
 # Main Workflow
 
 - GHA: `.github/workflows/runner.yml` - Orchestrates builds, deployments, and cleanups for the Blazium Engine across multiple operating systems and configurations. It triggers jobs based on a custom payload, enabling tailored workflows for nightly, template, or editor builds, with support for dynamic branching, versioning, and deployment management.
+
+Note: This workflow can also be triggered using the `.github/workflows/trigger_runner.yml` workflow and giving it inputs.
 
 Example payload to trigger the workflow:
 ```json
