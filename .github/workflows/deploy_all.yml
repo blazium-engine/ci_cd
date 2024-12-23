@@ -51,10 +51,6 @@ on:
         required: true
         type: string
 
-env:
-  BASE_NAME: Blazium_v
-  GODOT_BASE_BRANCH: blazium-dev
-
 concurrency:
   group: ci-${{ github.actor }}-${{ github.event.client_payload.type || 'nightly' }}-deploy-all
   cancel-in-progress: true
