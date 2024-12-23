@@ -31,6 +31,7 @@ jobs:
   dispatch-event:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       actions: write
     steps:
       - name: Send Repository Dispatch Event
