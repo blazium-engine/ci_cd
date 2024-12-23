@@ -2,6 +2,10 @@
 
 Actions needed to build engine and templates for the Blazium Engine, as well as deploy them.
 
+# Design Decisions
+
+Dockerfile for macos will not work because of the build size of the container on the github runners (including XCode built, about 20GB), and it will not start build because of the memory limit of the runners.
+
 # Table of contents
 
 1. [Features](#features)
