@@ -69,7 +69,6 @@ jobs:
         with:
           file_path: ${{ github.workspace }}/changelog.json
 
-
   static-checks:
     name: 📊 Static checks
     needs: get-latest-sha
@@ -196,7 +195,6 @@ jobs:
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
       new_version: ${{ needs.get-latest-sha.outputs.version_string }}
-
 
   cleanup:
     name: Clean Up

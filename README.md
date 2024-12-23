@@ -22,6 +22,8 @@ Dockerfile for macos will not work because of the build size of the container on
 
 - GHA: `.github/workflows/runner.yml` - Orchestrates builds, deployments, and cleanups for the Blazium Engine across multiple operating systems and configurations. It triggers jobs based on a custom payload, enabling tailored workflows for nightly, template, or editor builds, with support for dynamic branching, versioning, and deployment management.
 
+Note: This workflow can also be triggered using the `.github/workflows/trigger_runner.yml` workflow and giving it inputs.
+
 Example payload to trigger the workflow:
 ```json
 {
