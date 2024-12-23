@@ -16,56 +16,16 @@ on:
         description: 'Branch to build from'
         required: true
         default: 'blazium-dev'
-      build_template:
-        description: 'Build templates'
+      build_type:
+        description: 'Build type (comma-separated list like templates, editors)'
         required: true
-        type: boolean
-        default: true
-      build_editors:
-        description: 'Build editors'
+        type: string
+        default: 'templates,editors'
+      build:
+        description: 'Platforms to build for (comma-separated list like linux, monoglue, ios, macos, android, web, windows)'
         required: true
-        type: boolean
-        default: true
-      build_linux:
-        description: 'Build for Linux'
-        required: true
-        type: boolean
-        default: true
-      build_monoglue:
-        description: 'Build Mono Glue'
-        required: true
-        type: boolean
-        default: true
-      build_ios:
-        description: 'Build for iOS'
-        required: true
-        type: boolean
-        default: true
-      build_macos:
-        description: 'Build for macOS'
-        required: true
-        type: boolean
-        default: true
-      build_android:
-        description: 'Build for Android'
-        required: true
-        type: boolean
-        default: true
-      build_web:
-        description: 'Build for Web'
-        required: true
-        type: boolean
-        default: true
-      build_windows:
-        description: 'Build for Windows'
-        required: true
-        type: boolean
-        default: true
-      force:
-        description: 'Force build'
-        required: true
-        type: boolean
-        default: false
+        type: string
+        default: 'linux,ios,macos,android,web,windows,monoglue'
 
 jobs:
   dispatch-event:
@@ -73,43 +33,14 @@ jobs:
     steps:
       - name: Send Repository Dispatch Event
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the default token for the workflow
         run: |
-          # Append selected build types to build_type and build arrays
-          build_type=()
-          build=()
-          deploy=()
-          if [ "${{ inputs.build_template }}" == "true" ]; then
-            build_type+=("templates")
-            deploy+=("templates")
-          fi
-          if [ "${{ inputs.build_editors }}" == "true" ]; then
-            build_type+=("editors")
-            deploy+=("editors")
-          fi
-          if [ "${{ inputs.build_linux }}" == "true" ]; then
-            build+=("linux")
-          fi
-          if [ "${{ inputs.build_monoglue }}" == "true" ]; then
-            build+=("monoglue")
-          fi
-          if [ "${{ inputs.build_ios }}" == "true" ]; then
-            build+=("ios")
-          fi
-          if [ "${{ inputs.build_macos }}" == "true" ]; then
-            build+=("macos")
-          fi
-          if [ "${{ inputs.build_android }}" == "true" ]; then
-            build+=("android")
-          fi
-          if [ "${{ inputs.build_web }}" == "true" ]; then
-            build+=("web")
-          fi
-          if [ "${{ inputs.build_windows }}" == "true" ]; then
-            build+=("windows")
-          fi
-          
-          # Update the curl command with the final payload
+          # Convert the comma-separated string inputs into arrays
+          build_type=(${{ inputs.build_type }})
+          build=(${{ inputs.build }})
+          deploy=(${{ inputs.deploy }})
+
+          # Send the repository dispatch event
           curl -X POST \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token $GITHUB_TOKEN" \
@@ -123,6 +54,6 @@ jobs:
               "build_type": ["${build_type[@]}"],
               "force": ${{ inputs.force }},
               "build": ["${build[@]}"],
-              "deploy": ["${deploy[@]}"]
+              "deploy": ["${build_type[@]}"]
             }
           }'
