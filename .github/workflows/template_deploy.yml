@@ -14,11 +14,35 @@ on:
         description: "New Version that'll be Deployed"
         required: true
         type: string
+      monoglue-build:
+        description: "Build Status for Monoglue"
+        required: true
+        type: string
+      windows-build:
+        description: "Build Status for Windows"
+        required: true
+        type: string
+      macos-build:
+        description: "Build Status for MacOS"
+        required: true
+        type: string
+      linux-build:
+        description: "Build Status for Linux"
+        required: true
+        type: string
+      android-build:
+        description: "Build Status for Android"
+        required: true
+        type: string
+      ios-build:
+        description: "Build Status for iOS"
+        required: true
+        type: string
 # Global Settings
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  BASE_NAME: Blazium_v
+  BASE_NAME: Blazium_v${{ inputs.new_version }}
 
 concurrency:
   group: ci-${{github.actor}}-${{ github.event.client_payload.type || 'nightly' }}-template-deploy
@@ -518,7 +542,7 @@ jobs:
           # Define variables
           TARGET_DIR="${GITHUB_WORKSPACE}/templates/mono"
           RELDIR="${GITHUB_WORKSPACE}/export"
-          ZIP_FILE="${RELDIR}/${BASE_NAME}${{ inputs.new_version }}_mono_export_templates.tpz"
+          ZIP_FILE="${RELDIR}/${BASE_NAME}_mono_export_templates.tpz"
 
           # Ensure the target directory exists
           if [ ! -d "$TARGET_DIR" ]; then
@@ -555,7 +579,7 @@ jobs:
           # Define variables
           TARGET_DIR="${GITHUB_WORKSPACE}/templates"
           RELDIR="${GITHUB_WORKSPACE}/export"
-          ZIP_FILE="${RELDIR}/${BASE_NAME}${{ inputs.new_version }}_export_templates.tpz"
+          ZIP_FILE="${RELDIR}/${BASE_NAME}_export_templates.tpz"
 
           # Ensure the target directory exists
           if [ ! -d "$TARGET_DIR" ]; then
@@ -588,13 +612,12 @@ jobs:
       - name: Generate JSON with File Info and Checksums
         shell: bash
         env:
-          BASE_NAME: Blazium_v
           URL_BASE: ${{ secrets.CDN_URL }}/${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
         run: |
           # Define file paths and output file
           TARGET_DIR="${GITHUB_WORKSPACE}/export"
-          BASE_FILE="${TARGET_DIR}/${BASE_NAME}${{ inputs.new_version }}_export_templates.tpz"
-          MONO_FILE="${TARGET_DIR}/${BASE_NAME}${{ inputs.new_version }}_mono_export_templates.tpz"
+          BASE_FILE="${TARGET_DIR}/${BASE_NAME}_export_templates.tpz"
+          MONO_FILE="${TARGET_DIR}/${BASE_NAME}_mono_export_templates.tpz"
           OUTPUT_FILE="${TARGET_DIR}/details.json"
 
           # Ensure files exist
@@ -673,7 +696,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: export/${{ env.BASE_NAME }}${{ inputs.new_version }}_export_templates.tpz
+          source: export/${{ env.BASE_NAME }}_export_templates.tpz
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: BetaHuhn/do-spaces-action@v2
@@ -682,7 +705,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: export/${{ env.BASE_NAME }}${{ inputs.new_version }}_mono_export_templates.tpz
+          source: export/${{ env.BASE_NAME }}_mono_export_templates.tpz
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: BetaHuhn/do-spaces-action@v2
