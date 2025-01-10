@@ -63,8 +63,9 @@ Contributors:
         });
 
         // Export the text file
-        const outputFilePathDetailed = path.join(__dirname, `changelog_${baseBranch}_to_${currentBranch}.txt`);
-        const outputFilePathBase = path.join(__dirname, `changelog.txt`);
+        const outdir = process.cwd();
+        const outputFilePathDetailed = path.join(outdir, `changelog_${baseBranch}_to_${currentBranch}.txt`);
+        const outputFilePathBase = path.join(outdir, `changelog.txt`);
         fs.writeFileSync(outputFilePathDetailed, changelogText, 'utf-8');
         fs.writeFileSync(outputFilePathBase, changelogText, 'utf-8');
         console.log(`Changelog exported with detailed name to ${outputFilePathDetailed}`);
