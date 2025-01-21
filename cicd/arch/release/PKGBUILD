@@ -1,0 +1,142 @@
+# Maintainer: Matthias Schuster (shalokshalom@proton.me)
+
+pkgbase=Blazium
+pkgname=(blazium blazium-dotnet)
+pkgver=0.2.177
+pkgrel=1
+pkgdesc='Community driven, advanced cross-platform 2D and 3D game engine'
+url='https://blazium.app//'
+license=(MIT)
+arch=(x86_64)
+
+makedepends=(alsa-lib dotnet-sdk nuget pulse-native-provider scons setconf yasm)
+depends=(brotli ca-certificates embree freetype2 graphite harfbuzz harfbuzz-icu libglvnd libspeechd libsquish libtheora libvorbis
+         libwebp libwslay libxcursor libxi libxinerama libxrandr miniupnpc openxr pcre2)
+optdepends=('pipewire-alsa: for audio support'
+            'pulse-native-provider: for audio support')
+
+source=("$pkgname-$pkgver.tar.gz::https://github.com/blazium-engine/$pkgbase/archive/refs/tags/v0.2.177-nightly.tar.gz")
+b2sums=('8465ed54d7deee566419cd27991adbcab3fb36768a79e9e5b4d0101c08c154db810329b679dbcda675a7b6dc29866771682990dc445ffee3cc02e62d4ebc31c6')
+
+
+prepare() {
+  cd $pkgname-$pkgver-nightly
+
+  # Patch for miniupnpc
+  sed -i 's/addr, 16/addr, 16, nullptr, 0/g' modules/upnp/upnp.cpp
+
+  cd misc/dist/linux
+
+  # Prepare the Godot Mono desktop file
+  cp -f app.blazium.Blazium.desktop app.blazium.Blazium-dotnet.desktop
+  setconf app.blazium.Blazium-dotnet.desktop Exec blazium-dotnet
+  setconf app.blazium.Blazium-dotnet.desktop Name 'Blazium Engine Dotnet'
+  setconf app.blazium.Blazium-dotnet.desktop Icon blazium-dotnet.svg
+
+  # Fix the MIME info, ref FS#77810
+  sed -i 's,xmlns="https://specifications.freedesktop.org/shared-mime-info-spec",xmlns="http://www.freedesktop.org/standards/shared-mime-info",g' \
+    app.blazium.Blazium.xml
+
+  # Prepare the Godot Mono MIME file as well
+  cp -f app.blazium.Blazium.xml app.blazium.Blazium-dotnet.xml
+}
+
+build() {
+  cd $pkgname-$pkgver-nightly
+
+  export BUILD_NAME=arch_linux
+
+  # Not unbundled (yet):
+  #  mbedtls
+  #  enet (contains no upstreamed IPv6 support)
+  #  AUR: libwebm, rvo2
+  #  recastnavigation, xatlas
+
+  _args=(
+    -j$(nproc --all)
+    cflags="$CFLAGS -fPIC -Wl,-z,relro,-z,now -w"
+    cxxflags="$CXXFLAGS -fPIC -Wl,-z,relro,-z,now -w"
+    linkflags="$LDFLAGS"
+    arch=$CARCH
+    builtin_brotli=no
+    builtin_certs=no
+    builtin_clipper2=yes
+    builtin_embree=no
+    builtin_enet=yes
+    builtin_freetype=no
+    builtin_msdfgen=yes
+    builtin_glslang=yes
+    builtin_graphite=no
+    builtin_harfbuzz=no
+    builtin_icu4c=yes
+    builtin_libogg=no
+    builtin_libpng=no
+    builtin_libtheora=no
+    builtin_libvorbis=no
+    builtin_libwebp=no
+    builtin_wslay=yes
+    builtin_mbedtls=yes
+    builtin_miniupnpc=no
+    builtin_openxr=no
+    builtin_pcre2=no
+    builtin_pcre2_with_jit=no
+    builtin_recastnavigation=yes
+    builtin_rvo2_2d=yes
+    builtin_rvo2_3d=yes
+    builtin_squish=no
+    builtin_xatlas=yes
+    builtin_zlib=no
+    builtin_zstd=no
+    colored=yes
+    disable_exceptions=false
+    platform=linuxbsd
+    production=no
+    pulseaudio=yes
+    system_certs_path=/etc/ssl/certs/ca-certificates.crt
+    target=editor
+    use_llvm=no
+    werror=no
+  )
+
+  # Regular build
+  scons "${_args[@]}"
+
+  # Mono build
+  _args+=(module_mono_enabled=yes mono_glue=no)
+  scons "${_args[@]}"
+
+  bin/blazium.linuxbsd.editor.$CARCH.mono --headless --generate-dotnet-glue modules/mono/glue
+  modules/mono/build_scripts/build_assemblies.py --blazium-output-dir=./bin --blazium-platform=linuxbsd
+}
+
+package_blazium() {
+  cd $pkgbase
+
+  install -Dm755 bin/blazium.linuxbsd.editor.$CARCH "$pkgdir/usr/bin/blazium"
+
+  install -Dm644 icon.svg "$pkgdir/usr/share/pixmaps/$pkgname.svg"
+  install -Dm644 misc/dist/linux/app.blazium.Blazium.desktop "$pkgdir/usr/share/applications/app.blazium.Blazium.desktop"
+  install -Dm644 misc/dist/linux/app.blazium.Blazium.xml "$pkgdir/usr/share/mime/packages/app.blazium.Blazium.xml"
+
+  install -Dm644 misc/dist/linux/blazium.6 "$pkgdir/usr/share/man/man6/$pkgname.6"
+  install -Dm644 LICENSE.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+} 
+
+package_blazium-dotnet(){
+  depends+=(dotnet-sdk)
+
+  cd $pkgbase
+
+  install -Dm755 bin/blazium.linuxbsd.editor.$CARCH.mono "$pkgdir/usr/lib/$pkgname/blazium.linuxbsd.editor.$CARCH.mono"
+
+  cp -a bin/GodotSharp "$pkgdir/usr/lib/$pkgname/"
+  install -d "$pkgdir/usr/bin"
+  ln -s /usr/lib/$pkgname/blazium.linuxbsd.editor.$CARCH.mono "$pkgdir/usr/bin/$pkgname"
+
+  install -Dm644 icon.svg "$pkgdir/usr/share/pixmaps/$pkgname.svg"
+  install -Dm644 misc/dist/linux/app.blazium.Blazium-dotnet.desktop "$pkgdir/usr/share/applications/app.blazium.Blazium-dotnet.desktop"
+  install -Dm644 misc/dist/linux/app.blazium.Blazium-dotnet.xml "$pkgdir/usr/share/mime/packages/app.blazium.Blazium-dotnet.xml"
+
+  install -Dm644 misc/dist/linux/blazium.6 "$pkgdir/usr/share/man/man6/$pkgname.6"
+  install -Dm644 LICENSE.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
