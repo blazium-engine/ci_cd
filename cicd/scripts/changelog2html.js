@@ -48,7 +48,7 @@ function generateChangelogHTML(jsonFilePath) {
 <blockquote>
 Commit SHA: ${entry.sha}<br>
 Date: <code>${new Date(entry.date).toLocaleString()}</code><br>
-Author: <b>${entry.user}</b>
+Author: <b>${entry.user}</b> a.k.a. <i>${entry.names.join(", ")}</i>
 </blockquote>${details ? details.replace(/\n/g, "<br>") : ""}
 <hr></details>`;
             } 
