@@ -1,0 +1,9 @@
+/tools/secret_files/*
+!/tools/secret_files/.keep
+/tools/config_files/*
+!/tools/config_files/.keep
+.env
+.DS_Store
+secrets.json
+/tools/node_modules
+.VSCodeCounter
