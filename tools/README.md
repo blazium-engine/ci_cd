@@ -1,8 +1,4 @@
 
-
-### **README.md**
-
-```markdown
 # GitHub Secrets CLI Tools
 
 This repository contains a set of Node.js CLI tools for managing and encrypting GitHub Actions secrets using GitHub's API.
