@@ -138,7 +138,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: changelog.html
+          source: cicd/scripts/changelog.html
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: BetaHuhn/do-spaces-action@v2
@@ -147,7 +147,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: changelog.txt
+          source: cicd/scripts/changelog.txt
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - name: Create GitHub Release

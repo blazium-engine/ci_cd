@@ -177,65 +177,34 @@ jobs:
           repository: blazium-engine/ci_cd
           submodules: recursive
       
-      - name: Download All Template Files
+      - name: Download Editor
         uses: ./.github/actions/cerebro-download-multi-build
         with:
           names: |
             macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-          filename_new: |
-            ${{ env.BASE_NAME }}_macos
-          input_dir: ${{ github.workspace }}/extracted
-          output_dir: ${{ github.workspace }}/editors
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          folder: ${{ github.workspace }}/downloads
       
       - name: Uncompress Templates
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
           names: |
-            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-editor-${{ github.event.client_payload.type || 'nightly' }}
             macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
-            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
-      - name: Edit Editor Filenames in-Place
-        uses: ./.github/actions/multi-rename-inplace
-        with:
-          names: |
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            Blazium_macos.universal.zip
-          filename_new: |
-            ${{ env.BASE_NAME }}_macos.universal.zip
-          input_dir: ${{ github.workspace }}/extracted
-
       - name: Code sign again for store export
-        working-directory: build
+        working-directory: extracted
         run: |
           ls
           unzip -o Blazium_macos.universal.zip
           ls
-          #Blazium_macos.universal.app
+          # output should be Blazium.app
 
       - name: Install the Apple certificate and provisioning profile
-        working-directory: build
+        working-directory: extracted
         env:
           DEPLOY_CERTIFICATE_BASE64: ${{ secrets.DEPLOY_CERTIFICATE_BASE64 }}
           INSTALL_CERTIFICATE_BASE64: ${{ secrets.INSTALL_CERTIFICATE_BASE64 }}
@@ -284,14 +253,32 @@ jobs:
           # apply provisioning profile
           ls $PP_PATH
           echo $PP_PATH
-          cp $PP_PATH Blazium_macos.universal.app/Contents/embedded.provisionprofile
+          cp $PP_PATH Blazium.app/Contents/embedded.provisionprofile
           
-          # Set apple team id
-          sed -i '' -e "s/$APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" Blazium_macos.universal.app/Contents/embedded.provisionprofile
-
+          # Set apple team id in entitlements
+          sed -i '' -e "s/$APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" ../deploy/macos/deploy.entitlements
 
       - name: Code Sign
+        working-directory: extracted
+        run: |
+          # Remove wrong attributes, these could be quarantine attibutes.
+          xattr -cr Blazium.app
 
+          codesign --deep --force --options=runtime --verbose --timestamp \
+            --entitlements ../deploy/macos/deploy.entitlements --sign "$DEPLOY_SIGNING_IDENTITY" \
+            Blazium.app
+      
+      - name: Make installer
+        working-directory: extracted
+        run: |
+          productbuild --sign "$INSTALL_SIGNING_IDENTITY" \
+          --component Blazium.app /Applications Blazium.pkg
+      
+      - name: Deploy installer
+        working-directory: extracted
+        run: |
+          xcrun altool --upload-app --type osx --file Blazium.pkg \
+          --username "${{ secrets.APPLE_ID }}" --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" --verbose
 
   deploy-editors:
     runs-on: "ubuntu-20.04"
