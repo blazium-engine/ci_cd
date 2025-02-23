@@ -55,6 +55,7 @@ jobs:
           echo $deploy
           # Send the repository dispatch event
           curl -X POST \
+          -v \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ secrets.PRIVATE_GITHUB_PAT }}" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
