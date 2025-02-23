@@ -164,6 +164,135 @@ jobs:
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
+  deploy-mac-appstore:
+    runs-on: "macos-latest"
+    needs: do-we-deploy-lol
+    if: >
+      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
+      needs.do-we-deploy-lol.outputs.proceed == true
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/ci_cd
+          submodules: recursive
+      
+      - name: Download All Template Files
+        uses: ./.github/actions/cerebro-download-multi-build
+        with:
+          names: |
+            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+          filename_new: |
+            ${{ env.BASE_NAME }}_macos
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/editors
+      
+      - name: Uncompress Templates
+        uses: ./.github/actions/multi-uncompress-tar-gz
+        with:
+          names: |
+            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            web-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
+            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
+          input_dir: ${{ github.workspace }}/downloads
+          output_dir: ${{ github.workspace }}/extracted
+
+      - name: Edit Editor Filenames in-Place
+        uses: ./.github/actions/multi-rename-inplace
+        with:
+          names: |
+            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+          filename_old: |
+            Blazium_macos.universal.zip
+          filename_new: |
+            ${{ env.BASE_NAME }}_macos.universal.zip
+          input_dir: ${{ github.workspace }}/extracted
+
+      - name: Code sign again for store export
+        working-directory: build
+        run: |
+          ls
+          unzip -o Blazium_macos.universal.zip
+          ls
+          #Blazium_macos.universal.app
+
+      - name: Install the Apple certificate and provisioning profile
+        working-directory: build
+        env:
+          DEPLOY_CERTIFICATE_BASE64: ${{ secrets.DEPLOY_CERTIFICATE_BASE64 }}
+          INSTALL_CERTIFICATE_BASE64: ${{ secrets.INSTALL_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          DEPLOY_PROVISION_PROFILE_MAC_BASE64: ${{ secrets.DEPLOY_PROVISION_PROFILE_MAC_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          DEPLOY_CERTIFICATE_PATH=$RUNNER_TEMP/deploy_certificate.p12
+          INSTALL_CERTIFICATE_PATH=$RUNNER_TEMP/install_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.provisionprofile
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # import certificate and provisioning profile from secrets
+          echo -n "$DEPLOY_CERTIFICATE_BASE64" | base64 --decode -o $DEPLOY_CERTIFICATE_PATH
+          echo -n "$INSTALL_CERTIFICATE_BASE64" | base64 --decode -o $INSTALL_CERTIFICATE_PATH
+          echo -n "$DEPLOY_PROVISION_PROFILE_MAC_BASE64" | base64 --decode -o $PP_PATH
+
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          # Import first certificate
+          security import $DEPLOY_CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          SIGNING_IDENTITY=$(security find-identity -p basic -v | awk -F'"' 'NR==1 {print $2}')
+          # Capture list of identities before second import
+          IDENTITIES_BEFORE=$(security find-identity -p basic -v | awk -F'"' '{print $2}')
+
+          # Import second certificate
+          security import $INSTALL_CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security find-identity -p basic -v
+          # Capture list of identities after second import
+          IDENTITIES_AFTER=$(security find-identity -p basic -v | awk -F'"' '{print $2}')
+
+          # Find the new identity added (difference between after and before)
+          SECOND_SIGNING_IDENTITY=$(comm -13 <(echo "$IDENTITIES_BEFORE" | sort) <(echo "$IDENTITIES_AFTER" | sort) | head -n 1)
+
+          # Export to GitHub Actions environment
+          echo "INSTALL_SIGNING_IDENTITY=$SECOND_SIGNING_IDENTITY" >> $GITHUB_ENV
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # apply provisioning profile
+          ls $PP_PATH
+          echo $PP_PATH
+          cp $PP_PATH Blazium_macos.universal.app/Contents/embedded.provisionprofile
+          
+          # Set apple team id
+          sed -i '' -e "s/$APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" Blazium_macos.universal.app/Contents/embedded.provisionprofile
+
+
+      - name: Code Sign
+
+
   deploy-editors:
     runs-on: "ubuntu-20.04"
     needs: do-we-deploy-lol
