@@ -94,72 +94,74 @@ jobs:
 
   build-editors:
     runs-on: "ubuntu-20.04"
-    name: ${{ matrix.name }}
+    name: ${{ matrix.config.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-
+        config:
           - name: Editor (64bit)
             cache-name: linux-editor-64bit
             target: editor
-            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
 
           - name: Editor w/ Mono (64bit)
             cache-name: linux-editor-mono-64bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
             
           - name: Editor (32bit)
             cache-name: linux-editor-32bit
             target: editor
-            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
 
           - name: Editor w/ Mono (32bit)
             cache-name: linux-editor-mono-32bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
 
           - name: Editor (arm64)
             cache-name: linux-editor-arm64
             target: editor
-            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
             arm: true
+            skip: true
 
           - name: Editor w/ Mono (arm64)
             cache-name: linux-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
             arm: true
+            skip: true
 
           - name: Editor (arm32)
             cache-name: linux-editor-arm32
             target: editor
-            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
             arm: true
+            skip: true
 
           - name: Editor w/ Mono (arm32)
             cache-name: linux-editor-mono-arm32
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
             arm: true
+            skip: true
+
+        exclude:
+          - config:
+              skip: true
 
     steps:
-      - name: Skip Action?
-        if: matrix.skip
-        run: |
-          echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
-          exit 0
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -191,12 +193,12 @@ jobs:
       - name: Notify Cerebro of Build Starting
         uses: ./.github/actions/cerebro-started
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
-          mono: ${{ matrix.mono }}
+          build_type: ${{ startsWith(matrix.config.target, 'template_') && 'template' || 'editor' }}
+          mono: ${{ matrix.config.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: linux
@@ -253,10 +255,11 @@ jobs:
             libspeechd-dev \
             speech-dispatcher \
             fontconfig \
-            libfontconfig-dev
+            libfontconfig-dev \
+            binutils
 
       - name: Install llvm-mingw
-        if: matrix.arm
+        if: matrix.config.arm
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
@@ -283,7 +286,7 @@ jobs:
         uses: ammaraskar/gcc-problem-matcher@master
 
       - name: Download and extract mono-glue
-        if: matrix.mono
+        if: matrix.config.mono
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -312,12 +315,12 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
+          sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.config.sconsflags }}
           platform: linuxbsd
-          target: ${{ matrix.target }}
+          target: ${{ matrix.config.target }}
 
       - name: Building C# Assemblies
-        if: matrix.mono
+        if: matrix.config.mono
         run: |
           ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=linuxbsd
 
@@ -325,12 +328,12 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: ${{ matrix.cache-name }}
+          cache-name: ${{ matrix.config.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
         run: |
-          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
+          tar -czvf ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
         with:
@@ -338,22 +341,22 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
-          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+          source: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.config.target, 'template_') && '/template' || '' }}
 
 
       - name: Upload artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
-          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.config.target, 'template_') && '/template' || '' }}/${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           version: ${{ inputs.new_version }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -362,7 +365,7 @@ jobs:
         if: failure() || cancelled() # Triggers if the job fails or is canceled
         uses: ./.github/actions/cerebro-failed
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -388,13 +391,13 @@ jobs:
 
   build-templates:
     runs-on: "ubuntu-20.04"
-    name: ${{ matrix.name }}
+    name: ${{ matrix.config.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
       fail-fast: false
       matrix:
-        include:
+        config:
           - name: Release Template w/ Mono (64bit)
             cache-name: linux-template-mono-64bit
             target: template_release
@@ -507,12 +510,11 @@ jobs:
             arm: true
             skip: true
 
+        exclude:
+          - config:
+              skip: true
+
     steps:
-      - name: Skip Action?
-        if: matrix.skip
-        run: |
-          echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
-          exit 0
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -544,12 +546,12 @@ jobs:
       - name: Notify Cerebro of Build Starting
         uses: ./.github/actions/cerebro-started
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
-          mono: ${{ matrix.mono }}
+          build_type: ${{ startsWith(matrix.config.target, 'template_') && 'template' || 'editor' }}
+          mono: ${{ matrix.config.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: linux
@@ -617,7 +619,7 @@ jobs:
           sudo apt-get install -qq mesa-vulkan-drivers
 
       - name: Install llvm-mingw
-        if: matrix.arm
+        if: matrix.config.arm
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
@@ -635,7 +637,7 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: ${{ matrix.cache-name }}
+          cache-name: ${{ matrix.config.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -645,7 +647,7 @@ jobs:
         uses: ammaraskar/gcc-problem-matcher@master
 
       - name: Download and extract mono-glue
-        if: matrix.mono
+        if: matrix.config.mono
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -674,19 +676,19 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
+          sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.config.sconsflags }}
           platform: linuxbsd
-          target: ${{ matrix.target }}
+          target: ${{ matrix.config.target }}
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: ${{ matrix.cache-name }}
+          cache-name: ${{ matrix.config.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
         run: |
-          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
+          tar -czvf ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
         with:
@@ -694,22 +696,22 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
-          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+          source: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.config.target, 'template_') && '/template' || '' }}
 
 
       - name: Upload artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
-          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.config.target, 'template_') && '/template' || '' }}/${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           version: ${{ inputs.new_version }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -718,7 +720,7 @@ jobs:
         if: failure() || cancelled() # Triggers if the job fails or is canceled
         uses: ./.github/actions/cerebro-failed
         with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}

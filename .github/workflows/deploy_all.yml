@@ -138,6 +138,15 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: cicd/scripts/changelog.html
+          out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
           source: cicd/scripts/changelog.txt
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 

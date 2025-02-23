@@ -284,22 +284,22 @@ jobs:
             windows-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-debug-template-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
-            blazium.windows.template_release.x86_64.exe
-            blazium.windows.template_release.x86_64.console.exe
-            blazium.windows.template_debug.x86_64.exe
-            blazium.windows.template_debug.x86_64.console.exe
-            blazium.windows.template_release.x86_32.exe
-            blazium.windows.template_release.x86_32.console.exe
-            blazium.windows.template_debug.x86_32.exe
-            blazium.windows.template_debug.x86_32.console.exe
-            blazium.windows.template_release.arm64.exe
-            blazium.windows.template_release.arm64.console.exe
-            blazium.windows.template_debug.arm64.exe
-            blazium.windows.template_debug.arm64.console.exe
-            blazium.windows.template_release.arm32.exe
-            blazium.windows.template_release.arm32.console.exe
-            blazium.windows.template_debug.arm32.exe
-            blazium.windows.template_debug.arm32.console.exe
+            blazium.windows.template_release.x86_64.llvm.exe
+            blazium.windows.template_release.x86_64.llvm.console.exe
+            blazium.windows.template_debug.x86_64.llvm.exe
+            blazium.windows.template_debug.x86_64.llvm.console.exe
+            blazium.windows.template_release.x86_32.llvm.exe
+            blazium.windows.template_release.x86_32.llvm.console.exe
+            blazium.windows.template_debug.x86_32.llvm.exe
+            blazium.windows.template_debug.x86_32.llvm.console.exe
+            blazium.windows.template_release.arm64.llvm.exe
+            blazium.windows.template_release.arm64.llvm.console.exe
+            blazium.windows.template_debug.arm64.llvm.exe
+            blazium.windows.template_debug.arm64.llvm.console.exe
+            blazium.windows.template_release.arm32.llvm.exe
+            blazium.windows.template_release.arm32.llvm.console.exe
+            blazium.windows.template_debug.arm32.llvm.exe
+            blazium.windows.template_debug.arm32.llvm.console.exe
           filename_new: |
             windows_release_x86_64.exe
             windows_release_x86_64_console.exe
@@ -341,22 +341,22 @@ jobs:
             windows-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-debug-template-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
-            blazium.windows.template_release.x86_64.mono.exe
-            blazium.windows.template_debug.x86_64.mono.exe
-            blazium.windows.template_release.x86_32.mono.exe
-            blazium.windows.template_debug.x86_32.mono.exe
-            blazium.windows.template_release.x86_64.mono.console.exe
-            blazium.windows.template_debug.x86_64.mono.console.exe
-            blazium.windows.template_release.x86_32.mono.console.exe
-            blazium.windows.template_debug.x86_32.mono.console.exe
-            blazium.windows.template_release.arm64.mono.exe
-            blazium.windows.template_release.arm64.mono.console.exe
-            blazium.windows.template_debug.arm64.mono.exe
-            blazium.windows.template_debug.arm64.mono.console.exe
-            blazium.windows.template_release.arm32.mono.exe
-            blazium.windows.template_release.arm32.mono.console.exe
-            blazium.windows.template_debug.arm32.mono.exe
-            blazium.windows.template_debug.arm32.mono.console.exe
+            blazium.windows.template_release.x86_64.llvm.mono.exe
+            blazium.windows.template_debug.x86_64.llvm.mono.exe
+            blazium.windows.template_release.x86_32.llvm.mono.exe
+            blazium.windows.template_debug.x86_32.llvm.mono.exe
+            blazium.windows.template_release.x86_64.llvm.mono.console.exe
+            blazium.windows.template_debug.x86_64.llvm.mono.console.exe
+            blazium.windows.template_release.x86_32.llvm.mono.console.exe
+            blazium.windows.template_debug.x86_32.llvm.mono.console.exe
+            blazium.windows.template_release.arm64.llvm.mono.exe
+            blazium.windows.template_release.arm64.llvm.mono.console.exe
+            blazium.windows.template_debug.arm64.llvm.mono.exe
+            blazium.windows.template_debug.arm64.llvm.mono.console.exe
+            blazium.windows.template_release.arm32.llvm.mono.exe
+            blazium.windows.template_release.arm32.llvm.mono.console.exe
+            blazium.windows.template_debug.arm32.llvm.mono.exe
+            blazium.windows.template_debug.arm32.llvm.mono.console.exe
           filename_new: |
             windows_release_x86_64.exe
             windows_debug_x86_64.exe

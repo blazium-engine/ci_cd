@@ -1,0 +1,76 @@
+name: Butler Push Multiple Files
+
+description: Push multiple files to Itch.io using Butler, dynamically setting the channel based on the filename.
+
+inputs:
+  names:
+    description: A YAML list of files to push, with their paths relative to the repository root.
+    required: true
+  itch_username:
+    description: Your Itch.io username.
+    required: true
+  itch_game:
+    description: The Itch.io game identifier.
+    required: true
+  butler_credentials:
+    description: Butler authentication credentials.
+    required: true
+  version:
+    description: Optional version to use for Butler push.
+    required: false
+  tag:
+    description: Optional tag to append to the channel.
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Input Parameters
+      id: validate_inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.names }}" ]; then
+          echo "Error: No files specified for upload."
+          exit 1
+        fi
+        echo "Files to upload:" >> $GITHUB_STEP_SUMMARY
+        echo "${{ inputs.names }}" >> $GITHUB_STEP_SUMMARY
+
+    - name: Push Files to Itch.io using Butler
+      shell: bash
+      env:
+        ITCHIO_USERNAME: ${{ inputs.itch_username }}
+        ITCHIO_GAME: ${{ inputs.itch_game }}
+        BUTLER_CREDENTIALS: ${{ inputs.butler_credentials }}
+      run: |
+        echo "${{ inputs.names }}" | while IFS= read -r file_path; do
+          if [ -d "$file_path" ] || [ -f "$file_path" ]; then
+            file_name=$(basename "$file_path")
+
+            # Extract the second value after splitting on "_"
+            second_part=$(echo "$file_name" | awk -F'_' '{print $2}')
+            
+            # Extract the first value before "." in the second part
+            channel=$(echo "$second_part" | awk -F'.' '{print $1}')
+
+            if [ -z "$channel" ]; then
+              echo "Warning: Could not determine channel from $file_name, skipping."
+              continue
+            fi
+
+            if [ ! -z "${{ inputs.tag }}" ]; then
+              channel+="-${{ inputs.tag }}"
+            fi
+
+            butler_cmd="butler push \"$file_path\" \"$ITCHIO_USERNAME/$ITCHIO_GAME:$channel\""
+            
+            if [ ! -z "${{ inputs.version }}" ]; then
+              butler_cmd+=" --userversion \"${{ inputs.version }}\""
+            fi
+
+            echo "Executing: $butler_cmd"
+            eval $butler_cmd
+          else
+            echo "Warning: File or directory $file_path does not exist. Skipping."
+          fi
+        done

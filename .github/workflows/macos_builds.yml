@@ -103,13 +103,13 @@ jobs:
           - name: Editor
             cache-name: macos-editor
             target: editor
-            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
 
           - name: Editor/w MONO
             cache-name: macos-editor-mono
             target: editor
-            sconsflags:  module_mono_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags:  module_mono_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
 
     steps:
@@ -120,7 +120,6 @@ jobs:
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
-
 
       # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
       - name: Install the Apple certificate
@@ -148,6 +147,11 @@ jobs:
           SIGNING_IDENTITY=$(security find-identity -v -p codesigning | awk -F'"' 'NR==1 {print $2}')
           echo "APPLE_SIGNING_IDENTITY=$SIGNING_IDENTITY" >> $GITHUB_ENV
   
+      - name: Install binutils
+        run: |
+          brew update
+          brew install binutils
+          brew link --overwrite binutils
 
       - name: Remove existing workflows folder
         run: |
@@ -266,7 +270,7 @@ jobs:
 
           # Remove original binaries and strip the universal binary
           rm ./bin/blazium.macos.${{ matrix.target }}.x86_64${MONO_SUFFIX} ./bin/blazium.macos.${{ matrix.target }}.arm64${MONO_SUFFIX}
-          strip bin/blazium.*
+
           chmod +x bin/blazium.*
 
       - name: Package Editor
