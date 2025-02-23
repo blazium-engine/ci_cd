@@ -204,6 +204,7 @@ jobs:
           # output should be Blazium.app
           mv Blazium.app ../Blazium.app
 
+      # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
       - name: Install the Apple certificate and provisioning profile
         working-directory: extracted
         env:
@@ -234,6 +235,7 @@ jobs:
           security import $DEPLOY_CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
           SIGNING_IDENTITY=$(security find-identity -p basic -v | awk -F'"' 'NR==1 {print $2}')
+          echo "DEPLOY_SIGNING_IDENTITY=$SIGNING_IDENTITY" >> $GITHUB_ENV
           # Capture list of identities before second import
           IDENTITIES_BEFORE=$(security find-identity -p basic -v | awk -F'"' '{print $2}')
 
@@ -252,10 +254,7 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
 
           # apply provisioning profile
-          ls $PP_PATH
-          echo $PP_PATH
           cp $PP_PATH Blazium.app/Contents/embedded.provisionprofile
-          
           # Set apple team id in entitlements
           sed -i '' -e "s/APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" ../deploy/macos/deploy.entitlements
 
