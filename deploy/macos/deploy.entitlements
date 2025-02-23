@@ -12,7 +12,6 @@
  <string>APPLE_TEAM_ID</string>
  <key>com.apple.security.app-sandbox</key>
  <true/>
- <key>com.apple.security.cs.allow-dyld-shared-cache</key>
  <key>com.apple.security.cs.allow-dyld-environment-variables</key>
  <true/>
  <key>com.apple.security.cs.allow-jit</key>
