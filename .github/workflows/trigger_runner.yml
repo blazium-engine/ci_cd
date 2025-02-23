@@ -47,9 +47,9 @@ jobs:
       - name: Send Repository Dispatch Event
         run: |
           # Convert the comma-separated string inputs into arrays
-          build_type_json=$(printf '%s' '${{ inputs.build_type }}' | jq -R -c 'split(",")')
-          build_json=$(printf '%s' '${{ inputs.build }}' | jq -R -c 'split(",")')
-          deploy_json=$(printf '%s' '${{ inputs.deploy }}' | jq -R -c 'split(",")')
+          build_type=$(printf '%s' '${{ inputs.build_type }}' | jq -R -c 'split(",")')
+          build=$(printf '%s' '${{ inputs.build }}' | jq -R -c 'split(",")')
+          deploy=$(printf '%s' '${{ inputs.deploy }}' | jq -R -c 'split(",")')
           echo $build_type
           echo $build
           echo $deploy
