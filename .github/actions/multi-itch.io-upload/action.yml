@@ -42,6 +42,7 @@ runs:
         ITCHIO_USERNAME: ${{ inputs.itch_username }}
         ITCHIO_GAME: ${{ inputs.itch_game }}
         BUTLER_CREDENTIALS: ${{ inputs.butler_credentials }}
+        BUTLER_API_KEY: ${{ inputs.butler_credentials }}
       run: |
         echo "${{ inputs.names }}" | while IFS= read -r file_path; do
           if [ -f "$file_path" ]; then

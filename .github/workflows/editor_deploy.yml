@@ -684,7 +684,6 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.32bit.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.32bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_web.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
