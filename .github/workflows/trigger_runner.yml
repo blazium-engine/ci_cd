@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Send Repository Dispatch Event
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_PAT }}
         run: |
           # Convert the comma-separated string inputs into arrays
           build_type=(${{ inputs.build_type }})
