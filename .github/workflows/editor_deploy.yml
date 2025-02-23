@@ -195,7 +195,7 @@ jobs:
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
-      - name: Code sign again for store export
+      - name: Extract Blazium.
         working-directory: extracted/macos-editor-${{ github.event.client_payload.type || 'nightly' }}
         run: |
           ls
@@ -257,7 +257,7 @@ jobs:
           cp $PP_PATH Blazium.app/Contents/embedded.provisionprofile
           
           # Set apple team id in entitlements
-          sed -i '' -e "s/$APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" ../deploy/macos/deploy.entitlements
+          sed -i '' -e "s/APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" ../deploy/macos/deploy.entitlements
 
       - name: Code Sign
         working-directory: extracted
