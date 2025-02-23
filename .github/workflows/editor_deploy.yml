@@ -276,14 +276,14 @@ jobs:
             blazium.linuxbsd.editor.x86_64.mono
             blazium.linuxbsd.editor.x86_32.mono
             blazium.linuxbsd.editor.x86_32
-            blazium.windows.editor.x86_64.mono.exe
-            blazium.windows.editor.x86_64.mono.console.exe
-            blazium.windows.editor.x86_64.exe
-            blazium.windows.editor.x86_64.console.exe
-            blazium.windows.editor.x86_32.mono.exe
-            blazium.windows.editor.x86_32.mono.console.exe
-            blazium.windows.editor.x86_32.exe
-            blazium.windows.editor.x86_32.console.exe
+            blazium.windows.editor.x86_64.llvm.mono.exe
+            blazium.windows.editor.x86_64.llvm.mono.console.exe
+            blazium.windows.editor.x86_64.llvm.exe
+            blazium.windows.editor.x86_64.llvm.console.exe
+            blazium.windows.editor.x86_32.llvm.mono.exe
+            blazium.windows.editor.x86_32.llvm.mono.console.exe
+            blazium.windows.editor.x86_32.llvm.exe
+            blazium.windows.editor.x86_32.llvm.console.exe
             blazium.web.editor.wasm32.zip
             Blazium_macos.universal.zip
             Blazium_macos.universal.zip
