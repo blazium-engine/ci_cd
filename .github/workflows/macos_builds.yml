@@ -125,6 +125,7 @@ jobs:
         run: |
           brew update
           brew install binutils
+          brew link --overwrite binutils
 
       - name: Remove existing workflows folder
         run: |
@@ -243,7 +244,7 @@ jobs:
 
           # Remove original binaries and strip the universal binary
           rm ./bin/blazium.macos.${{ matrix.target }}.x86_64${MONO_SUFFIX} ./bin/blazium.macos.${{ matrix.target }}.arm64${MONO_SUFFIX}
-          strip bin/blazium.*
+
           chmod +x bin/blazium.*
 
       - name: Package Editor
