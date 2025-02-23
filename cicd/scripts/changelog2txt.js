@@ -46,7 +46,7 @@ Commits and PRs:
                 changelogText += `
     Commit SHA: ${entry.sha}
     Date: ${new Date(entry.date).toLocaleString()}
-    User: ${entry.user} - ${entry.names.join(", ")}
+    User: ${entry.user}
     Message: ${entry.message}
     ---`;
             } 
