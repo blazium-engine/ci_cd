@@ -180,7 +180,12 @@ jobs:
   deploy:
     name: Deploy
     needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha, static-checks]
-    if: always() && !failure()
+    if: >-
+      join(github.event.client_payload.deploy, '') != '' &&
+      !failure() && 
+      !cancelled() && 
+      needs.*.result != 'failure' && 
+      needs.*.result != 'cancelled'
     uses: ./.github/workflows/deploy_all.yml
     secrets: inherit
     with:
