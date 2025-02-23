@@ -116,7 +116,7 @@ jobs:
           MINOR_VERSION: ${{ steps.version.outputs.external_minor }}
           PATCH_VERSION: ${{ steps.version.outputs.external_patch }}
         run: |
-          node ./cicd/scripts/changelog2txt.js ${{ github.workspace }}/changelog.json
+          node ./cicd/scripts/changelog2txt.js $(pwd)/changelog.json
 
       - name: Generate changelog.html
         id: changelog-html
@@ -130,7 +130,7 @@ jobs:
           MINOR_VERSION: ${{ steps.version.outputs.external_minor }}
           PATCH_VERSION: ${{ steps.version.outputs.external_patch }}
         run: |
-          node ./cicd/scripts/changelog2html.js ${{ github.workspace }}/changelog.json
+          node ./cicd/scripts/changelog2html.js $(pwd)/changelog.json
 
       - uses: BetaHuhn/do-spaces-action@v2
         with:
@@ -138,7 +138,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: cicd/scripts/changelog.html
+          source: changelog.html
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: BetaHuhn/do-spaces-action@v2
@@ -147,7 +147,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: cicd/scripts/changelog.txt
+          source: changelog.txt
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - name: Create GitHub Release

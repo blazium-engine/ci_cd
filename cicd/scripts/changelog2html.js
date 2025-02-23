@@ -4,10 +4,15 @@ const path = require('path');
 // Function to generate a templated changelog from the JSON file
 function generateChangelogHTML(jsonFilePath) {
     try {
-        // Read the JSON file
-        const changelogData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
+        // Read and parse the JSON file
+        const rawData = fs.readFileSync(jsonFilePath, 'utf-8');
+        const changelogData = JSON.parse(rawData);
 
-        // Extract data from JSON
+        // Validate required keys
+        if (!changelogData || typeof changelogData !== "object") {
+            throw new Error("Invalid JSON structure.");
+        }
+
         const {
             baseBranch,
             currentBranch,
@@ -22,51 +27,62 @@ function generateChangelogHTML(jsonFilePath) {
             version
         } = changelogData;
 
+        // Check if `changelog` is defined and is an array
+        if (!Array.isArray(changelog)) {
+            throw new Error("Changelog data is missing or invalid in the JSON file.");
+        }
+
         // Template: Header Section
-        
         let changelogText = 
 `<h4>Changelog: ${baseBranch} -> ${currentBranch}</h4>
 <h2>Summary:</h2>
 <ul>
-<li><b>Version</b>: <code>${version["major"]}.${version["minor"]}.${version["patch"]}</code></li>
-<li><b>Total Commits</b>: <code>${totalCommits}</code></li>
-<li><b>Total PRs</b>: <code>${totalPRs}</code></li>
-<li><b>Total Files Changed</b>: <code>${totalFilesChanged}</code></li>
-<li><b>Time Since First Change</b>: <code>${timeSinceFirstChange}</code></li>
-<li><b>Time Since Last Change</b>: <code>${timeSinceLastChange}</code></li>
-<li><b>Total Contributors</b>: <code>${totalContributors}</code></li>
+<li><b>Version</b>: <code>${version?.major || 0}.${version?.minor || 0}.${version?.patch || 0}</code></li>
+<li><b>Total Commits</b>: <code>${totalCommits || 0}</code></li>
+<li><b>Total PRs</b>: <code>${totalPRs || 0}</code></li>
+<li><b>Total Files Changed</b>: <code>${totalFilesChanged || 0}</code></li>
+<li><b>Time Since First Change</b>: <code>${timeSinceFirstChange || 'N/A'}</code></li>
+<li><b>Time Since Last Change</b>: <code>${timeSinceLastChange || 'N/A'}</code></li>
+<li><b>Total Contributors</b>: <code>${totalContributors || 0}</code></li>
 </ul>
 <hr>
 <details><summary><h2>Commits and PRs:</h2></summary>`;
 
         // Template: Commits and PRs Section
         changelog.forEach((entry) => {
-            if (!entry.pr) {
-                var [message, details] = entry.message.split(/\n\n/);
+            if (!entry.pr && entry.message) {
+                let [message, details] = entry.message.split(/\n\n/);
                 changelogText +=
 `<details><summary><b>${message}</b></summary>
 <blockquote>
-Commit SHA: ${entry.sha}<br>
-Date: <code>${new Date(entry.date).toLocaleString()}</code><br>
-Author: <b>${entry.user}</b>
+Commit SHA: ${entry.sha || 'N/A'}<br>
+Date: <code>${entry.date ? new Date(entry.date).toLocaleString() : 'N/A'}</code><br>
+Author: <b>${entry.user || 'Unknown'}</b>
 </blockquote>${details ? details.replace(/\n/g, "<br>") : ""}
 <hr></details>`;
-            } 
+            }
         });
 
         changelogText += `</details><details><summary><h2>Contributors:</h2></summary><ul>`;
 
         // Template: Contributors Section
-        uniqueContributors.forEach((contributor) => {
-            changelogText += `<li><b>${contributor.username}</b>: <code>${contributor.contributions} contributions</code></li>`;
-        });
-        changelogText += `</ul></details>`
+        if (Array.isArray(uniqueContributors)) {
+            uniqueContributors.forEach((contributor) => {
+                changelogText += `<li><b>${contributor.username || 'Unknown'}</b>: <code>${contributor.contributions || 0} contributions</code></li>`;
+            });
+        }
+        
+        changelogText += `</ul></details>`;
+
         const cleanedMessage = changelogText.replace(/\n/g, "");
+
         // Export the text file
         const outputFilePathDetailed = path.join(__dirname, `changelog_${baseBranch}_to_${currentBranch}.html`);
         const outputFilePathBase = path.join(__dirname, `changelog.html`);
+
         fs.writeFileSync(outputFilePathDetailed, cleanedMessage, 'utf-8');
         fs.writeFileSync(outputFilePathBase, cleanedMessage, 'utf-8');
+
         console.log(`Changelog exported with detailed name to ${outputFilePathDetailed}`);
         console.log(`Changelog exported with base name to ${outputFilePathBase}`);
     } catch (error) {

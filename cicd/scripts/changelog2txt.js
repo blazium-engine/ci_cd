@@ -5,9 +5,14 @@ const path = require('path');
 function generateChangelogText(jsonFilePath) {
     try {
         // Read the JSON file
-        const changelogData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
+        const rawData = fs.readFileSync(jsonFilePath, 'utf-8');
+        const changelogData = JSON.parse(rawData);
 
-        // Extract data from JSON
+        // Validate JSON structure
+        if (!changelogData || typeof changelogData !== "object") {
+            throw new Error("Invalid JSON structure.");
+        }
+
         const {
             baseBranch,
             currentBranch,
@@ -22,18 +27,22 @@ function generateChangelogText(jsonFilePath) {
             version
         } = changelogData;
 
+        // Ensure `changelog` is an array before iterating
+        if (!Array.isArray(changelog)) {
+            throw new Error("Changelog data is missing or invalid in the JSON file.");
+        }
+
         // Template: Header Section
-        
         let changelogText = `Changelog: ${baseBranch} -> ${currentBranch}
 
 Summary:
-- Version: ${version["major"]}.${version["minor"]}.${version["patch"]}
-- Total Commits: ${totalCommits}
-- Total PRs: ${totalPRs}
-- Total Files Changed: ${totalFilesChanged}
-- Time Since First Change: ${timeSinceFirstChange}
-- Time Since Last Change: ${timeSinceLastChange}
-- Total Contributors: ${totalContributors}
+- Version: ${version?.major || 0}.${version?.minor || 0}.${version?.patch || 0}
+- Total Commits: ${totalCommits || 0}
+- Total PRs: ${totalPRs || 0}
+- Total Files Changed: ${totalFilesChanged || 0}
+- Time Since First Change: ${timeSinceFirstChange || 'N/A'}
+- Time Since Last Change: ${timeSinceLastChange || 'N/A'}
+- Total Contributors: ${totalContributors || 0}
 
 ---
 
@@ -42,28 +51,36 @@ Commits and PRs:
 
         // Template: Commits and PRs Section
         changelog.forEach((entry) => {
-            if (!entry.pr) {
+            if (entry && !entry.pr) {
                 changelogText += `
-    Commit SHA: ${entry.sha}
-    Date: ${new Date(entry.date).toLocaleString()}
-    User: ${entry.user}
-    Message: ${entry.message}
-    ---`;
-            } 
+Commit SHA: ${entry.sha || 'N/A'}
+Date: ${entry.date ? new Date(entry.date).toLocaleString() : 'Unknown'}
+User: ${entry.user || 'Unknown'}
+Message: ${entry.message || 'No message'}
+---
+`;
+            }
         });
 
         // Template: Contributors Section
         changelogText += `\nContributors:\n`;
 
-        uniqueContributors.forEach((contributor) => {
-            changelogText += `- ${contributor.username}: ${contributor.contributions} contributions\n`;
-        });
+        if (Array.isArray(uniqueContributors)) {
+            uniqueContributors.forEach((contributor) => {
+                changelogText += `- ${contributor.username || 'Unknown'}: ${contributor.contributions || 0} contributions\n`;
+            });
+        }
+
+        // Clean up new lines
         const cleanedMessage = changelogText.replace(/\r/g, "");
+
         // Export the text file
         const outputFilePathDetailed = path.join(__dirname, `changelog_${baseBranch}_to_${currentBranch}.txt`);
         const outputFilePathBase = path.join(__dirname, `changelog.txt`);
+
         fs.writeFileSync(outputFilePathDetailed, cleanedMessage, 'utf-8');
         fs.writeFileSync(outputFilePathBase, cleanedMessage, 'utf-8');
+
         console.log(`Changelog exported with detailed name to ${outputFilePathDetailed}`);
         console.log(`Changelog exported with base name to ${outputFilePathBase}`);
     } catch (error) {
