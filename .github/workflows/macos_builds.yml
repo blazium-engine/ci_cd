@@ -121,6 +121,32 @@ jobs:
           submodules: recursive
           fetch-depth: 2
 
+      # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
+      - name: Install the Apple certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # import certificate and provisioning profile from secrets
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning | awk -F'"' 'NR==1 {print $2}')
+          echo "APPLE_SIGNING_IDENTITY=$SIGNING_IDENTITY" >> $GITHUB_ENV
+  
       - name: Install binutils
         run: |
           brew update
@@ -274,11 +300,26 @@ jobs:
             cp -rp ./bin/GodotSharp Blazium${MONO_SUFFIX}.app/Contents/Resources/GodotSharp
           fi
 
+          # Remove wrong attributes
+          xattr -cr Blazium${MONO_SUFFIX}.app
+
           # Set permissions and sign the application
           chmod +x Blazium${MONO_SUFFIX}.app/Contents/MacOS/Blazium
-          codesign --force --timestamp --options=runtime --entitlements $ENTITLEMENTS_FILE -s - Blazium${MONO_SUFFIX}.app
+
+          codesign --deep --force --options=runtime --verbose --timestamp \
+            --entitlements $ENTITLEMENTS_FILE --sign "${{ env.APPLE_SIGNING_IDENTITY }}" \
+            Blazium${MONO_SUFFIX}.app
 
           # Package the application into a zip file
+          zip -q -9 -r "Blazium_macos.universal.zip" Blazium${MONO_SUFFIX}.app
+
+          /Applications/Xcode.app/Contents/Developer/usr/bin/notarytool store-credentials "AppleID" --apple-id "${{ secrets.APPLE_ID }}" --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" --team-id "${{ secrets.APPLE_TEAM_ID }}"
+
+          /Applications/Xcode.app/Contents/Developer/usr/bin/notarytool submit Blazium${MONO_SUFFIX}.zip --wait --keychain-profile "AppleID"
+
+          xcrun stapler staple Blazium${MONO_SUFFIX}.app
+
+          # Package it again after stapling
           zip -q -9 -r "Blazium_macos.universal.zip" Blazium${MONO_SUFFIX}.app
 
       - name: Upload Editor artifact
