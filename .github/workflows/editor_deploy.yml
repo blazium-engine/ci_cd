@@ -196,12 +196,13 @@ jobs:
           output_dir: ${{ github.workspace }}/extracted
 
       - name: Code sign again for store export
-        working-directory: extracted
+        working-directory: extracted/macos-editor-${{ github.event.client_payload.type || 'nightly' }}
         run: |
           ls
           unzip -o Blazium_macos.universal.zip
           ls
           # output should be Blazium.app
+          mv Blazium.app ../Blazium.app
 
       - name: Install the Apple certificate and provisioning profile
         working-directory: extracted
