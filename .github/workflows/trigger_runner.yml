@@ -47,9 +47,9 @@ jobs:
       - name: Send Repository Dispatch Event
         run: |
           # Convert the comma-separated string inputs into arrays
-          build_type=(${{ inputs.build_type }})
-          build=(${{ inputs.build }})
-          deploy=(${{ inputs.deploy }})
+          build_type_json=$(echo '${{ inputs.build_type }}' | jq -R -s -c 'split(",")')
+          build_json=$(echo '${{ inputs.build }}' | jq -R -s -c 'split(",")')
+          deploy_json=$(echo '${{ inputs.deploy }}' | jq -R -s -c 'split(",")')
 
           # Send the repository dispatch event
           curl -X POST \
@@ -63,9 +63,9 @@ jobs:
               "production": ${{ inputs.production }},
               "type": "${{ inputs.type }}",
               "branch": "${{ inputs.branch }}",
-              "build_type": ["${build_type[@]}"],
+              "build_type": $build_type_json,
               "force": ${{ inputs.force }},
-              "build": ["${build[@]}"],
-              "deploy": ["${build_type[@]}"]
+              "build": $build_json,
+              "deploy": $deploy_json
             }
           }'
