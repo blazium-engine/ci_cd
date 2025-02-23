@@ -583,6 +583,8 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm32.zip
           itch_username: blaziumengine
           itch_game: blazium-engine
+          version: ${{ inputs.new_version }}
+          tag: ${{ github.event.client_payload.type || 'nightly' }}
           butler_credentials: ${{ secrets.BUTLER_CREDENTIALS }}
 
       - name: Upload assets to GitHub release

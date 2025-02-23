@@ -15,6 +15,12 @@ inputs:
   butler_credentials:
     description: Butler authentication credentials.
     required: true
+  version:
+    description: Optional version to use for Butler push.
+    required: false
+  tag:
+    description: Optional tag to append to the channel.
+    required: false
 
 runs:
   using: "composite"
@@ -36,7 +42,6 @@ runs:
         ITCHIO_USERNAME: ${{ inputs.itch_username }}
         ITCHIO_GAME: ${{ inputs.itch_game }}
         BUTLER_CREDENTIALS: ${{ inputs.butler_credentials }}
-        BUTLER_API_KEY: ${{ inputs.butler_credentials }}
       run: |
         echo "${{ inputs.names }}" | while IFS= read -r file_path; do
           if [ -d "$file_path" ] || [ -f "$file_path" ]; then
@@ -53,8 +58,18 @@ runs:
               continue
             fi
 
-            echo "Pushing $file_path to Itch.io channel $channel..."
-            butler push "$file_path" "$ITCHIO_USERNAME/$ITCHIO_GAME:$channel"
+            if [ ! -z "${{ inputs.tag }}" ]; then
+              channel+="-${{ inputs.tag }}"
+            fi
+
+            butler_cmd="butler push \"$file_path\" \"$ITCHIO_USERNAME/$ITCHIO_GAME:$channel\""
+            
+            if [ ! -z "${{ inputs.version }}" ]; then
+              butler_cmd+=" --userversion \"${{ inputs.version }}\""
+            fi
+
+            echo "Executing: $butler_cmd"
+            eval $butler_cmd
           else
             echo "Warning: File or directory $file_path does not exist. Skipping."
           fi
