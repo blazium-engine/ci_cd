@@ -282,7 +282,7 @@ jobs:
           --username "${{ secrets.APPLE_ID }}" --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" --verbose
 
   deploy-editors:
-    runs-on: "ubuntu-20.04"
+    runs-on: "pogr-sponsored"
     needs: do-we-deploy-lol
     if: >
       needs.do-we-deploy-lol.outputs.proceed == 'true' ||
