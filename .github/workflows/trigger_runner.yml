@@ -66,9 +66,9 @@ jobs:
               "production": ${{ inputs.production }},
               "type": "${{ inputs.type }}",
               "branch": "${{ inputs.branch }}",
-              "build_type": ["${build_type[@]}"],
+              "build_type": ${build_type[@]},
               "force": ${{ inputs.force }},
-              "build": ["${build[@]}"],
-              "deploy": ["${build_type[@]}"]
+              "build": ${build[@]},
+              "deploy": ${build_type[@]}
             }
           }'
