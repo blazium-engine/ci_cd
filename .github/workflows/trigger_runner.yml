@@ -64,8 +64,8 @@ jobs:
             \"event_type\": \"trigger_build\",
             \"client_payload\": {
               \"production\": ${{ inputs.production }},
-              \"type\": "${{ inputs.type }}",
-              \"branch\": "${{ inputs.branch }}",
+              \"type\": \"${{ inputs.type }}\",
+              \"branch\": \"${{ inputs.branch }}\",
               \"build_type\": $build_type,
               \"force\": ${{ inputs.force }},
               \"build\": $build,
