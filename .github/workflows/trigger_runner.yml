@@ -47,10 +47,12 @@ jobs:
       - name: Send Repository Dispatch Event
         run: |
           # Convert the comma-separated string inputs into arrays
-          build_type_json=$(echo '${{ inputs.build_type }}' | jq -R -s -c 'split(",")')
-          build_json=$(echo '${{ inputs.build }}' | jq -R -s -c 'split(",")')
-          deploy_json=$(echo '${{ inputs.deploy }}' | jq -R -s -c 'split(",")')
-
+          build_type_json=$(printf '%s' '${{ inputs.build_type }}' | jq -R -c 'split(",")')
+          build_json=$(printf '%s' '${{ inputs.build }}' | jq -R -c 'split(",")')
+          deploy_json=$(printf '%s' '${{ inputs.deploy }}' | jq -R -c 'split(",")')
+          echo $build_type
+          echo $build
+          echo $deploy
           # Send the repository dispatch event
           curl -X POST \
           -H "Accept: application/vnd.github.everest-preview+json" \
@@ -63,9 +65,9 @@ jobs:
               "production": ${{ inputs.production }},
               "type": "${{ inputs.type }}",
               "branch": "${{ inputs.branch }}",
-              "build_type": $build_type_json,
+              "build_type": ["${build_type[@]}"],
               "force": ${{ inputs.force }},
-              "build": $build_json,
-              "deploy": $deploy_json
+              "build": ["${build[@]}"],
+              "deploy": ["${build_type[@]}"]
             }
           }'
