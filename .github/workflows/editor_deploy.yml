@@ -178,6 +178,21 @@ jobs:
           repository: blazium-engine/ci_cd
           submodules: recursive
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl unzip
+
+      - name: Install Butler
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip
+          chmod +x butler
+          sudo mv butler /usr/local/bin/
+
+      - name: Verify Butler Installation
+        run: butler -V
+
       - name: Download All Template Files
         uses: ./.github/actions/cerebro-download-multi-build
         with:
@@ -540,6 +555,35 @@ jobs:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_path: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+
+      - uses: ./.github/actions/multi-itch.io-upload
+        name: Upload Editorst to Itch.io
+        with:
+          names: |
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_32.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_32.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.64bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.32bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.32bit.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_web.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.meta.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm32.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm32.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm64.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm32.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm32.zip
+          itch_username: blaziumengine
+          itch_game: blazium-engine
+          butler_credentials: ${{ secrets.BUTLER_CREDENTIALS }}
 
       - name: Upload assets to GitHub release
         uses: ./.github/actions/upload-github-release

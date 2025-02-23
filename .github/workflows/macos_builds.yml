@@ -103,13 +103,13 @@ jobs:
           - name: Editor
             cache-name: macos-editor
             target: editor
-            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
 
           - name: Editor/w MONO
             cache-name: macos-editor-mono
             target: editor
-            sconsflags:  module_mono_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags:  module_mono_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
 
     steps:
@@ -120,6 +120,11 @@ jobs:
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
+
+      - name: Install binutils
+        run: |
+          brew update
+          brew install binutils
 
       - name: Remove existing workflows folder
         run: |

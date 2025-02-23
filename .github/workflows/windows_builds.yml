@@ -105,35 +105,35 @@ jobs:
           - name: Editor (64bit)
             cache-name: windows-editor-64bit
             target: editor
-            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
             d3d12: true
 
           - name: Editor w/ Mono (64bit)
             cache-name: windows-editor-mono-64bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
             d3d12: true
             
           - name: Editor (32bit)
             cache-name: windows-editor-32bit
             target: editor
-            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
             d3d12: true
 
           - name: Editor w/ Mono (32bit)
             cache-name: windows-editor-mono-32bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
             d3d12: true
             
           - name: Editor (arm64)
             cache-name: windows-editor-arm64
             target: editor
-            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
             arm: true
             skip: false
@@ -142,7 +142,7 @@ jobs:
           - name: Editor w/ Mono (arm64)
             cache-name: windows-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
             arm: true
             skip: false
@@ -151,7 +151,7 @@ jobs:
           - name: Editor (arm32)
             cache-name: windows-editor-arm32
             target: editor
-            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: false
             arm: true
             skip: false
@@ -160,7 +160,7 @@ jobs:
           - name: Editor w/ Mono (arm32)
             cache-name: windows-editor-mono-arm32
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
             mono: true
             arm: true
             skip: false
@@ -281,7 +281,8 @@ jobs:
             fontconfig \
             libfontconfig-dev \
             dotnet-sdk-8.0 \
-            directx-headers-dev
+            directx-headers-dev \
+            binutils
           # mingw-w64 \
           # mingw-w64-common \
           # mingw-w64-tools \
