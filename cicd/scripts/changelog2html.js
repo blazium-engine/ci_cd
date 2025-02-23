@@ -45,10 +45,12 @@ function generateChangelogHTML(jsonFilePath) {
 <li><b>Time Since Last Change</b>: <code>${timeSinceLastChange || 'N/A'}</code></li>
 <li><b>Total Contributors</b>: <code>${totalContributors || 0}</code></li>
 </ul>
-<hr>
-<details><summary><h2>Commits and PRs:</h2></summary>`;
+<hr>`
+// TODO disabled for now commits and PR's Section
+//changelogText += `<details><summary><h2>Commits and PRs:</h2></summary>`;
 
         // Template: Commits and PRs Section
+        /*
         changelog.forEach((entry) => {
             if (!entry.pr && entry.message) {
                 let [message, details] = entry.message.split(/\n\n/);
@@ -62,8 +64,10 @@ Author: <b>${entry.user || 'Unknown'}</b>
 <hr></details>`;
             }
         });
+        */
 
-        changelogText += `</details><details><summary><h2>Contributors:</h2></summary><ul>`;
+        //changelogText += `</details>`;
+        changelogText += `<details><summary><h2>Contributors:</h2></summary><ul>`;
 
         // Template: Contributors Section
         if (Array.isArray(uniqueContributors)) {
