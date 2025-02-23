@@ -89,7 +89,6 @@ jobs:
           build_sha: ${{ inputs.build_sha }}
           is_template: 'true'
 
-
   build-editors:
     runs-on: "macos-latest"
     name: Building ${{ matrix.name }}
@@ -302,6 +301,9 @@ jobs:
           # Set permissions and sign the application
           chmod +x Blazium${MONO_SUFFIX}.app/Contents/MacOS/Blazium
 
+          # Set version
+          sed -i '' -e "s/4.3/${{ inputs.new_version }}/" Blazium${MONO_SUFFIX}.app/Contents/Info.plist
+
           codesign --deep --force --options=runtime --verbose --timestamp \
             --entitlements $ENTITLEMENTS_FILE --sign "${{ env.APPLE_SIGNING_IDENTITY }}" \
             Blazium${MONO_SUFFIX}.app
@@ -311,7 +313,7 @@ jobs:
 
           /Applications/Xcode.app/Contents/Developer/usr/bin/notarytool store-credentials "AppleID" --apple-id "${{ secrets.APPLE_ID }}" --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" --team-id "${{ secrets.APPLE_TEAM_ID }}"
 
-          /Applications/Xcode.app/Contents/Developer/usr/bin/notarytool submit Blazium${MONO_SUFFIX}.zip --wait --keychain-profile "AppleID"
+          /Applications/Xcode.app/Contents/Developer/usr/bin/notarytool submit Blazium_macos.universal.zip --wait --keychain-profile "AppleID"
 
           xcrun stapler staple Blazium${MONO_SUFFIX}.app
 
@@ -392,7 +394,6 @@ jobs:
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: build.sha
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
-
 
   build-templates:
     runs-on: "macos-latest"
