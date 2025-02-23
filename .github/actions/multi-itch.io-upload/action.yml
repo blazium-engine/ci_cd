@@ -44,7 +44,7 @@ runs:
         BUTLER_CREDENTIALS: ${{ inputs.butler_credentials }}
       run: |
         echo "${{ inputs.names }}" | while IFS= read -r file_path; do
-          if [ -d "$file_path" ] || [ -f "$file_path" ]; then
+          if [ -f "$file_path" ]; then
             file_name=$(basename "$file_path")
 
             # Extract the second value after splitting on "_"
@@ -71,6 +71,6 @@ runs:
             echo "Executing: $butler_cmd"
             eval $butler_cmd
           else
-            echo "Warning: File or directory $file_path does not exist. Skipping."
+            echo "Warning: File $file_path does not exist. Skipping."
           fi
         done
