@@ -296,12 +296,6 @@ jobs:
           repository: blazium-engine/ci_cd
           submodules: recursive
 
-      - name: Install Butler
-        run: |
-          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
-          unzip butler.zip
-          chmod +x butler
-
       - name: Verify Butler Installation
         run: butler -V
 
