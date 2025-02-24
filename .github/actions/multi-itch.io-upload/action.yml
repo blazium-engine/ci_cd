@@ -54,6 +54,11 @@ runs:
             # Extract the first value before "." in the second part
             channel=$(echo "$second_part" | awk -F'.' '{print $1}')
 
+            if [[ ${#channel} -gt 1 ]]; then
+                arch=$(echo "$second_part" | awk -F'.' '{print $2}')
+                channel="${channel}-${arch}"
+            fi
+
             if [ -z "$channel" ]; then
               echo "Warning: Could not determine channel from $file_name, skipping."
               continue

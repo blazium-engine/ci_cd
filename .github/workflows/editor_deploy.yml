@@ -667,25 +667,14 @@ jobs:
         with:
           names: |
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_32.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.64bit.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.32bit.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.32bit.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.meta.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm32.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm32.zip
           itch_username: blaziumengine
           itch_game: blazium-engine
           version: ${{ inputs.new_version }}
