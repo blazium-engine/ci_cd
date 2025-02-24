@@ -36,6 +36,7 @@ env:
   D3D12FLAGS: d3d12=yes "mesa_libs=${{ github.workspace }}/deps/mesa" "agility_sdk_path=${{github.workspace}}/bin/build_deps/agility_sdk"
   SCONS_CACHE_MSVC_CONFIG: true
   DEPLOY_TYPE: windows
+  DEBUG_SCONSFLAGS: debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
 
 concurrency:
   group: ci-${{github.actor}}-${{ github.event.client_payload.type || 'nightly' }}-windows
@@ -105,35 +106,35 @@ jobs:
           - name: Editor (64bit)
             cache-name: windows-editor-64bit
             target: editor
-            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: false
             d3d12: true
 
           - name: Editor w/ Mono (64bit)
             cache-name: windows-editor-mono-64bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: true
             d3d12: true
             
           - name: Editor (32bit)
             cache-name: windows-editor-32bit
             target: editor
-            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: false
             d3d12: true
 
           - name: Editor w/ Mono (32bit)
             cache-name: windows-editor-mono-32bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: true
             d3d12: true
             
           - name: Editor (arm64)
             cache-name: windows-editor-arm64
             target: editor
-            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: false
             arm: true
             skip: false
@@ -142,7 +143,7 @@ jobs:
           - name: Editor w/ Mono (arm64)
             cache-name: windows-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: true
             arm: true
             skip: false
@@ -151,7 +152,7 @@ jobs:
           - name: Editor (arm32)
             cache-name: windows-editor-arm32
             target: editor
-            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: false
             arm: true
             skip: false
@@ -160,7 +161,7 @@ jobs:
           - name: Editor w/ Mono (arm32)
             cache-name: windows-editor-mono-arm32
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: true
             arm: true
             skip: false

@@ -33,6 +33,7 @@ env:
   GODOT_BASE_BRANCH: blazium-dev
   SCONSFLAGS: verbose=yes warnings=no progress=no
   DEPLOY_TYPE: macos
+  DEBUG_SCONSFLAGS: debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
 
 concurrency:
   group: ci-${{github.actor}}-${{ github.event.client_payload.type || 'nightly' }}-macos
@@ -102,13 +103,13 @@ jobs:
           - name: Editor
             cache-name: macos-editor
             target: editor
-            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags: ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: false
 
           - name: Editor/w MONO
             cache-name: macos-editor-mono
             target: editor
-            sconsflags:  module_mono_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}  debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+            sconsflags:  module_mono_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: true
 
     steps:
