@@ -266,7 +266,7 @@ jobs:
           # Remove wrong attributes, these could be quarantine attibutes.
           xattr -cr Blazium.app
 
-          codesign --deep --force --options=runtime --verbose --timestamp \
+          codesign --force --options=runtime --verbose --timestamp \
             --entitlements ../deploy/macos/deploy.entitlements --sign "$DEPLOY_SIGNING_IDENTITY" \
             Blazium.app
       
