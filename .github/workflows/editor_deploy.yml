@@ -257,6 +257,8 @@ jobs:
           cp $PP_PATH Blazium.app/Contents/embedded.provisionprofile
           # Set apple team id in entitlements
           sed -i '' -e "s/APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" ../deploy/macos/deploy.entitlements
+          plutil ../deploy/macos/deploy.entitlements
+          cat ../deploy/macos/deploy.entitlements
 
       - name: Code Sign
         working-directory: extracted
