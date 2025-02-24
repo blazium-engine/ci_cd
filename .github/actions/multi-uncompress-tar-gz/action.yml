@@ -66,6 +66,8 @@ runs:
             echo "Uncompressing $TAR_FILE directly into $OUTPUT_DIR" >> $GITHUB_STEP_SUMMARY
             if tar --strip-components=1 -xzf "$TAR_FILE" -C "$OUTPUT_DIR" >> $GITHUB_STEP_SUMMARY 2>&1; then
               echo "Successfully uncompressed $TAR_FILE" >> $GITHUB_STEP_SUMMARY
+              rm -rf $TAR_FILE
+              echo "Successfully deleted $TAR_FILE" >> $GITHUB_STEP_SUMMARY
               UNCOMPRESSED_FOLDERS+=("$OUTPUT_DIR")
             else
               echo "Error: Failed to uncompress $TAR_FILE" >> $GITHUB_STEP_SUMMARY
@@ -79,6 +81,8 @@ runs:
             echo "Uncompressing $TAR_FILE into $TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY
             if tar -xzf "$TAR_FILE" -C "$TARGET_FOLDER" >> $GITHUB_STEP_SUMMARY 2>&1; then
               echo "Successfully uncompressed $TAR_FILE" >> $GITHUB_STEP_SUMMARY
+              rm -rf $TAR_FILE
+              echo "Successfully deleted $TAR_FILE" >> $GITHUB_STEP_SUMMARY
               UNCOMPRESSED_FOLDERS+=("$TARGET_FOLDER")
             else
               echo "Error: Failed to uncompress $TAR_FILE" >> $GITHUB_STEP_SUMMARY

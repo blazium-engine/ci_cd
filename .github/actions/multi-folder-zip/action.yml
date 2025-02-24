@@ -84,6 +84,7 @@ runs:
           # Zip the folder
           ZIP_FILE="$OUTPUT_DIR/${NEW_FOLDER_NAME}.zip"
           (cd "$NEW_FOLDER_PATH" && zip -q -9 -r -D "$ZIP_FILE" .)
+          rm -rf $NEW_FOLDER_PATH
           # zip -r "$ZIP_FILE" "$NEW_FOLDER_PATH" > /dev/null
           if [ $? -eq 0 ]; then
             echo "Successfully zipped $NEW_FOLDER_PATH to $ZIP_FILE" >> $GITHUB_STEP_SUMMARY
