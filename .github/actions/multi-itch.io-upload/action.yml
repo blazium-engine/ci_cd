@@ -49,7 +49,7 @@ runs:
             file_name=$(basename "$file_path")
 
             # Extract the second value after splitting on "_"
-            second_part=$(echo "$file_name" | awk -F'_' '{print $2}')
+            second_part=$(echo "$file_name" | awk -F'_' '{print $3}')
             
             # Extract the first value before "." in the second part
             channel=$(echo "$second_part" | awk -F'.' '{print $1}')
