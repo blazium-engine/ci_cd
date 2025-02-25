@@ -413,6 +413,10 @@ jobs:
 
       - name: Move into the bin directory.
         run: |
+          ls -la
+          sudo chown -R $(whoami) ./signed ./bin
+          sudo chmod -R u+rw ./signed ./bin
+          rm -rf ./signed/build_deps
           mv -f ./signed/* ./bin/
 
       - name: Create tar.gz Archive
