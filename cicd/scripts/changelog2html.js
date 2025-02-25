@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Function to generate a templated changelog from the JSON file
-function generateChangelogHTML(jsonFilePath) {
+function generateChangelogHTML(jsonFilePath, shortSummary = false) {
     try {
         // Read and parse the JSON file
         const rawData = fs.readFileSync(jsonFilePath, 'utf-8');
@@ -13,7 +13,7 @@ function generateChangelogHTML(jsonFilePath) {
             throw new Error("Invalid JSON structure.");
         }
 
-        const {
+        var {
             baseBranch,
             currentBranch,
             totalCommits,
@@ -47,11 +47,17 @@ function generateChangelogHTML(jsonFilePath) {
 </ul>
 <hr>`
 // TODO disabled for now commits and PR's Section
-//changelogText += `<details><summary><h2>Commits and PRs:</h2></summary>`;
+changelogText += `<details><summary><h2>Commits and PRs:</h2></summary>`;
 
+        var new_changelog = [];
         // Template: Commits and PRs Section
-        /*
-        changelog.forEach((entry) => {
+if (shortSummary) {
+   new_changelog = new_changelog.concat(changelog.slice(0, 24))
+   changelogText += `<h2>Showing 25 out of ${new_changelog.length+1}</h2>`
+} else {
+    new_changelog = new_changelog.concat(changelog)
+}
+new_changelog.forEach((entry) => {
             if (!entry.pr && entry.message) {
                 let [message, details] = entry.message.split(/\n\n/);
                 changelogText +=
@@ -64,13 +70,20 @@ Author: <b>${entry.user || 'Unknown'}</b>
 <hr></details>`;
             }
         });
-        */
 
-        //changelogText += `</details>`;
-        changelogText += `<details><summary><h2>Contributors:</h2></summary><ul>`;
+
+        changelogText += `</details>`;
 
         // Template: Contributors Section
         if (Array.isArray(uniqueContributors)) {
+            var contribs = [];
+            if (shortSummary && uniqueContributors.length > 24) {  
+                changelogText += `<details><summary><h2>Contributors 25 out of ${uniqueContributors.length+1}:</h2></summary><ul>`;
+                contribs = contribs.concat(uniqueContributors.splice(0, 24));
+            } else {
+                changelogText += `<details><summary><h2>Contributors:</h2></summary><ul>`;
+                contribs = contribs.concat(uniqueContributors);
+            }
             uniqueContributors.forEach((contributor) => {
                 changelogText += `<li><b>${contributor.username || 'Unknown'}</b>: <code>${contributor.contributions || 0} contributions</code></li>`;
             });
@@ -82,12 +95,19 @@ Author: <b>${entry.user || 'Unknown'}</b>
 
         // Export the text file
         const outputFilePathDetailed = path.join(__dirname, `changelog_${baseBranch}_to_${currentBranch}.html`);
-        const outputFilePathBase = path.join(__dirname, `changelog.html`);
+        
+        var outputFilePathBase = path.join(__dirname, `changelog.html`);
+        
+        if (shortSummary) {
+            outputFilePathBase = path.join(__dirname, `changelog_short.html`);
+        }
 
-        fs.writeFileSync(outputFilePathDetailed, cleanedMessage, 'utf-8');
+        if(!shortSummary) {
+            fs.writeFileSync(outputFilePathDetailed, cleanedMessage, 'utf-8');
+            console.log(`Changelog exported with detailed name to ${outputFilePathDetailed}`);
+        }
         fs.writeFileSync(outputFilePathBase, cleanedMessage, 'utf-8');
 
-        console.log(`Changelog exported with detailed name to ${outputFilePathDetailed}`);
         console.log(`Changelog exported with base name to ${outputFilePathBase}`);
     } catch (error) {
         console.error(`Error processing the JSON file: ${error.message}`);
@@ -112,7 +132,8 @@ function main() {
     }
 
     // Generate the changelog from the provided JSON file
-    generateChangelogHTML(jsonFilePath);
+    generateChangelogHTML(jsonFilePath, false);
+    generateChangelogHTML(jsonFilePath, true);
 }
 
 // Execute the main function
