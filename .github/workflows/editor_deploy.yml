@@ -1,4 +1,4 @@
-name: Eeditor Deploy
+name: Editor Deploy
 on:
   workflow_call:
     inputs:
@@ -51,7 +51,7 @@ concurrency:
 
 jobs:
   do-we-deploy-lol:
-    name: Should we Deploy?
+    name: Should we Deploy, the Editors?
     runs-on: ubuntu-latest
     outputs:
       proceed: ${{ steps.evaluate.outputs.proceed }}
@@ -101,186 +101,6 @@ jobs:
       - name: Final Debug Output
         run: |
           echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}"
-  web-deploy:
-    name: Deploying Web Editor to ${{ github.event.client_payload.type || 'nightly' }}
-    needs: do-we-deploy-lol
-    if: >
-      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
-      needs.do-we-deploy-lol.outputs.proceed == true
-    runs-on: ubuntu-latest
-    env:
-      APP_NAME_BASE: "blazium_web-editor"  # Define a global base app name
-      CDN_URL: "https://cdn.blazium.app/"
-      DEPLOY_TYPE: web-editor
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Download and extract web editor package
-        run: |
-          # Create storage directory
-          mkdir -p cicd/storage
-          
-          # Download the .tar.gz package instead of .zip
-          curl -L "${{ env.CDN_URL }}${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/${{ env.DEPLOY_TYPE }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz" -o cicd/storage/web-editor.tar.gz
-
-          # Extract the main .tar.gz file
-          tar -xzf cicd/storage/web-editor.tar.gz -C cicd/storage
-          
-          # Find the inner .zip file and unzip it
-          inner_zip=$(find cicd/storage -type f -name 'blazium.web.editor.*.zip' | head -n 1)
-          mkdir -p ./cicd/web-editor/static
-          unzip "$inner_zip" -d ./cicd/web-editor/static
-          
-          # Rename the main HTML file
-          mv ./cicd/web-editor/static/blazium.editor.html ./cicd/web-editor/static/index.html
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: ./cicd/web-editor
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME_BASE }}-${{ github.event.client_payload.type || 'nightly' }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.APP_NAME_BASE }}-${{ github.event.client_payload.type || 'nightly' }}:${{ inputs.new_version }}
-
-      - name: Notify Cerebro to Deploy Web Build
-        uses: ./.github/actions/cerebro-deploy
-        with:
-          name: web-editor
-          type: ${{ github.event.client_payload.type || 'nightly' }}
-          cerebro_url: ${{ secrets.CEREBRO_URL }}
-          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-
-  deploy-mac-appstore:
-    runs-on: "macos-latest"
-    needs: do-we-deploy-lol
-    if: >
-      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
-      needs.do-we-deploy-lol.outputs.proceed == true
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          repository: blazium-engine/ci_cd
-          submodules: recursive
-      
-      - name: Download Editor
-        uses: ./.github/actions/cerebro-download-multi-build
-        with:
-          names: |
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-          run_id: ${{ inputs.runner_id }}
-          cerebro_url: ${{ secrets.CEREBRO_URL }}
-          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          folder: ${{ github.workspace }}/downloads
-      
-      - name: Uncompress Templates
-        uses: ./.github/actions/multi-uncompress-tar-gz
-        with:
-          names: |
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-          input_dir: ${{ github.workspace }}/downloads
-          output_dir: ${{ github.workspace }}/extracted
-
-      - name: Extract Blazium.
-        working-directory: extracted/macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-        run: |
-          ls
-          unzip -o Blazium_macos.universal.zip
-          ls
-          # output should be Blazium.app
-          mv Blazium.app ../Blazium.app
-
-      # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
-      - name: Install the Apple certificate and provisioning profile
-        working-directory: extracted
-        env:
-          DEPLOY_CERTIFICATE_BASE64: ${{ secrets.DEPLOY_CERTIFICATE_BASE64 }}
-          INSTALL_CERTIFICATE_BASE64: ${{ secrets.INSTALL_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          DEPLOY_PROVISION_PROFILE_MAC_BASE64: ${{ secrets.DEPLOY_PROVISION_PROFILE_MAC_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          # create variables
-          DEPLOY_CERTIFICATE_PATH=$RUNNER_TEMP/deploy_certificate.p12
-          INSTALL_CERTIFICATE_PATH=$RUNNER_TEMP/install_certificate.p12
-          PP_PATH=$RUNNER_TEMP/build_pp.provisionprofile
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          # import certificate and provisioning profile from secrets
-          echo -n "$DEPLOY_CERTIFICATE_BASE64" | base64 --decode -o $DEPLOY_CERTIFICATE_PATH
-          echo -n "$INSTALL_CERTIFICATE_BASE64" | base64 --decode -o $INSTALL_CERTIFICATE_PATH
-          echo -n "$DEPLOY_PROVISION_PROFILE_MAC_BASE64" | base64 --decode -o $PP_PATH
-
-          # create temporary keychain
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # import certificate to keychain
-          # Import first certificate
-          security import $DEPLOY_CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-          SIGNING_IDENTITY=$(security find-identity -p basic -v | awk -F'"' 'NR==1 {print $2}')
-          echo "DEPLOY_SIGNING_IDENTITY=$SIGNING_IDENTITY" >> $GITHUB_ENV
-          # Capture list of identities before second import
-          IDENTITIES_BEFORE=$(security find-identity -p basic -v | awk -F'"' '{print $2}')
-
-          # Import second certificate
-          security import $INSTALL_CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-          security find-identity -p basic -v
-          # Capture list of identities after second import
-          IDENTITIES_AFTER=$(security find-identity -p basic -v | awk -F'"' '{print $2}')
-
-          # Find the new identity added (difference between after and before)
-          SECOND_SIGNING_IDENTITY=$(comm -13 <(echo "$IDENTITIES_BEFORE" | sort) <(echo "$IDENTITIES_AFTER" | sort) | head -n 1)
-
-          # Export to GitHub Actions environment
-          echo "INSTALL_SIGNING_IDENTITY=$SECOND_SIGNING_IDENTITY" >> $GITHUB_ENV
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # apply provisioning profile
-          cp $PP_PATH Blazium.app/Contents/embedded.provisionprofile
-          # Set apple team id in entitlements
-          sed -i '' -e "s/APPLE_TEAM_ID/${{ secrets.APPLE_TEAM_ID }}/" ../deploy/macos/deploy.entitlements
-          plutil ../deploy/macos/deploy.entitlements
-          cat ../deploy/macos/deploy.entitlements
-
-      - name: Code Sign
-        working-directory: extracted
-        run: |
-          # Remove wrong attributes, these could be quarantine attibutes.
-          xattr -cr Blazium.app
-
-          codesign --force --options=runtime --verbose --timestamp \
-            --entitlements ../deploy/macos/deploy.entitlements --sign "$DEPLOY_SIGNING_IDENTITY" \
-            Blazium.app
-      
-      - name: Make installer
-        working-directory: extracted
-        run: |
-          productbuild --sign "$INSTALL_SIGNING_IDENTITY" \
-          --component Blazium.app /Applications Blazium.pkg
-      
-      - name: Deploy installer
-        working-directory: extracted
-        run: |
-          xcrun altool --upload-app --type osx --file Blazium.pkg \
-          --username "${{ secrets.APPLE_ID }}" --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" --verbose
 
   deploy-editors:
     runs-on: "pogr-sponsored"
@@ -631,7 +451,7 @@ jobs:
           cat "$OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
 
       - uses: ./.github/actions/multi-do-upload
-        name: Upload Editors
+        name: Upload Editors to CDN
         with:
           files: |
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
@@ -663,7 +483,7 @@ jobs:
           space_path: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: ./.github/actions/multi-itch.io-upload
-        name: Upload Editorst to Itch.io
+        name: Upload Editors to Itch.io
         with:
           names: |
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
