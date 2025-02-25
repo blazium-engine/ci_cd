@@ -53,7 +53,7 @@ changelogText += `<details><summary><h2>Commits and PRs:</h2></summary>`;
         // Template: Commits and PRs Section
 if (shortSummary) {
    new_changelog = new_changelog.concat(changelog.slice(0, 24))
-   changelogText += `<h2>Showing 25 out of ${new_changelog.length+1}</h2>`
+   changelogText += `<h2>Showing 25 out of ${changelog.length+1}</h2>`
 } else {
     new_changelog = new_changelog.concat(changelog)
 }
@@ -84,7 +84,7 @@ Author: <b>${entry.user || 'Unknown'}</b>
                 changelogText += `<details><summary><h2>Contributors:</h2></summary><ul>`;
                 contribs = contribs.concat(uniqueContributors);
             }
-            uniqueContributors.forEach((contributor) => {
+            contribs.forEach((contributor) => {
                 changelogText += `<li><b>${contributor.username || 'Unknown'}</b>: <code>${contributor.contributions || 0} contributions</code></li>`;
             });
         }
