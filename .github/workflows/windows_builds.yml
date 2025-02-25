@@ -413,7 +413,7 @@ jobs:
 
       - name: Move into the bin directory.
         run: |
-          mv -f ./signed/* ./signed/.* ./bin/ 2>/dev/null
+          mv -f ./signed/* ./bin/
 
       - name: Create tar.gz Archive
         run: |
