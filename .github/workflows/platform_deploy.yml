@@ -282,3 +282,135 @@ jobs:
         run: |
           xcrun altool --upload-app --type osx --file Blazium.pkg \
           --username "${{ secrets.APPLE_ID }}" --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" --verbose
+
+  deploy-steam:
+    runs-on: ubuntu-latest
+    needs: do-we-deploy-lol
+    if: >
+      needs.do-we-deploy-lol.outputs.proceed == 'true' ||
+      needs.do-we-deploy-lol.outputs.proceed == true
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: Windows Editors 64bit
+            os: windows
+            app_id: 3293450
+            depot_id: 3293451
+            folder: windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            old_filenames: |
+              blazium.windows.editor.x86_64.llvm.exe
+              blazium.windows.editor.x86_64.llvm.console.exe
+            new_filenames: |
+              blazium.windows.editor.exe
+              blazium.windows.editor.console.exe
+
+          - name: MacOS Editors Universal
+            os: macos
+            app_id: 3293450
+            depot_id: 3293453
+            folder: macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+            old_filenames: |
+              Blazium_macos.universal.zip
+            new_filenames: |
+              Blazium_macos.universal.zip
+
+          - name: Linux Editors 64bit
+            os: linux
+            app_id: 3293450
+            depot_id: 3293452
+            folder: linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+            old_filenames: |
+              blazium.linuxbsd.editor.x86_64
+            new_filenames: |
+              blazium.linux.editor
+
+          - name: Windows Editors 32bit
+            os: windows
+            app_id: 3293450
+            depot_id: 3293451
+            folder: windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            old_filenames: |
+              blazium.windows.editor.x86_32.llvm.exe
+              blazium.windows.editor.x86_32.llvm.console.exe
+            new_filenames: |
+              blazium.windows.editor.exe
+              blazium.windows.editor.console.exe
+
+          - name: Linux Editors 32bit
+            os: linux
+            app_id: 3293450
+            depot_id: 3293452
+            folder: linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+            old_filenames: |
+              blazium.linuxbsd.editor.x86_32
+            new_filenames: |
+              blazium.linux.editor
+
+        exclude:
+          - config:
+              skip: true
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/ci_cd
+          submodules: recursive
+
+      - name: Download All Template Files
+        uses: ./.github/actions/cerebro-download-multi-build
+        with:
+          names: |
+            ${{ matrix.config.folder }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          folder: ${{ github.workspace }}/downloads
+
+      - name: Uncompress Templates
+        uses: ./.github/actions/multi-uncompress-tar-gz
+        with:
+          names: |
+            ${{ matrix.config.folder }}
+          input_dir: ${{ github.workspace }}/downloads
+          output_dir: ${{ github.workspace }}/extracted
+
+      - name: Edit Editor Filenames in-Place (Single File)
+        if: ${{ !contains(matrix.config.old_filenames, '\n') }}
+        uses: ./.github/actions/multi-rename-inplace
+        with:
+          names: |
+            ${{ matrix.config.folder }}
+          filename_old: ${{ matrix.config.old_filenames }}
+          filename_new: ${{ matrix.config.new_filenames }}
+          input_dir: ${{ github.workspace }}/extracted
+
+      - name: Edit Editor Filenames in-Place (Two Files)
+        if: ${{ contains(matrix.config.old_filenames, '\n') }}
+        uses: ./.github/actions/multi-rename-inplace
+        with:
+          names: |
+            ${{ matrix.config.folder }}
+          filename_old: ${{ matrix.config.old_filenames }}
+          filename_new: ${{ matrix.config.new_filenames }}
+          input_dir: ${{ github.workspace }}/extracted
+
+      - name: Delete Editor Filenames/Folders in-Place
+        uses: ./.github/actions/multi-delete-inplace
+        with:
+          names: |
+            ${{ matrix.config.folder }}
+          input_dir: ${{ github.workspace }}/extracted
+          items_to_delete: |
+            build_deps/
+
+      - uses: bioblaze/deploy2steam@v2
+        with:
+          username: ${{ secrets.STEAM_USERNAME }}     
+          password: ${{ secrets.STEAM_PASSWORD }}
+          shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
+          appId: ${{ matrix.config.app_id }}
+          buildDescription: ${{ inputs.new_version }}
+          rootPath: ${{ github.workspace }}/extracted/
+          depotId: ${{ matrix.config.depot_id }}
+          depotPath: ${{ matrix.config.folder }}

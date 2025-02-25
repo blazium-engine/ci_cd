@@ -400,6 +400,17 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
+      - uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ./bin
+          output_path: ./bin
+          environment_name: PROD
+
       - name: Create tar.gz Archive
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .

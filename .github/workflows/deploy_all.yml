@@ -166,7 +166,7 @@ jobs:
           DEBUG: true
 
   template-deploy:
-    name: 📊 Template Deploy
+    name: 📊 Deploy Templates to CDN
     if: contains(github.event.client_payload.deploy, 'templates')
     needs: [changelog-deploy]
     uses: ./.github/workflows/template_deploy.yml
@@ -185,7 +185,7 @@ jobs:
 
 
   editor-deploy:
-    name: 📊 Editor Deploy
+    name: 📊 Deploy Editors to CDN
     if: contains(github.event.client_payload.deploy, 'editors')
     needs: [changelog-deploy]
     uses: ./.github/workflows/editor_deploy.yml
@@ -229,7 +229,7 @@ jobs:
 
   platform-deploy:
     name: 📊 Deploy Editors to Platforms
-    if: contains(github.event.client_payload.deploy, 'editors')
+    if: contains(github.event.client_payload.deploy, 'editors') && !github.event.client_payload.force
     needs: [changelog-deploy, update-version, editor-deploy, template-deploy]
     uses: ./.github/workflows/platform_deploy.yml
     secrets: inherit
