@@ -418,11 +418,6 @@ jobs:
         run: |
           rm -rf "${{ github.workspace }}/bin/build_deps"
 
-      - name: Upload artifact
-        uses: ./.github/actions/upload-artifact
-        with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
-
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
@@ -824,11 +819,6 @@ jobs:
         if: matrix.d3d12
         run: |
           rm -rf "${{ github.workspace }}/bin/build_deps"
-
-      - name: Upload artifact
-        uses: ./.github/actions/upload-artifact
-        with:
-          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful

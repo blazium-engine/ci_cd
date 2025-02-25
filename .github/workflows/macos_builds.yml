@@ -334,18 +334,6 @@ jobs:
 
           echo "ARTIFACT_PATH=./bin/blazium.macos.${{ matrix.target }}.universal${MONO_SUFFIX}" >> $GITHUB_ENV
 
-      - name: Upload Editor artifact
-        uses: ./.github/actions/upload-artifact
-        with:
-          name: ${{ matrix.cache-name }}
-          path: ${{ env.ARTIFACT_PATH }}
-
-          
-      - name: Upload Packaged Editor artifact
-        uses: ./.github/actions/upload-artifact
-        with:
-          name: ${{ matrix.cache-name }}-packed
-          path: Blazium_macos.universal.zip
       
       - name: Create tar.gz Archive
         run: |
