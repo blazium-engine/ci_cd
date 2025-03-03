@@ -376,7 +376,7 @@ jobs:
           output_dir: ${{ github.workspace }}/extracted
 
       - name: Edit Editor Filenames in-Place (Single File)
-        if: ${{ fromJSON(toJson(matrix.config.old_filenames)) | length == 1 }}
+        if: ${{ length(fromJSON(toJson(matrix.config.old_filenames))) == 1 }}
         uses: ./.github/actions/multi-rename-inplace
         with:
           names: |
@@ -386,7 +386,7 @@ jobs:
           input_dir: ${{ github.workspace }}/extracted
 
       - name: Edit Editor Filenames in-Place (Two Files)
-        if: ${{ fromJSON(toJson(matrix.config.old_filenames)) | length > 1 }}
+        if: ${{ length(fromJSON(toJson(matrix.config.old_filenames))) > 1 }}
         uses: ./.github/actions/multi-rename-inplace
         with:
           names: |
