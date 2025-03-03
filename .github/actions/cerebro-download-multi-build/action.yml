@@ -1,5 +1,5 @@
 name: Blazium Cerebro Get Multiple Run Build Data
-description: Fetches build data for multiple names, downloads available files, and returns their paths.
+description: Fetches build data for multiple names, downloads available files, and ensures integrity.
 
 inputs:
   names:
@@ -79,19 +79,59 @@ runs:
             continue
           fi
 
+          # Use HEAD request to get expected file size from Content-Length header
+          EXPECTED_SIZE=$(curl -sI "$FILE_URL" | awk '/Content-Length/ {print $2}' | tr -d '\r')
+
+          if [[ -z "$EXPECTED_SIZE" ]]; then
+            echo "Warning: Could not determine expected file size for $NAME." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Expected file size for $NAME: $EXPECTED_SIZE bytes" >> $GITHUB_STEP_SUMMARY
+          fi
+
           # Determine file name and full path
           FILE_NAME=$(basename "$FILE_URL")
           FULL_PATH="$FOLDER/$FILE_NAME"
 
-          # Download the file
-          echo "Downloading $FILE_URL to $FULL_PATH" >> $GITHUB_STEP_SUMMARY
-          curl -L -o "$FULL_PATH" "$FILE_URL"
-          if [ $? -eq 0 ]; then
-            echo "File downloaded successfully for $NAME to $FULL_PATH" >> $GITHUB_STEP_SUMMARY
-            FILE_PATHS+=("$FULL_PATH")
-          else
-            echo "Error: Failed to download the file for $NAME" >> $GITHUB_STEP_SUMMARY
+          # Attempt to download the file up to 5 times if file size does not match
+          MAX_RETRIES=5
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            echo "Downloading $FILE_URL to $FULL_PATH (Attempt $((ATTEMPT + 1)))" >> $GITHUB_STEP_SUMMARY
+            curl -L -o "$FULL_PATH" "$FILE_URL"
+            
+            # Verify download success
+            if [ $? -ne 0 ]; then
+              echo "Error: Failed to download the file for $NAME. Retrying..." >> $GITHUB_STEP_SUMMARY
+              ((ATTEMPT++))
+              continue
+            fi
+
+            # Check file size if expected size is available
+            if [[ -n "$EXPECTED_SIZE" ]]; then
+              ACTUAL_SIZE=$(stat -c %s "$FULL_PATH")
+              echo "Downloaded file size for $NAME: $ACTUAL_SIZE bytes" >> $GITHUB_STEP_SUMMARY
+
+              if [ "$ACTUAL_SIZE" -eq "$EXPECTED_SIZE" ]; then
+                echo "File size matches for $NAME. Download successful." >> $GITHUB_STEP_SUMMARY
+                FILE_PATHS+=("$FULL_PATH")
+                break
+              else
+                echo "Warning: File size mismatch for $NAME. Retrying..." >> $GITHUB_STEP_SUMMARY
+                rm -f "$FULL_PATH"  # Remove the incorrect file
+              fi
+            else
+              echo "Skipping file size validation due to missing expected size." >> $GITHUB_STEP_SUMMARY
+              FILE_PATHS+=("$FULL_PATH")
+              break
+            fi
+
+            ((ATTEMPT++))
+          done
+
+          if [ $ATTEMPT -eq $MAX_RETRIES ]; then
+            echo "Error: Max retries reached for $NAME. Skipping file." >> $GITHUB_STEP_SUMMARY
           fi
+
         done <<< "$NAMES"
 
         # Convert array to JSON and set output

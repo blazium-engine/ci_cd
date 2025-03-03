@@ -59,7 +59,7 @@ jobs:
           ref: nightly-testing
           fetch-depth: 1
 
-      - name: Compilation
+      - name: Validate Version
         if: ${{ github.event.client_payload.force != true }}
         id: compile
         uses: ./.github/actions/version-checker
