@@ -298,54 +298,54 @@ jobs:
             app_id: 3293450
             depot_id: 3293451
             folder: windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            old_filenames:
-              - blazium.windows.editor.x86_64.llvm.exe
-              - blazium.windows.editor.x86_64.llvm.console.exe
-            new_filenames:
-              - blazium.windows.editor.exe
-              - blazium.windows.editor.console.exe
+            old_filenames: |
+              blazium.windows.editor.x86_64.llvm.exe
+              blazium.windows.editor.x86_64.llvm.console.exe
+            new_filenames: |
+              blazium.windows.editor.exe
+              blazium.windows.editor.console.exe
 
           - name: MacOS Editors Universal
             os: macos
             app_id: 3293450
             depot_id: 3293453
             folder: macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-            old_filenames:
-              - Blazium_macos.universal.zip
-            new_filenames:
-              - Blazium_macos.universal.zip
+            old_filenames: |
+              Blazium_macos.universal.zip
+            new_filenames: |
+              Blazium_macos.universal.zip
 
           - name: Linux Editors 64bit
             os: linux
             app_id: 3293450
             depot_id: 3293452
             folder: linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            old_filenames:
-              - blazium.linuxbsd.editor.x86_64
-            new_filenames:
-              - blazium.linux.editor
+            old_filenames: |
+              blazium.linuxbsd.editor.x86_64
+            new_filenames: |
+              blazium.linux.editor
 
           - name: Windows Editors 32bit
             os: windows
             app_id: 3293450
             depot_id: 3293451
             folder: windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            old_filenames:
-              - blazium.windows.editor.x86_32.llvm.exe
-              - blazium.windows.editor.x86_32.llvm.console.exe
-            new_filenames:
-              - blazium.windows.editor.exe
-              - blazium.windows.editor.console.exe
+            old_filenames: |
+              blazium.windows.editor.x86_32.llvm.exe
+              blazium.windows.editor.x86_32.llvm.console.exe
+            new_filenames: |
+              blazium.windows.editor.exe
+              blazium.windows.editor.console.exe
 
           - name: Linux Editors 32bit
             os: linux
             app_id: 3293450
             depot_id: 3293452
             folder: linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            old_filenames:
-              - blazium.linuxbsd.editor.x86_32
-            new_filenames:
-              - blazium.linux.editor
+            old_filenames: |
+              blazium.linuxbsd.editor.x86_32
+            new_filenames: |
+              blazium.linux.editor
 
         exclude:
           - config:
@@ -375,24 +375,16 @@ jobs:
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
-      - name: Edit Editor Filenames in-Place (Single File)
-        if: ${{ !contains(join(matrix.config.old_filenames, ','), ',') }}
-        uses: ./.github/actions/multi-rename-inplace
-        with:
-          names: |
-            ${{ matrix.config.folder }}
-          filename_old: ${{ matrix.config.old_filenames }}
-          filename_new: ${{ matrix.config.new_filenames }}
-          input_dir: ${{ github.workspace }}/extracted
 
-      - name: Edit Editor Filenames in-Place (Two Files)
-        if: ${{ contains(join(matrix.config.old_filenames, ','), ',') }}
+      - name: Edit Editor Filenames in-Place
         uses: ./.github/actions/multi-rename-inplace
         with:
           names: |
             ${{ matrix.config.folder }}
-          filename_old: ${{ matrix.config.old_filenames }}
-          filename_new: ${{ matrix.config.new_filenames }}
+          filename_old: |
+            ${{ matrix.config.old_filenames }}
+          filename_new: | 
+            ${{ matrix.config.new_filenames }}
           input_dir: ${{ github.workspace }}/extracted
 
       - name: Delete Editor Filenames/Folders in-Place
