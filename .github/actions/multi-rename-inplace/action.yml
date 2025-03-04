@@ -27,15 +27,28 @@ runs:
       id: validate_inputs
       shell: bash
       run: |
-        INPUT_DIR=${{ inputs.input_dir }}
+        set -x  # Enable debug mode
+        INPUT_DIR="${{ inputs.input_dir }}"
         NAMES=$(echo "${{ inputs.names }}" | awk NF)
         FILENAME_OLD=$(echo "${{ inputs.filename_old }}" | awk NF)
         FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
+
+        echo "## Debug: Input Parameters" >> $GITHUB_STEP_SUMMARY
+        echo "Input Directory: $INPUT_DIR" >> $GITHUB_STEP_SUMMARY
+        echo "Names Array: $NAMES" >> $GITHUB_STEP_SUMMARY
+        echo "Filename Old Array: $FILENAME_OLD" >> $GITHUB_STEP_SUMMARY
+        echo "Filename New Array: $FILENAME_NEW" >> $GITHUB_STEP_SUMMARY
 
         # Check array lengths match
         LEN_NAMES=$(echo "$NAMES" | wc -l)
         LEN_OLD=$(echo "$FILENAME_OLD" | wc -l)
         LEN_NEW=$(echo "$FILENAME_NEW" | wc -l)
+
+        echo "## Debug: Array Lengths" >> $GITHUB_STEP_SUMMARY
+        echo "Length of Names Array: $LEN_NAMES" >> $GITHUB_STEP_SUMMARY
+        echo "Length of Filename Old Array: $LEN_OLD" >> $GITHUB_STEP_SUMMARY
+        echo "Length of Filename New Array: $LEN_NEW" >> $GITHUB_STEP_SUMMARY
+
         if [ "$LEN_NAMES" -ne "$LEN_OLD" ] || [ "$LEN_OLD" -ne "$LEN_NEW" ]; then
           echo "Error: All input arrays must have the same length." >> $GITHUB_STEP_SUMMARY
           exit 1
@@ -47,24 +60,32 @@ runs:
       id: process_files
       shell: bash
       run: |
-        INPUT_DIR=${{ inputs.input_dir }}
+        set -x  # Enable debug mode
+        INPUT_DIR="${{ inputs.input_dir }}"
         NAMES=$(echo "${{ inputs.names }}" | awk NF)
         FILENAME_OLD=$(echo "${{ inputs.filename_old }}" | awk NF)
         FILENAME_NEW=$(echo "${{ inputs.filename_new }}" | awk NF)
 
-        echo "## Listing Input Directory Contents" >> $GITHUB_STEP_SUMMARY
+        echo "## Debug: Initial Directory Listing" >> $GITHUB_STEP_SUMMARY
         ls -la "$INPUT_DIR" >> $GITHUB_STEP_SUMMARY
 
         # Initialize array to store renamed file paths
         RENAMED_FILES=()
 
-        # Process each entry in the arrays
+        echo "## Debug: Starting Rename Process" >> $GITHUB_STEP_SUMMARY
+
         paste <(echo "$NAMES") <(echo "$FILENAME_OLD") <(echo "$FILENAME_NEW") | while IFS=$'\t' read -r NAME OLD NEW; do
+          echo "Processing entry: Directory=$NAME, Old File=$OLD, New File=$NEW" >> $GITHUB_STEP_SUMMARY
+          
           SOURCE_DIR="$INPUT_DIR/$NAME"
           if [ ! -d "$SOURCE_DIR" ]; then
             echo "Error: Directory $SOURCE_DIR does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
             continue
           fi
+
+          echo "Directory $SOURCE_DIR exists." >> $GITHUB_STEP_SUMMARY
+          echo "## Debug: Listing Directory Contents Before Rename" >> $GITHUB_STEP_SUMMARY
+          ls -la "$SOURCE_DIR" >> $GITHUB_STEP_SUMMARY
 
           SOURCE_FILE="$SOURCE_DIR/$OLD"
           DEST_FILE="$SOURCE_DIR/$NEW"
@@ -74,10 +95,14 @@ runs:
             continue
           fi
 
+          echo "File $SOURCE_FILE exists. Attempting rename to $DEST_FILE" >> $GITHUB_STEP_SUMMARY
+          
           mv "$SOURCE_FILE" "$DEST_FILE"
-          echo "## Listing Directory Contents After Rename" >> $GITHUB_STEP_SUMMARY
+          STATUS=$?
+          echo "## Debug: Listing Directory Contents After Rename" >> $GITHUB_STEP_SUMMARY
           ls -la "$SOURCE_DIR" >> $GITHUB_STEP_SUMMARY
-          if [ $? -eq 0 ]; then
+          
+          if [ $STATUS -eq 0 ]; then
             echo "Successfully renamed $SOURCE_FILE to $DEST_FILE" >> $GITHUB_STEP_SUMMARY
             RENAMED_FILES+=("$DEST_FILE")
           else
