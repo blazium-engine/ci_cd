@@ -229,7 +229,7 @@ jobs:
 
   platform-deploy:
     name: 📊 Deploy Editors to Platforms
-    if: contains(github.event.client_payload.deploy, 'editors') && !github.event.client_payload.force
+    if: contains(github.event.client_payload.deploy, 'platforms')
     needs: [changelog-deploy, update-version, editor-deploy, template-deploy]
     uses: ./.github/workflows/platform_deploy.yml
     secrets: inherit
