@@ -382,9 +382,9 @@ jobs:
           names: |
             ${{ matrix.config.folder }}
           filename_old: |
-            ${{ matrix.config.old_filenames }}
-          filename_new: | 
-            ${{ matrix.config.new_filenames }}
+            ${{ join(matrix.config.old_filenames, '\n') }}
+          filename_new: |
+            ${{ join(matrix.config.new_filenames, '\n') }}
           input_dir: ${{ github.workspace }}/extracted
 
       - name: Delete Editor Filenames/Folders in-Place
