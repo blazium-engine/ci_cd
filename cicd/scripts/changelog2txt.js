@@ -22,7 +22,7 @@ function generateChangelogText(jsonFilePath) {
             timeSinceFirstChange,
             timeSinceLastChange,
             totalContributors,
-            uniqueContributors,
+            contributors,
             changelog,
             version
         } = changelogData;
@@ -65,8 +65,8 @@ Message: ${entry.message || 'No message'}
         // Template: Contributors Section
         changelogText += `\nContributors:\n`;
 
-        if (Array.isArray(uniqueContributors)) {
-            uniqueContributors.forEach((contributor) => {
+        if (Array.isArray(contributors)) {
+            contributors.forEach((contributor) => {
                 changelogText += `- ${contributor.username || 'Unknown'}: ${contributor.contributions || 0} contributions\n`;
             });
         }
