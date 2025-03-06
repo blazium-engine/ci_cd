@@ -132,9 +132,9 @@ jobs:
           version: ${{ inputs.new_version }}
 
 
-      # - uses: maxim-lobanov/setup-xcode@v1
-      #   with:
-      #     xcode-version: '15.0.1'
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: '16.0'
 
       - name: Download and extract MoltenVK
         run: |
