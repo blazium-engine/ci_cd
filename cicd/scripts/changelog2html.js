@@ -22,7 +22,7 @@ function generateChangelogHTML(jsonFilePath, shortSummary = false) {
             timeSinceFirstChange,
             timeSinceLastChange,
             totalContributors,
-            uniqueContributors,
+            contributors,
             changelog,
             version
         } = changelogData;
@@ -75,14 +75,14 @@ Author: <b>${entry.user || 'Unknown'}</b>
         changelogText += `</details>`;
 
         // Template: Contributors Section
-        if (Array.isArray(uniqueContributors)) {
+        if (Array.isArray(contributors)) {
             var contribs = [];
-            if (shortSummary && uniqueContributors.length > 24) {  
-                changelogText += `<details><summary><h2>Contributors 25 out of ${uniqueContributors.length+1}:</h2></summary><ul>`;
-                contribs = contribs.concat(uniqueContributors.splice(0, 24));
+            if (shortSummary && contributors.length > 24) {  
+                changelogText += `<details><summary><h2>Contributors 25 out of ${contributors.length+1}:</h2></summary><ul>`;
+                contribs = contribs.concat(contributors.splice(0, 24));
             } else {
                 changelogText += `<details><summary><h2>Contributors:</h2></summary><ul>`;
-                contribs = contribs.concat(uniqueContributors);
+                contribs = contribs.concat(contributors);
             }
             contribs.forEach((contributor) => {
                 changelogText += `<li><b>${contributor.username || 'Unknown'}</b>: <code>${contributor.contributions || 0} contributions</code></li>`;
