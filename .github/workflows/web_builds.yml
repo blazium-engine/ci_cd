@@ -94,7 +94,8 @@ jobs:
   build-editors:
     #runs-on: "ubuntu-22.04"
     name: ${{ matrix.name }}
-    runs-on: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
+    runs-on:  
+      group: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
     strategy:
@@ -238,7 +239,8 @@ jobs:
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
 
   build-templates:
-    runs-on: ${{ github.event.client_payload.production && 'release-builder' || 'ubuntu-20.04' }}
+    runs-on:  
+      group: ${{ github.event.client_payload.production && 'release-builder' || 'ubuntu-20.04' }}
     name: ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}

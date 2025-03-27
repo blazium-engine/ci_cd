@@ -96,7 +96,8 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    runs-on: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
+    runs-on:  
+      group: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
     #runs-on: "ubuntu-20.04"
     name: Building Android ${{ matrix.name }}
     needs: editor-check
@@ -369,7 +370,8 @@ jobs:
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
 
   build-templates:
-    runs-on: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
+    runs-on:  
+      group: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
     #runs-on: "ubuntu-20.04"
     name: Building Android ${{ matrix.name }}
     needs: template-check
