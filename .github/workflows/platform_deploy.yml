@@ -290,6 +290,7 @@ jobs:
       needs.do-we-deploy-lol.outputs.proceed == 'true' ||
       needs.do-we-deploy-lol.outputs.proceed == true
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         config:
@@ -310,6 +311,7 @@ jobs:
             app_id: 3293450
             depot_id: 3293453
             folder: macos-editor-${{ github.event.client_payload.type || 'nightly' }}
+            skip_filenames: true
             old_filenames:  
              - Blazium_macos.universal.zip
             new_filenames:  
@@ -378,6 +380,7 @@ jobs:
 
       - name: Edit Editor Filenames in-Place
         uses: ./.github/actions/multi-rename-inplace
+        if: ${{ matrix.config.skip_filenames != true }}
         with:
           names: |
             ${{ matrix.config.folder }}
