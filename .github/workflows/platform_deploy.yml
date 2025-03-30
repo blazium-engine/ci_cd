@@ -406,6 +406,6 @@ jobs:
           shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
           appId: ${{ matrix.config.app_id }}
           buildDescription: ${{ inputs.new_version }}
-          rootPath: ${{ github.workspace }}/extracted/
+          rootPath: extracted/
           depotId: ${{ matrix.config.depot_id }}
           depotPath: ${{ matrix.config.folder }}
