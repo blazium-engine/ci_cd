@@ -218,7 +218,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
   build-editors-prod:
-    name: ${{ matrix.name }}
+    name: "Prod-Editor: ${{ matrix.name }}"
     runs-on:  
       group: release-builder
     needs: editor-check
@@ -363,6 +363,25 @@ jobs:
           source: build.sha
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
 
+  editor-success-prod:
+    name: Editor Success
+    needs: build-editors-prod
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create build.sha for Version Verification Later
+        run: |
+          echo ${{ inputs.build_sha }} >> build.sha
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: build.sha
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
+
   build-templates:
     runs-on:  "ubuntu-22.04"
     name: ${{ matrix.name }}
@@ -370,6 +389,7 @@ jobs:
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}
     strategy:
       fail-fast: true
+      max-parallel: 4
       matrix:
         include:
 
@@ -527,11 +547,12 @@ jobs:
   build-templates-prod:
     runs-on:  
       group: "release-builder"
-    name: ${{ matrix.name }}
+    name: "Prod-Template: ${{ matrix.name }}"
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production == true }}
     strategy:
       fail-fast: true
+      max-parallel: 4
       matrix:
         include:
 
@@ -704,4 +725,24 @@ jobs:
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: build.sha
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/template
+
+  template-success-prod:
+    name: Template Success
+    needs: build-templates-prod
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create build.sha for Version Verification Later
+        run: |
+          echo ${{ inputs.build_sha }} >> build.sha
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: build.sha
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/template
+
 

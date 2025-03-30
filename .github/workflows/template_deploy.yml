@@ -113,7 +113,7 @@ jobs:
     if: >
       needs.do-we-deploy-lol.outputs.proceed == 'true' ||
       needs.do-we-deploy-lol.outputs.proceed == true
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     name: Template Deploy
     steps:
       - name: Checkout Repository

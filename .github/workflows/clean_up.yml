@@ -62,7 +62,7 @@ concurrency:
 
 jobs:
   build-monoglue:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     name: Example for Clean up
     steps:
 

@@ -95,13 +95,11 @@ jobs:
           build_sha: ${{ inputs.build_sha }}
           is_template: 'true'
 
-  build-editors:
-    runs-on:  
-      group: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
-    #runs-on: "ubuntu-20.04"
-    name: Building Android ${{ matrix.name }}
+  build-editors: 
+    runs-on: "ubuntu-22.04"
+    name: Building Development Android ${{ matrix.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}
     strategy:
       fail-fast: false
       matrix:
@@ -350,6 +348,281 @@ jobs:
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
+  build-editors-prod:
+    runs-on:  
+      group: "release-builder"
+    name: Building Production Android ${{ matrix.name }}
+    needs: editor-check
+    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Editor
+            cache-name: android-editor
+            mono: false
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/blazium
+          ref: ${{ inputs.build_sha }}
+          submodules: recursive
+          fetch-depth: 2
+
+      - name: Remove existing workflows folder
+        run: |
+          rm -rf .github/workflows
+
+      - name: Pull .github folder from ci_cd repository
+        run: |
+          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          cp -r ci_cd_repo/.github/* .github/
+          rm -rf ci_cd_repo
+
+
+      - name: Update new Version Information to version.py
+        uses: ./.github/actions/set-repos-version
+        with:
+          file_path: ${{ github.workspace }}/version.py
+          external_major: ${{ inputs.new_major }}
+          external_minor: ${{ inputs.new_minor }}
+          external_patch: ${{ inputs.new_patch }}
+          external_status: ${{ github.event.client_payload.type || 'nightly' }}
+          external_sha: ${{ inputs.build_sha }}
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Download pre-built Android Swappy Frame Pacing Library
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: darksylinc/godot-swappy
+          version: tags/v2023.3.0.0
+          file: godot-swappy.7z
+          target: swappy/godot-swappy.7z
+
+      - name: Extract pre-built Android Swappy Frame Pacing Library
+        run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
+
+      - name: Setup Android SDK
+        uses: amyu/setup-android@v4
+
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+
+      - name: Download and extract mono-glue
+        if: matrix.mono
+        run: |
+          TYPE=${{ github.event.client_payload.type || 'nightly' }}
+          URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
+          
+          # Download the file
+          curl -L $URL -o monoglue.tar.gz
+
+          # Extract the entire archive to a temporary directory
+          mkdir -p temp_extract
+          tar -xzvf monoglue.tar.gz -C temp_extract
+
+          # Create target directories if they don't exist
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharp
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharpEditor
+
+          # Move the extracted folders to their target locations
+          rsync -av temp_extract/GodotSharp/ modules/mono/glue/GodotSharp/GodotSharp/
+          rsync -av temp_extract/GodotSharpEditor/ modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharp/
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          # Clean up the temporary directory
+          rm -rf temp_extract monoglue.tar.gz
+
+      - name: Compilation (target=editor,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: editor
+
+      - name: Compilation (target=editor,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: editor
+
+      - name: Compilation (target=editor,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: editor
+
+      - name: Compilation (target=editor,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: editor
+
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Notify Cerebro of Build Starting
+        uses: ./.github/actions/cerebro-started
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          build_type: editor
+          mono: ${{ matrix.mono }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          branch: ${{ github.event.client_payload.branch }}
+          build_os: android
+          checksum: ${{ inputs.build_sha }}
+          production: ${{ github.event.client_payload.production }}
+          version: ${{ inputs.new_version }}
+
+
+
+      - name: Generate Godot Meta editor
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotEditor
+          cd ../../..
+          ls -l bin/android_editor_builds/
+
+      - name: Create tar.gz Archive
+        run: |
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin/android_editor_builds/ .
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
+
+
+      - name: Notify Cerebro of Build Success
+        if: success() # Only runs if the job was successful
+        uses: ./.github/actions/cerebro-completed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          version: ${{ inputs.new_version }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Notify Cerebro of Build Failure
+        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        uses: ./.github/actions/cerebro-failed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Clear folder
+        run: |
+          rm -rf bin/android_editor_builds/*
+
+      - name: Notify Cerebro of Build Starting
+        uses: ./.github/actions/cerebro-started
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          build_type: template
+          mono: ${{ matrix.mono }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          branch: ${{ github.event.client_payload.branch }}
+          build_os: android
+          checksum: ${{ inputs.build_sha }}
+          production: ${{ github.event.client_payload.production }}
+          version: ${{ inputs.new_version }}
+
+      - name: Generate Godot Meta editor
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotHorizonOSEditor
+          cd ../../..
+          ls -l bin/android_editor_builds/
+
+      - name: Create tar.gz Archive
+        run: |
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta.tar.gz -C ./bin/android_editor_builds/ .
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+
+
+      - name: Notify Cerebro of Build Success
+        if: success() # Only runs if the job was successful
+        uses: ./.github/actions/cerebro-completed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
+          run_id: ${{ inputs.runner_id }}
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta.tar.gz
+          version: ${{ inputs.new_version }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Notify Cerebro of Build Failure
+        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        uses: ./.github/actions/cerebro-failed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+
+  editor-success-prod:
+    name: Editor Success
+    needs: build-editors-prod
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create build.sha for Version Verification Later
+        run: |
+          echo ${{ inputs.build_sha }} >> build.sha
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: build.sha
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
+
+
   editor-success:
     name: Editor Success
     needs: build-editors
@@ -370,12 +643,10 @@ jobs:
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
 
   build-templates:
-    runs-on:  
-      group: ${{ github.event.client_payload.production && 'release-builder' || 'pogr-sponsored' }}
-    #runs-on: "ubuntu-20.04"
-    name: Building Android ${{ matrix.name }}
+    runs-on: "ubuntu-22.04"
+    name: Building Development Android ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}
     strategy:
       fail-fast: false
       matrix:
@@ -600,9 +871,260 @@ jobs:
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
+  build-templates-prod:
+    runs-on:  
+      group: "release-builder"
+    name: Building Production Android ${{ matrix.name }}
+    needs: template-check
+    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Templates
+            cache-name: android-template
+            mono: false
+
+          - name: Templates/w Mono
+            cache-name: android-template-mono
+            mono: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/blazium
+          ref: ${{ inputs.build_sha }}
+          submodules: recursive
+          fetch-depth: 2
+
+      - name: Remove existing workflows folder
+        run: |
+          rm -rf .github/workflows
+
+      - name: Pull .github folder from ci_cd repository
+        run: |
+          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          cp -r ci_cd_repo/.github/* .github/
+          rm -rf ci_cd_repo
+
+      - name: Notify Cerebro of Build Starting
+        uses: ./.github/actions/cerebro-started
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          build_type: template
+          mono: ${{ matrix.mono }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          branch: ${{ github.event.client_payload.branch }}
+          build_os: android
+          checksum: ${{ inputs.build_sha }}
+          production: ${{ github.event.client_payload.production }}
+          version: ${{ inputs.new_version }}
+
+      - name: Update new Version Information to version.py
+        uses: ./.github/actions/set-repos-version
+        with:
+          file_path: ${{ github.workspace }}/version.py
+          external_major: ${{ inputs.new_major }}
+          external_minor: ${{ inputs.new_minor }}
+          external_patch: ${{ inputs.new_patch }}
+          external_status: ${{ github.event.client_payload.type || 'nightly' }}
+          external_sha: ${{ inputs.build_sha }}
+
+      - name: Download pre-built Android Swappy Frame Pacing Library
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: darksylinc/godot-swappy
+          version: tags/v2023.3.0.0
+          file: godot-swappy.7z
+          target: swappy/godot-swappy.7z
+
+      - name: Extract pre-built Android Swappy Frame Pacing Library
+        run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Setup Android SDK
+        uses: amyu/setup-android@v4
+
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+
+      - name: Download and extract mono-glue
+        if: matrix.mono
+        run: |
+          TYPE=${{ github.event.client_payload.type || 'nightly' }}
+          URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
+          
+          # Download the file
+          curl -L $URL -o monoglue.tar.gz
+
+          # Extract the entire archive to a temporary directory
+          mkdir -p temp_extract
+          tar -xzvf monoglue.tar.gz -C temp_extract
+
+          # Create target directories if they don't exist
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharp
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharpEditor
+
+          # Move the extracted folders to their target locations
+          rsync -av temp_extract/GodotSharp/ modules/mono/glue/GodotSharp/GodotSharp/
+          rsync -av temp_extract/GodotSharpEditor/ modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharp/
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          # Clean up the temporary directory
+          rm -rf temp_extract monoglue.tar.gz
+
+      - name: Compilation (target=template_release,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
+
+      - name: Compilation (target=template_release,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
+
+      - name: Compilation (target=template_release,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
+
+      - name: Compilation (target=template_release,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_release
+
+      - name: Compilation (target=template_debug,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
+          platform: android
+          target: template_debug
+
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Generate Godot templates
+        if: ${{ !matrix.mono }}
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotTemplates
+          cd ../../..
+          ls -l bin/
+
+      - name: Generate Godot templates
+        if: ${{ matrix.mono }}
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotMonoTemplates
+          cd ../../..
+          ls -l bin/
+
+      - name: Create tar.gz Archive
+        run: |
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/template
+
+
+      - name: Notify Cerebro of Build Success
+        if: success() # Only runs if the job was successful
+        uses: ./.github/actions/cerebro-completed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/template/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          version: ${{ inputs.new_version }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Notify Cerebro of Build Failure
+        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        uses: ./.github/actions/cerebro-failed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+
+
   template-success:
     name: Template Success
     needs: build-templates
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create build.sha for Version Verification Later
+        run: |
+          echo ${{ inputs.build_sha }} >> build.sha
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: build.sha
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/template
+  
+  template-success-prod:
+    name: Template Success
+    needs: build-templates-prod
     runs-on: ubuntu-latest
     steps:
 

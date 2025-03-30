@@ -47,7 +47,7 @@ jobs:
   editor-check:
     name: Checking Editor build.sha
     if: contains(github.event.client_payload.build_type, 'editors')
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       compile: ${{ steps.compile.outputs.should_compile }}
     steps:
@@ -94,7 +94,7 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     name: ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -458,7 +458,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
   build-templates:
-    runs-on: "ubuntu-20.04"
+    runs-on: "ubuntu-22.04"
     name: ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
