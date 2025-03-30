@@ -244,9 +244,7 @@ jobs:
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
 
-
-
-      - name: Generate Godot Meta editor
+      - name: Generate Blazium editor
         run: |
           cd platform/android/java
           ./gradlew generateGodotEditor
@@ -265,7 +263,6 @@ jobs:
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
-
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
@@ -327,7 +324,6 @@ jobs:
           source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta.tar.gz
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
 
-
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
@@ -344,6 +340,66 @@ jobs:
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Clear folder
+        run: |
+          rm -rf bin/android_editor_builds/*
+
+      - name: Notify Cerebro of Build Starting
+        uses: ./.github/actions/cerebro-started
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          build_type: template
+          mono: ${{ matrix.mono }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          branch: ${{ github.event.client_payload.branch }}
+          build_os: android
+          checksum: ${{ inputs.build_sha }}
+          production: ${{ github.event.client_payload.production }}
+          version: ${{ inputs.new_version }}
+
+      - name: Generate Godot PicoOS editor
+        run: |
+          cd platform/android/java
+          ./gradlew generateGodotPicoOSEditor
+          cd ../../..
+          ls -l bin/android_editor_builds/
+
+      - name: Create tar.gz Archive
+        run: |
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico.tar.gz -C ./bin/android_editor_builds/ .
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+
+      - name: Notify Cerebro of Build Success
+        if: success() # Only runs if the job was successful
+        uses: ./.github/actions/cerebro-completed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
+          run_id: ${{ inputs.runner_id }}
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta.tar.gz
+          version: ${{ inputs.new_version }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Notify Cerebro of Build Failure
+        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        uses: ./.github/actions/cerebro-failed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}

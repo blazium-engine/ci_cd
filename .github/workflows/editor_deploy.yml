@@ -136,6 +136,7 @@ jobs:
             macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
             windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
@@ -166,6 +167,7 @@ jobs:
             macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
             windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
@@ -200,6 +202,8 @@ jobs:
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
             windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
@@ -232,6 +236,8 @@ jobs:
             android_editor-android-debug.apk
             android_editor-horizonos-debug.aab
             android_editor-horizonos-debug.apk
+            android_editor-picoos-debug.aab
+            android_editor-picoos-debug.apk
             blazium.windows.editor.arm64.llvm.exe
             blazium.windows.editor.arm64.llvm.console.exe
             blazium.windows.editor.arm64.llvm.mono.exe
@@ -264,6 +270,8 @@ jobs:
             ${{ env.BASE_NAME }}_android.apk
             ${{ env.BASE_NAME }}_android.meta.aab
             ${{ env.BASE_NAME }}_android.meta.apk
+            ${{ env.BASE_NAME }}_android.pico.aab
+            ${{ env.BASE_NAME }}_android.pico.apk
             ${{ env.BASE_NAME }}_windows.arm64.exe
             ${{ env.BASE_NAME }}_windows.arm64.console.exe
             ${{ env.BASE_NAME }}_windows.mono.arm64.exe
@@ -296,6 +304,7 @@ jobs:
             macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
             windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
@@ -326,6 +335,7 @@ jobs:
             macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}
             android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
+            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
             windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
@@ -348,6 +358,7 @@ jobs:
             ${{ env.BASE_NAME }}_macos.mono
             ${{ env.BASE_NAME }}_android
             ${{ env.BASE_NAME }}_android.meta
+            ${{ env.BASE_NAME }}_android.pico
             ${{ env.BASE_NAME }}_windows.arm64
             ${{ env.BASE_NAME }}_windows.mono.arm64
             ${{ env.BASE_NAME }}_windows.arm32
@@ -399,6 +410,7 @@ jobs:
             "${BASE_NAME}_macos.mono.zip"
             "${BASE_NAME}_android.zip" 
             "${BASE_NAME}_android.meta.zip"
+            "${BASE_NAME}_android.pico.zip"
             "${BASE_NAME}_windows.arm64.zip"
             "${BASE_NAME}_windows.mono.arm64.zip"
             "${BASE_NAME}_windows.arm32.zip"
@@ -467,6 +479,7 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.meta.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.pico.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm32.zip
@@ -514,6 +527,7 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.meta.zip
+            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.pico.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm32.zip

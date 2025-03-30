@@ -559,18 +559,18 @@ jobs:
       - name: Distro-specific Deps Install
         run: |
           # Remove all existing third-party repositories
-          sudo rm -f /etc/apt/sources.list.d/*
+          #sudo rm -f /etc/apt/sources.list.d/*
 
           # Add architecture support for 32-bit
           sudo dpkg --add-architecture i386
 
           # Update sources list to include default Ubuntu repositories
-          sudo bash -c 'cat > /etc/apt/sources.list <<EOF
-          deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
-          EOF'
+          #sudo bash -c 'cat > /etc/apt/sources.list <<EOF
+          #deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+          #EOF'
 
           # Update package lists
           sudo apt-get update
