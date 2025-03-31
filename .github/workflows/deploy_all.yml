@@ -151,7 +151,7 @@ jobs:
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - name: Create GitHub Release
-        continue-on-error: true
+        continue-on-error: ${{ github.event.client_payload.run_id != '' }}
         id: createRelease
         uses: ./.github/actions/create-github-release
         with:
