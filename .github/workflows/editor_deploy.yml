@@ -141,11 +141,6 @@ jobs:
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
-          run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
@@ -172,10 +167,6 @@ jobs:
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
@@ -212,10 +203,6 @@ jobs:
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_old: |
             blazium.linuxbsd.editor.x86_64
             blazium.linuxbsd.editor.x86_64.mono
@@ -246,10 +233,6 @@ jobs:
             blazium.windows.editor.arm32.llvm.console.exe
             blazium.windows.editor.arm32.llvm.mono.exe
             blazium.windows.editor.arm32.llvm.mono.console.exe
-            blazium.linuxbsd.editor.arm64.llvm
-            blazium.linuxbsd.editor.arm64.llvm.mono
-            blazium.linuxbsd.editor.arm32.llvm
-            blazium.linuxbsd.editor.arm32.llvm.mono
           filename_new: |
             ${{ env.BASE_NAME }}_linux.x86_64
             ${{ env.BASE_NAME }}_linux.mono.x86_64
@@ -280,10 +263,6 @@ jobs:
             ${{ env.BASE_NAME }}_windows.arm32.console.exe
             ${{ env.BASE_NAME }}_windows.mono.arm32.exe
             ${{ env.BASE_NAME }}_windows.mono.arm32.console.exe
-            ${{ env.BASE_NAME }}_linux.arm64
-            ${{ env.BASE_NAME }}_linux.mono.arm64
-            ${{ env.BASE_NAME }}_linux.arm32
-            ${{ env.BASE_NAME }}_linux.mono.arm32
           input_dir: ${{ github.workspace }}/extracted
 
 
@@ -309,10 +288,6 @@ jobs:
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           input_dir: ${{ github.workspace }}/extracted
           items_to_delete: |
             build_deps/
@@ -340,10 +315,6 @@ jobs:
             windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
             windows-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-arm32-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-arm32-${{ github.event.client_payload.type || 'nightly' }}
           filename_new: |
             ${{ env.BASE_NAME }}_linux.x86_64
             ${{ env.BASE_NAME }}_linux.mono.x86_64
@@ -363,10 +334,6 @@ jobs:
             ${{ env.BASE_NAME }}_windows.mono.arm64
             ${{ env.BASE_NAME }}_windows.arm32
             ${{ env.BASE_NAME }}_windows.mono.arm32
-            ${{ env.BASE_NAME }}_linux.arm64
-            ${{ env.BASE_NAME }}_linux.mono.arm64
-            ${{ env.BASE_NAME }}_linux.arm32
-            ${{ env.BASE_NAME }}_linux.mono.arm32
 
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/editors
@@ -415,10 +382,6 @@ jobs:
             "${BASE_NAME}_windows.mono.arm64.zip"
             "${BASE_NAME}_windows.arm32.zip"
             "${BASE_NAME}_windows.mono.arm32.zip"
-            "${BASE_NAME}_linux.arm64.zip"
-            "${BASE_NAME}_linux.mono.arm64.zip"
-            "${BASE_NAME}_linux.arm32.zip"
-            "${BASE_NAME}_linux.mono.arm32.zip"
           )
 
           # Process each file
@@ -484,10 +447,6 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm32.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm32.zip
             ${{ github.workspace }}/editors/editors.json
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
@@ -532,8 +491,4 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm32.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.arm32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.arm32.zip
           DEBUG: "true"
