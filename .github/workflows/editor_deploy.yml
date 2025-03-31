@@ -150,7 +150,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
 
-      - name: Uncompress Templates
+      - name: Uncompress Editors
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
           names: |
