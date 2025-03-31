@@ -613,6 +613,7 @@ jobs:
           directory: ${{ github.workspace }}/export
 
       - name: Upload Template Release Asset
+        continue-on-error: true
         id: template-upload
         uses: actions/upload-release-asset@v1.0.1
         env:
@@ -624,6 +625,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload Mono Template Release Asset
+        continue-on-error: true
         id: mono-template-upload
         uses: actions/upload-release-asset@v1.0.1
         env:

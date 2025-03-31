@@ -468,6 +468,7 @@ jobs:
           butler_credentials: ${{ secrets.BUTLER_CREDENTIALS }}
 
       - name: Upload assets to GitHub release
+        continue-on-error: true
         uses: ./.github/actions/upload-github-release
         with:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_PAT }}
