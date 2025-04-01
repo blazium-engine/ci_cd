@@ -144,6 +144,7 @@ jobs:
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
+          run_id: ${{ inputs.runner_id }}
 
       - name: Uncompress Editors
         uses: ./.github/actions/multi-uncompress-tar-gz
