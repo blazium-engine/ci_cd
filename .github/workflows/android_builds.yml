@@ -39,6 +39,9 @@ env:
   TERM: 'xterm'
   DISPLAY: ':0'
   DEPLOY_TYPE: android
+  GODOT_ANDROID_KEYSTORE_ALIAS: ${{ secrets.GODOT_ANDROID_KEYSTORE_ALIAS }}
+  GODOT_ANDROID_SIGN_KEYSTORE_BAS64: ${{ secrets.GODOT_ANDROID_SIGN_KEYSTORE_BAS64 }}
+  GODOT_ANDROID_SIGN_PASSWORD: ${{ secrets.GODOT_ANDROID_SIGN_PASSWORD }}
 
 concurrency:
   group: ci-${{github.actor}}-${{ github.event.client_payload.type || 'nightly' }}-android
