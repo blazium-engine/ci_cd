@@ -6,15 +6,16 @@ const path = require('path');
 const token = process.env.GITHUB_TOKEN;
 const owner = process.env.GITHUB_OWNER; // The owner of the repository
 const repo = process.env.GITHUB_REPO; // The repository name
-const baseBranch = process.env.BASE_BRANCH; // The base branch
 const currentBranch = process.env.CURRENT_BRANCH; // The current branch
 const includeFiles = process.env.INCLUDE_FILES || false;
 
+var baseBranch = process.env.BASE_BRANCH;
 
 var version = {
     major: process.env.MAJOR_VERSION || 0,
     minor: process.env.MINOR_VERSION || 1,
-    patch: process.env.PATCH_VERSION || 0
+    patch: process.env.PATCH_VERSION || 0,
+    build_type: process.env.BUILD_TYPE || "nightly"
 }
 
 if (!token || !owner || !repo || !baseBranch || !currentBranch) {
@@ -57,6 +58,23 @@ function httpsGet(url, additionalHeaders = {}) {
         req.on('error', reject);
         req.end();
     });
+}
+
+async function setBaseBranch() {
+    console.log(`[DEBUG] Getting baseBranch`);
+    const response = await httpsGet(`${apiBaseUrl}/releases`, {
+        'X-GitHub-Api-Version': '2022-11-28',
+    });
+    const gh_releases = response.data;
+    for (let i = 0; i < gh_releases.length; i++) {
+        const release = gh_releases[i];
+        if (release.name.includes(version.build_type)) {
+            baseBranch = release.target_commitish;
+            console.log(`[DEBUG] The baseBranch was found: ${baseBranch}`);
+            return;
+        }
+    }
+    console.log(`[DEBUG] Warning: using env baseBranch! ${baseBranch}`);
 }
 
 async function getPaginatedData(url) {
@@ -254,6 +272,7 @@ function getSemVerLabel(message) {
 (async function main() {
     const args = process.argv.slice(2);
     const outputDir = args[0] || __dirname;
+    await setBaseBranch();
     console.log(`Generating changelog in: ${outputDir}`);
     await generateChangelog(outputDir);
 })();

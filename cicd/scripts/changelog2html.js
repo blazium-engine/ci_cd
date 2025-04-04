@@ -37,6 +37,7 @@ function generateChangelogHTML(jsonFilePath, shortSummary = false) {
 `<h4>Changelog: ${baseBranch} -> ${currentBranch}</h4>
 <h2>Summary:</h2>
 <ul>
+<li><b>Build Type</b>: <code>${version?.build_type || ""}</code></li>
 <li><b>Version</b>: <code>${version?.major || 0}.${version?.minor || 0}.${version?.patch || 0}</code></li>
 <li><b>Total Commits</b>: <code>${totalCommits || 0}</code></li>
 <li><b>Total PRs</b>: <code>${totalPRs || 0}</code></li>
