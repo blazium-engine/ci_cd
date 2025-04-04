@@ -36,6 +36,7 @@ function generateChangelogText(jsonFilePath) {
         let changelogText = `Changelog: ${baseBranch} -> ${currentBranch}
 
 Summary:
+- Build Type: ${version?.build_type || ""}
 - Version: ${version?.major || 0}.${version?.minor || 0}.${version?.patch || 0}
 - Total Commits: ${totalCommits || 0}
 - Total PRs: ${totalPRs || 0}
