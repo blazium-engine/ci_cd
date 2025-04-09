@@ -66,15 +66,36 @@ async function setBaseBranch() {
         'X-GitHub-Api-Version': '2022-11-28',
     });
     const gh_releases = response.data;
-    for (let i = 0; i < gh_releases.length; i++) {
-        const release = gh_releases[i];
-        if (release.name.includes(version.build_type)) {
-            baseBranch = release.target_commitish;
-            console.log(`[DEBUG] The baseBranch was found: ${baseBranch}`);
-            return;
+
+    // We want to check for the version/commithash in lower buildtype
+    // if it fails to find it in the current one, aka the buildtype is missing
+    let build_types = ["release", "prerelease", "nightly"];
+    build_types = build_types.slice(build_types.indexOf(version.build_type));
+
+    for (let type_i = 0; type_i < build_types.length; type_i++) {
+        const build_type = build_types[type_i];
+
+        for (let release_i = 0; release_i < gh_releases.length; release_i++) {
+            const release = gh_releases[release_i];
+
+            if (release.name.includes(build_type)) {
+                // Get base commit hash
+                baseBranch = release.target_commitish;
+                console.log(`[DEBUG] The baseBranch was found: ${baseBranch}`);
+
+                // Get version number too
+                const dash_index = release.tag_name.indexOf("-");
+                const version_array = release.tag_name.substring(1, dash_index).split(".");
+                version.major = parseInt(version_array[0]);
+                version.minor = parseInt(version_array[1]);
+                version.patch = parseInt(version_array[2]);
+                console.log(`[DEBUG] Base version: ${version.major}.${version.minor}.${version.patch}`);
+                return;
+            }
         }
     }
     console.log(`[DEBUG] Warning: using env baseBranch! ${baseBranch}`);
+    console.log(`[DEBUG] Warning: using env version! ${version.major}.${version.minor}.${version.patch}`);
 }
 
 async function getPaginatedData(url) {
