@@ -11,16 +11,21 @@ const includeFiles = process.env.INCLUDE_FILES || false;
 
 var baseBranch = process.env.BASE_BRANCH;
 
+if (!token || !owner || !repo || !currentBranch || !baseBranch) {
+    console.error("Error: Missing required environment variables.");
+    process.exit(1);
+}
+
 var version = {
     major: process.env.MAJOR_VERSION || 0,
     minor: process.env.MINOR_VERSION || 1,
     patch: process.env.PATCH_VERSION || 0,
     build_type: process.env.BUILD_TYPE || "nightly"
 }
-
-if (!token || !owner || !repo || !baseBranch || !currentBranch) {
-    console.error("Error: Missing required environment variables.");
-    process.exit(1);
+const build_types = ["release", "prerelease", "nightly"];
+// if "dev" set to "nightly"
+if (!build_types.includes(version.build_type)) {
+    version.build_type = "nightly";
 }
 
 // API base URL for the repository
@@ -69,11 +74,10 @@ async function setBaseBranch() {
 
     // We want to check for the version/commithash in lower buildtype
     // if it fails to find it in the current one, aka the buildtype is missing
-    let build_types = ["release", "prerelease", "nightly"];
-    build_types = build_types.slice(build_types.indexOf(version.build_type));
+    const build_types_to_check = build_types.slice(build_types.indexOf(version.build_type));
 
-    for (let type_i = 0; type_i < build_types.length; type_i++) {
-        const build_type = build_types[type_i];
+    for (let type_i = 0; type_i < build_types_to_check.length; type_i++) {
+        const build_type = build_types_to_check[type_i];
 
         for (let release_i = 0; release_i < gh_releases.length; release_i++) {
             const release = gh_releases[release_i];
