@@ -90,8 +90,9 @@ async function setBaseBranch() {
                 // Get version number too
                 const dash_index = release.tag_name.indexOf("-");
                 const version_array = release.tag_name.substring(1, dash_index).split(".");
-                version.major = parseInt(version_array[0]);
-                version.minor = parseInt(version_array[1]);
+                // Take the major and minor from the version.py
+                // version.major = parseInt(version_array[0]);
+                // version.minor = parseInt(version_array[1]);
                 version.patch = parseInt(version_array[2]);
                 console.log(`[DEBUG] Base version: ${version.major}.${version.minor}.${version.patch}`);
                 return;
