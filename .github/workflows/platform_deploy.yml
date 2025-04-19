@@ -281,7 +281,7 @@ jobs:
           items_to_delete: |
             build_deps/
 
-      - uses: bioblaze/deploy2steam@v2
+      - uses: bioblaze/deploy2steam@v3
         with:
           username: ${{ secrets.STEAM_USERNAME }}     
           password: ${{ secrets.STEAM_PASSWORD }}
