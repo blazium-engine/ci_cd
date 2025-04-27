@@ -88,12 +88,27 @@ async function setBaseBranch() {
                 console.log(`[DEBUG] The baseBranch was found: ${baseBranch}`);
 
                 // Get version number too
-                const dash_index = release.tag_name.indexOf("-");
-                const version_array = release.tag_name.substring(1, dash_index).split(".");
-                // Take the major and minor from the version.py
-                // version.major = parseInt(version_array[0]);
-                // version.minor = parseInt(version_array[1]);
-                version.patch = parseInt(version_array[2]);
+                let dash_index = release.tag_name.indexOf("-");
+                if (dash_index === -1) {
+                    dash_index = release.tag_name.length;
+                }
+                const version_array = release.tag_name.slice(1, dash_index).split(".");
+
+                let v_num = parseInt(version_array[0]);
+                if (v_num > version.major) {
+                    version.major = v_num;
+                    console.log(`[DEBUG] Warning: version.py major number is outdated`);
+                }
+                v_num = parseInt(version_array[1]);
+                if (v_num > version.minor) {
+                    version.minor = v_num;
+                    console.log(`[DEBUG] Warning: version.py minor number is outdated`);
+                }
+                v_num = parseInt(version_array[2]);
+                if (v_num > version.patch) {
+                    version.patch = v_num;
+                    console.log(`[DEBUG] Warning: version.py patch number is outdated`);
+                }
                 console.log(`[DEBUG] Base version: ${version.major}.${version.minor}.${version.patch}`);
                 return;
             }
