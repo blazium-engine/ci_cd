@@ -63,7 +63,7 @@ jobs:
         run: |
           node ./cicd/scripts/changelog.js $(pwd)
 
-      - name: Get Verson of Changelog
+      - name: Get Version from Changelog
         id: new_version
         uses: ./.github/actions/version-from-changelog
         with:
