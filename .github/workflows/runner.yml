@@ -60,6 +60,7 @@ jobs:
           MAJOR_VERSION: ${{ steps.version.outputs.external_major }}
           MINOR_VERSION: ${{ steps.version.outputs.external_minor }}
           PATCH_VERSION: ${{ steps.version.outputs.external_patch }}
+          BUILD_TYPE: ${{ github.event.client_payload.type || 'nightly' }}
         run: |
           node ./cicd/scripts/changelog.js $(pwd)
 

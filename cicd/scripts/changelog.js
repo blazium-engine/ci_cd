@@ -22,11 +22,6 @@ var version = {
     patch: process.env.PATCH_VERSION || 0,
     build_type: process.env.BUILD_TYPE || "nightly"
 }
-const build_types = ["release", "prerelease", "nightly"];
-// if "dev" set to "nightly"
-if (!build_types.includes(version.build_type)) {
-    version.build_type = "nightly";
-}
 
 // API base URL for the repository
 const apiBaseUrl = `https://api.github.com/repos/${owner}/${repo}`;
@@ -74,6 +69,11 @@ async function setBaseBranch() {
 
     // We want to check for the version/commithash in lower buildtype
     // if it fails to find it in the current one, aka the buildtype is missing
+    const build_types = ["release", "prerelease", "nightly"];
+    if (!build_types.includes(version.build_type)) {
+        console.error(`Error: Incorrect build_type value: ${version.build_type}`);
+        process.exit(1);
+    }
     const build_types_to_check = build_types.slice(build_types.indexOf(version.build_type));
 
     for (let type_i = 0; type_i < build_types_to_check.length; type_i++) {
