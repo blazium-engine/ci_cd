@@ -23,6 +23,9 @@ var version = {
     build_type: process.env.BUILD_TYPE || "nightly"
 }
 
+var is_version_py_major_greater = false;
+var is_version_py_minor_greater = false;
+
 // API base URL for the repository
 const apiBaseUrl = `https://api.github.com/repos/${owner}/${repo}`;
 
@@ -94,22 +97,29 @@ async function setBaseBranch() {
                 }
                 const version_array = release.tag_name.slice(1, dash_index).split(".");
 
-                let v_num = parseInt(version_array[0]);
-                if (v_num > version.major) {
-                    version.major = v_num;
+                let prev = {
+                    major: parseInt(version_array[0]),
+                    minor: parseInt(version_array[1]),
+                    patch: parseInt(version_array[2])
+                };
+
+                if (prev.major > version.major) {
+                    version.major = prev.major;
                     console.log(`[DEBUG] Warning: version.py major number is outdated`);
                 }
-                v_num = parseInt(version_array[1]);
-                if (v_num > version.minor) {
-                    version.minor = v_num;
+                if (prev.minor > version.minor) {
+                    version.minor = prev.minor;
                     console.log(`[DEBUG] Warning: version.py minor number is outdated`);
                 }
-                v_num = parseInt(version_array[2]);
-                if (v_num > version.patch) {
-                    version.patch = v_num;
+                if (prev.patch > version.patch) {
+                    version.patch = prev.patch;
                     console.log(`[DEBUG] Warning: version.py patch number is outdated`);
                 }
                 console.log(`[DEBUG] Base version: ${version.major}.${version.minor}.${version.patch}`);
+
+                is_version_py_major_greater = prev.major < version.major;
+                is_version_py_minor_greater = prev.minor < version.minor;
+
                 return;
             }
         }
@@ -243,11 +253,17 @@ async function generateChangelog(outputDir = __dirname) {
 
             // Versioning
             if (semVerLabel === "major") {
-                version.major++;
+                if (!is_version_py_major_greater) {
+                    version.major++;
+                    is_version_py_major_greater = false;
+                }
                 version.minor = 0;
                 version.patch = 0;
             } else if (semVerLabel === "minor") {
-                version.minor++;
+                if (!is_version_py_minor_greater) {
+                    version.minor++;
+                    is_version_py_minor_greater = false;
+                }
                 version.patch = 0;
             } else {
                 version.patch++;
