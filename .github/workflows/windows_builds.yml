@@ -106,35 +106,35 @@ jobs:
           - name: Editor (64bit)
             cache-name: windows-editor-64bit
             target: editor
-            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}  
+            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: false
             d3d12: true
 
           - name: Editor w/ Mono (64bit)
             cache-name: windows-editor-mono-64bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}  
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: true
             d3d12: true
             
           - name: Editor (32bit)
             cache-name: windows-editor-32bit
             target: editor
-            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}  
+            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: false
             d3d12: true
 
           - name: Editor w/ Mono (32bit)
             cache-name: windows-editor-mono-32bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}  
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: true
             d3d12: true
             
           - name: Editor (arm64)
             cache-name: windows-editor-arm64
             target: editor
-            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none  
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: false
             arm: true
             skip: false
@@ -143,7 +143,7 @@ jobs:
           - name: Editor w/ Mono (arm64)
             cache-name: windows-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none  
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: true
             arm: true
             skip: false
@@ -152,7 +152,7 @@ jobs:
           - name: Editor (arm32)
             cache-name: windows-editor-arm32
             target: editor
-            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none  
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: false
             arm: true
             skip: false
@@ -161,7 +161,7 @@ jobs:
           - name: Editor w/ Mono (arm32)
             cache-name: windows-editor-mono-arm32
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none  
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: true
             arm: true
             skip: false
@@ -385,7 +385,7 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }}
           platform: windows
           target: ${{ matrix.target }}
 
@@ -470,63 +470,63 @@ jobs:
           - name: Template w/ Mono (64bit)
             cache-name: windows-template-mono-64bit
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             d3d12: true
 
           - name: Template (64bit)
             cache-name: windows-template-64bit
             target: template_release
-            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             d3d12: true
 
           - name: Template w/ Mono (64bit)
             cache-name: windows-debug-template-mono-64bit
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             d3d12: true
 
           - name: Template (64bit)
             cache-name: windows-debug-template-64bit
             target: template_debug
-            sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             d3d12: true
 
           - name: Template w/ Mono (32bit)
             cache-name: windows-template-mono-32bit
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             d3d12: true
 
           - name: Template (32bit)
             cache-name: windows-template-32bit
             target: template_release
-            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             d3d12: true
 
           - name: Template w/ Mono (32bit)
             cache-name: windows-debug-template-mono-32bit
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
             d3d12: true
 
           - name: Template (32bit)
             cache-name: windows-debug-template-32bit
             target: template_debug
-            sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }}
+            sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
             d3d12: true
 
           - name: Template w/ Mono (arm64)
             cache-name: windows-template-mono-arm64
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arm: true
             d3d12: true
@@ -534,7 +534,7 @@ jobs:
           - name: Template (arm64)
             cache-name: windows-template-arm64
             target: template_release
-            sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
             d3d12: true
@@ -542,7 +542,7 @@ jobs:
           - name: Template w/ Mono (arm64)
             cache-name: windows-debug-template-mono-arm64
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arm: true
             d3d12: true
@@ -550,7 +550,7 @@ jobs:
           - name: Template (arm64)
             cache-name: windows-debug-template-arm64
             target: template_debug
-            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
             d3d12: true
@@ -558,7 +558,7 @@ jobs:
           - name: Template w/ Mono (arm32)
             cache-name: windows-template-mono-arm32
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arm: true
             d3d12: false
@@ -566,7 +566,7 @@ jobs:
           - name: Template (arm32)
             cache-name: windows-template-arm32
             target: template_release
-            sconsflags: arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
             d3d12: false
@@ -574,7 +574,7 @@ jobs:
           - name: Template w/ Mono (arm32)
             cache-name: windows-debug-template-mono-arm32
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arm: true
             d3d12: false
@@ -582,7 +582,7 @@ jobs:
           - name: Template (arm32)
             cache-name: windows-debug-template-arm32
             target: template_debug
-            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || env.DEBUG_SCONSFLAGS }} lto=none
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
             d3d12: false
@@ -811,7 +811,7 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }}  ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }}
           platform: windows
           target: ${{ matrix.target }}
 
