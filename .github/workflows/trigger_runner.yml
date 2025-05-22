@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
       type:
-        description: 'Build type (e.g., nightly)'
+        description: 'Prod or nightly (e.g., nightly)'
         required: true
         default: 'nightly'
       branch:
@@ -32,7 +32,7 @@ on:
         type: boolean
         default: true
       deploy:
-        description: 'Build type (comma-separated list like templates, editors)'
+        description: 'Deploy (comma-separated list like templates, editors)'
         required: true
         type: string
         default: 'templates,editors'
