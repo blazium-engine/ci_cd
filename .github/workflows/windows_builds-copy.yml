@@ -1,0 +1,899 @@
+name: 🏁 Windows Builds
+on:
+  workflow_call:
+    inputs:
+      build_sha:
+        description: "Build commit SHA to use for this job"
+        required: true
+        type: string
+      runner_id:
+        description: "Runner ID of the Parent Runner"
+        required: true
+        type: string
+      new_major:
+        description: "New Major # for Version"
+        required: true
+        type: string
+      new_minor:
+        description: "New Minor # for Version"
+        required: true
+        type: string
+      new_patch:
+        description: "New Patch # for Version"
+        required: true
+        type: string
+      new_version:
+        description: "New Version that'll be Deployed"
+        required: true
+        type: string
+
+# Global Settings
+# SCONS_CACHE for windows must be set in the build environment
+env:
+  # Used for the cache key. Add version suffix to force clean build.
+  GODOT_BASE_BRANCH: blazium-dev
+  SCONSFLAGS: verbose=yes warnings=no progress=no "angle_libs=${{github.workspace}}/deps/angle"
+  D3D12FLAGS: d3d12=yes "mesa_libs=${{ github.workspace }}/deps/mesa" "agility_sdk_path=${{github.workspace}}/bin/build_deps/agility_sdk"
+  SCONS_CACHE_MSVC_CONFIG: true
+  DEPLOY_TYPE: windows
+  DEBUG_SCONSFLAGS: debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
+
+concurrency:
+  group: ci-${{github.actor}}-${{ github.event.client_payload.type || 'nightly' }}-windows
+  cancel-in-progress: true
+
+jobs:
+
+  editor-check:
+    name: Checking Editor build.sha
+    if: contains(github.event.client_payload.build_type, 'editors')
+    runs-on: windows-latest
+    outputs:
+      compile: ${{ steps.compile.outputs.should_compile }}
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/ci_cd
+          ref: nightly-testing
+          fetch-depth: 1
+
+      - name: Validate Version
+        if: ${{ github.event.client_payload.force != true }}
+        id: compile
+        uses: ./.github/actions/version-checker
+        with:
+          deploy_type: ${{ env.DEPLOY_TYPE }}
+          build_type: ${{ github.event.client_payload.type || 'nightly' }}
+          build_sha: ${{ inputs.build_sha }}
+
+  template-check:
+    name: Checking Templates build.sha
+    if: contains(github.event.client_payload.build_type, 'templates')
+    runs-on: ubuntu-latest
+    outputs:
+      compile: ${{ steps.compile.outputs.should_compile == 'true' }}
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/ci_cd
+          ref: nightly-testing
+          fetch-depth: 1
+
+      - name: Compilation
+        if: ${{ github.event.client_payload.force != true }}
+        id: compile
+        uses: ./.github/actions/version-checker
+        with:
+          deploy_type: ${{ env.DEPLOY_TYPE }}
+          build_type: ${{ github.event.client_payload.type || 'nightly' }}
+          build_sha: ${{ inputs.build_sha }}
+          is_template: 'true'
+
+  build-editors:
+    runs-on: "ubuntu-22.04"
+    name: ${{ matrix.name }}
+    needs: editor-check
+    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+
+          - name: Editor (64bit)
+            cache-name: windows-editor-64bit
+            target: editor
+            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            mono: false
+            d3d12: true
+
+          - name: Editor w/ Mono (64bit)
+            cache-name: windows-editor-mono-64bit
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            mono: true
+            d3d12: true
+            
+          - name: Editor (32bit)
+            cache-name: windows-editor-32bit
+            target: editor
+            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            mono: false
+            d3d12: true
+
+          - name: Editor w/ Mono (32bit)
+            cache-name: windows-editor-mono-32bit
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            mono: true
+            d3d12: true
+            
+          - name: Editor (arm64)
+            cache-name: windows-editor-arm64
+            target: editor
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            mono: false
+            arm: true
+            skip: false
+            d3d12: true
+
+          - name: Editor w/ Mono (arm64)
+            cache-name: windows-editor-mono-arm64
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            mono: true
+            arm: true
+            skip: false
+            d3d12: true
+
+          - name: Editor (arm32)
+            cache-name: windows-editor-arm32
+            target: editor
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            mono: false
+            arm: true
+            skip: false
+            d3d12: false
+
+          - name: Editor w/ Mono (arm32)
+            cache-name: windows-editor-mono-arm32
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            mono: true
+            arm: true
+            skip: false
+            d3d12: false
+
+    steps:
+      - name: Skip Action?
+        if: matrix.skip
+        run: |
+          echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
+          exit 0
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/blazium
+          ref: ${{ inputs.build_sha }}
+          submodules: recursive
+          fetch-depth: 2
+
+      - name: Remove existing workflows folder
+        run: |
+          rm -rf .github/workflows
+
+      - name: Pull .github folder from ci_cd repository
+        run: |
+          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          cp -r ci_cd_repo/.github/* .github/
+          rm -rf ci_cd_repo
+
+      - name: Update new Version Information to version.py
+        uses: ./.github/actions/set-repos-version
+        with:
+          file_path: ${{ github.workspace }}/version.py
+          external_major: ${{ inputs.new_major }}
+          external_minor: ${{ inputs.new_minor }}
+          external_patch: ${{ inputs.new_patch }}
+          external_status: ${{ github.event.client_payload.type || 'nightly' }}
+          external_sha: ${{ inputs.build_sha }}
+
+      - name: Notify Cerebro of Build Starting
+        uses: ./.github/actions/cerebro-started
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
+          mono: ${{ matrix.mono }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          branch: ${{ github.event.client_payload.branch }}
+          build_os: windows
+          checksum: ${{ inputs.build_sha }}
+          production: ${{ github.event.client_payload.production }}
+          version: ${{ inputs.new_version }}
+
+      # TODO: Figure out somehow how to embed this one.
+      - name: Distro-specific Deps Install
+        run: |
+          # Remove all existing third-party repositories
+          #sudo rm -f /etc/apt/sources.list.d/*
+
+          # Add architecture support for 32-bit
+          sudo dpkg --add-architecture i386
+
+          # Update sources list to include default Ubuntu repositories
+          #sudo bash -c 'cat > /etc/apt/sources.list <<EOF
+          #deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+          #EOF'
+
+          # Update package lists
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+            bash bzip2 curl file gettext wget \
+            git make nano patch scons pkg-config unzip xz-utils cmake gdb
+
+          # Install required packages
+          sudo apt-get install -y \
+            build-essential \
+            gcc-multilib g++-multilib \
+            libc6-dev libc6-dev-i386 \
+            libx11-dev libx11-dev:i386 \
+            libxcursor-dev libxcursor-dev:i386 \
+            libxinerama-dev libxinerama-dev:i386 \
+            libxi-dev libxi-dev:i386 \
+            libxrandr-dev libxrandr-dev:i386 \
+            libgl1-mesa-dev libgl1-mesa-dev:i386 
+          sudo apt-get install -y \
+            libglu1-mesa-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libudev-dev \
+            libwayland-dev \
+            libstdc++6 \
+            libatomic1 \
+            libfreetype6-dev \
+            libssl-dev \
+            libc++-dev \
+            libc++abi-dev \
+            libgl-dev \
+            liblzma-dev \
+            liblzma5 \
+            libglu-dev \
+            libdbus-1-dev \
+            libwayland-bin
+          sudo apt-get install -y \
+            yasm \
+            xvfb \
+            llvm \
+            gcc \
+            g++ \
+            libspeechd-dev \
+            speech-dispatcher \
+            fontconfig \
+            libfontconfig-dev \
+            dotnet-sdk-8.0 \
+            directx-headers-dev \
+            binutils
+          # mingw-w64 \
+          # mingw-w64-common \
+          # mingw-w64-tools \
+          #   gcc-mingw-w64 g++-mingw-w64
+          # sudo update-alternatives --config x86_64-w64-mingw32-g++
+          # sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+          # sudo update-alternatives --config x86_64-w64-mingw32-gcc
+          # sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+          # sudo update-alternatives --config i686-w64-mingw32-g++
+          # sudo update-alternatives --set i686-w64-mingw32-g++ /usr/bin/i686-w64-mingw32-g++-posix
+          # sudo update-alternatives --config i686-w64-mingw32-gcc
+          # sudo update-alternatives --set i686-w64-mingw32-gcc /usr/bin/i686-w64-mingw32-gcc-posix
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo apt-get purge -y --auto-remove
+          sudo apt-get autoremove
+          sudo apt-get clean
+
+      - name: Install llvm-mingw
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64
+          echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
+
+      - name: Download and extract llvm-mingw SDK
+        env:
+          CURRENT_DIR: ${{ github.workspace }}
+        if: matrix.arm
+        run: |
+          mkdir -p "$CURRENT_DIR/sdks"
+          cd "$CURRENT_DIR/sdks"
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20241015/llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          xz -dc llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz | tar -xvf -
+          rm -f llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64
+          echo "LLVM_MINGW=$(pwd)" >> $GITHUB_ENV
+
+      - name: Free disk space on runner
+        run: |
+          echo "Disk usage before:" && df -h
+          sudo rm -rf /usr/local/lib/android
+          echo "Disk usage after:" && df -h
+
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+
+      - name: Download and extract mono-glue
+        if: matrix.mono
+        run: |
+          TYPE=${{ github.event.client_payload.type || 'nightly' }}
+          URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
+          
+          # Download the file
+          curl -L $URL -o monoglue.tar.gz
+
+          # Extract the entire archive to a temporary directory
+          mkdir -p temp_extract
+          tar -xzvf monoglue.tar.gz -C temp_extract
+
+          # Create target directories if they don't exist
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharp
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharpEditor
+
+          # Move the extracted folders to their target locations
+          rsync -av temp_extract/GodotSharp/ modules/mono/glue/GodotSharp/GodotSharp/
+          rsync -av temp_extract/GodotSharpEditor/ modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharp/
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          # Clean up the temporary directory
+          rm -rf temp_extract monoglue.tar.gz
+
+      - name: Download Direct3D 12 SDK components
+        if: matrix.d3d12
+        run: |
+          python ./misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Download ANGLE Libraries
+        uses: ./.github/actions/download-angle-action
+        with:
+          angle_url_base: "https://github.com/blazium-engine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
+          angle_folder: "${{ github.workspace }}/deps/angle"
+      
+      - name: Download Mesa Libraries
+        if: matrix.d3d12
+        uses: ./.github/actions/download-mesa-action
+        with:
+          mesa_url_base: "https://github.com/blazium-engine/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
+          mesa_folder: "${{ github.workspace }}/deps/mesa"
+
+      - name: Compilation
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }}
+          platform: windows
+          target: ${{ matrix.target }}
+
+      - name: Building C# Assemblies
+        if: matrix.mono
+        run: |
+          ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows
+
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ./bin
+          output_path: ./signed
+          environment_name: PROD
+
+      - name: Move into the bin directory.
+        run: |
+          ls -la
+          sudo chown -R $(whoami) ./signed ./bin
+          sudo chmod -R u+rw ./signed ./bin
+          rm -rf ./signed/build_deps
+          mv -f ./signed/* ./bin/
+
+      - name: Create tar.gz Archive
+        run: |
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+
+      - name: Clean D3D12 deps
+        if: matrix.d3d12
+        run: |
+          rm -rf "${{ github.workspace }}/bin/build_deps"
+
+      - name: Notify Cerebro of Build Success
+        if: success() # Only runs if the job was successful
+        uses: ./.github/actions/cerebro-completed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          version: ${{ inputs.new_version }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Notify Cerebro of Build Failure
+        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        uses: ./.github/actions/cerebro-failed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+  build-templates:
+    runs-on: "ubuntu-22.04"
+    name: ${{ matrix.name }}
+    needs: template-check
+    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+
+          - name: Template w/ Mono (64bit)
+            cache-name: windows-template-mono-64bit
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            d3d12: true
+
+          - name: Template (64bit)
+            cache-name: windows-template-64bit
+            target: template_release
+            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            d3d12: true
+
+          - name: Template w/ Mono (64bit)
+            cache-name: windows-debug-template-mono-64bit
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            d3d12: true
+
+          - name: Template (64bit)
+            cache-name: windows-debug-template-64bit
+            target: template_debug
+            sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            d3d12: true
+
+          - name: Template w/ Mono (32bit)
+            cache-name: windows-template-mono-32bit
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            d3d12: true
+
+          - name: Template (32bit)
+            cache-name: windows-template-32bit
+            target: template_release
+            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            d3d12: true
+
+          - name: Template w/ Mono (32bit)
+            cache-name: windows-debug-template-mono-32bit
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: true
+            d3d12: true
+
+          - name: Template (32bit)
+            cache-name: windows-debug-template-32bit
+            target: template_debug
+            sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            mono: false
+            d3d12: true
+
+          - name: Template w/ Mono (arm64)
+            cache-name: windows-template-mono-arm64
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: true
+            arm: true
+            d3d12: true
+
+          - name: Template (arm64)
+            cache-name: windows-template-arm64
+            target: template_release
+            sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: false
+            arm: true
+            d3d12: true
+
+          - name: Template w/ Mono (arm64)
+            cache-name: windows-debug-template-mono-arm64
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: true
+            arm: true
+            d3d12: true
+
+          - name: Template (arm64)
+            cache-name: windows-debug-template-arm64
+            target: template_debug
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: false
+            arm: true
+            d3d12: true
+
+          - name: Template w/ Mono (arm32)
+            cache-name: windows-template-mono-arm32
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: true
+            arm: true
+            d3d12: false
+
+          - name: Template (arm32)
+            cache-name: windows-template-arm32
+            target: template_release
+            sconsflags: arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: false
+            arm: true
+            d3d12: false
+
+          - name: Template w/ Mono (arm32)
+            cache-name: windows-debug-template-mono-arm32
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: true
+            arm: true
+            d3d12: false
+
+          - name: Template (arm32)
+            cache-name: windows-debug-template-arm32
+            target: template_debug
+            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: false
+            arm: true
+            d3d12: false
+
+
+    steps:
+      - name: Skip Action?
+        if: matrix.skip
+        run: |
+          echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
+          exit 0
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-engine/blazium
+          ref: ${{ inputs.build_sha }}
+          submodules: recursive
+          fetch-depth: 2
+
+      - name: Remove existing workflows folder
+        run: |
+          rm -rf .github/workflows
+
+      - name: Pull .github folder from ci_cd repository
+        run: |
+          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          cp -r ci_cd_repo/.github/* .github/
+          rm -rf ci_cd_repo
+
+      - name: Update new Version Information to version.py
+        uses: ./.github/actions/set-repos-version
+        with:
+          file_path: ${{ github.workspace }}/version.py
+          external_major: ${{ inputs.new_major }}
+          external_minor: ${{ inputs.new_minor }}
+          external_patch: ${{ inputs.new_patch }}
+          external_status: ${{ github.event.client_payload.type || 'nightly' }}
+          external_sha: ${{ inputs.build_sha }}
+
+      - name: Notify Cerebro of Build Starting
+        uses: ./.github/actions/cerebro-started
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
+          mono: ${{ matrix.mono }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          branch: ${{ github.event.client_payload.branch }}
+          build_os: windows
+          checksum: ${{ inputs.build_sha }}
+          production: ${{ github.event.client_payload.production }}
+          version: ${{ inputs.new_version }}
+
+
+      - name: Distro-specific Deps Install
+        run: |
+          # Remove all existing third-party repositories
+          #sudo rm -f /etc/apt/sources.list.d/*
+
+          # Add architecture support for 32-bit
+          sudo dpkg --add-architecture i386
+
+          # Update sources list to include default Ubuntu repositories
+          #sudo bash -c 'cat > /etc/apt/sources.list <<EOF
+          #deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+          #EOF'
+
+          # Update package lists
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+            bash bzip2 curl file gettext wget \
+            git make nano patch scons pkg-config unzip xz-utils cmake gdb
+
+          # Install required packages
+          sudo apt-get install -y \
+            build-essential \
+            gcc-multilib g++-multilib \
+            libc6-dev libc6-dev-i386 \
+            libx11-dev libx11-dev:i386 \
+            libxcursor-dev libxcursor-dev:i386 \
+            libxinerama-dev libxinerama-dev:i386 \
+            libxi-dev libxi-dev:i386 \
+            libxrandr-dev libxrandr-dev:i386 \
+            libgl1-mesa-dev libgl1-mesa-dev:i386 
+          sudo apt-get install -y \
+            libglu1-mesa-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libudev-dev \
+            libwayland-dev \
+            libstdc++6 \
+            libatomic1 \
+            libfreetype6-dev \
+            libssl-dev \
+            libc++-dev \
+            libc++abi-dev \
+            libgl-dev \
+            liblzma-dev \
+            liblzma5 \
+            libglu-dev \
+            libdbus-1-dev 
+          sudo apt-get install -y \
+            yasm \
+            xvfb \
+            llvm \
+            gcc \
+            g++ \
+            libspeechd-dev \
+            speech-dispatcher \
+            fontconfig \
+            libfontconfig-dev \
+            directx-headers-dev \
+            dotnet-sdk-8.0
+          # libvulkan-dev \
+          # zlib1g-dev \
+          # mingw-w64 \
+          # mingw-w64-common \
+          # mingw-w64-tools \
+          # gcc-mingw-w64 \
+          # g++-mingw-w64 \
+          # sudo update-alternatives --config x86_64-w64-mingw32-g++
+          # sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+          # sudo update-alternatives --config x86_64-w64-mingw32-gcc
+          # sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+          # sudo update-alternatives --config i686-w64-mingw32-g++
+          # sudo update-alternatives --set i686-w64-mingw32-g++ /usr/bin/i686-w64-mingw32-g++-posix
+          # sudo update-alternatives --config i686-w64-mingw32-gcc
+          # sudo update-alternatives --set i686-w64-mingw32-gcc /usr/bin/i686-w64-mingw32-gcc-posix
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo apt-get purge -y --auto-remove
+          sudo apt-get autoremove
+          sudo apt-get clean
+
+      - name: Install llvm-mingw
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64
+          echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
+
+      - name: Download and extract llvm-mingw SDK
+        env:
+          CURRENT_DIR: ${{ github.workspace }}
+        if: matrix.arm
+        run: |
+          mkdir -p "$CURRENT_DIR/sdks"
+          cd "$CURRENT_DIR/sdks"
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20241015/llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          xz -dc llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz | tar -xvf -
+          rm -f llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          cd llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64
+          echo "LLVM_MINGW=$(pwd)" >> $GITHUB_ENV
+
+      - name: Free disk space on runner
+        run: |
+          echo "Mingw_Prefix: $MINGW_PREFIX" >> $GITHUB_STEP_SUMMARY
+          echo "Disk usage before:" && df -h
+          sudo rm -rf /usr/local/lib/android
+          echo "Disk usage after:" && df -h
+
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+
+      - name: Setup GCC problem matcher
+        uses: ammaraskar/gcc-problem-matcher@master
+
+      - name: Download and extract mono-glue
+        if: matrix.mono
+        run: |
+          TYPE=${{ github.event.client_payload.type || 'nightly' }}
+          URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
+          
+          # Download the file
+          curl -L $URL -o monoglue.tar.gz
+
+          # Extract the entire archive to a temporary directory
+          mkdir -p temp_extract
+          tar -xzvf monoglue.tar.gz -C temp_extract
+
+          # Create target directories if they don't exist
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharp
+          mkdir -p modules/mono/glue/GodotSharp/GodotSharpEditor
+
+          # Move the extracted folders to their target locations
+          rsync -av temp_extract/GodotSharp/ modules/mono/glue/GodotSharp/GodotSharp/
+          rsync -av temp_extract/GodotSharpEditor/ modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharp/
+          ls -la ./modules/mono/glue/GodotSharp/GodotSharpEditor/
+
+          # Clean up the temporary directory
+          rm -rf temp_extract monoglue.tar.gz
+
+      - name: Download Direct3D 12 SDK components
+        if: matrix.d3d12
+        run: |
+          python ./misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Download ANGLE Libraries
+        uses: ./.github/actions/download-angle-action
+        with:
+          angle_url_base: "https://github.com/blazium-engine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
+          angle_folder: "${{ github.workspace }}/deps/angle"
+
+      - name: Download Mesa Libraries
+        if: matrix.d3d12
+        uses: ./.github/actions/download-mesa-action
+        with:
+          mesa_url_base: "https://github.com/blazium-engine/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
+          mesa_folder: "${{ github.workspace }}/deps/mesa"
+
+      - name: Compilation
+        uses: ./.github/actions/godot-build
+        with:
+          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }}  ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }}
+          platform: windows
+          target: ${{ matrix.target }}
+
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: ${{ matrix.cache-name }}
+        continue-on-error: true
+
+      - name: Create tar.gz Archive
+        run: |
+          tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
+
+      - name: Clean D3D12 deps
+        if: matrix.d3d12
+        run: |
+          rm -rf "${{ github.workspace }}/bin/build_deps"
+
+      - name: Notify Cerebro of Build Success
+        if: success() # Only runs if the job was successful
+        uses: ./.github/actions/cerebro-completed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}/${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          version: ${{ inputs.new_version }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+      - name: Notify Cerebro of Build Failure
+        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        uses: ./.github/actions/cerebro-failed
+        with:
+          name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
+  template-success:
+    name: Template Success
+    needs: build-templates
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create build.sha for Version Verification Later
+        run: |
+          echo ${{ inputs.build_sha }} >> build.sha
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: build.sha
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}/template
+
+  editor-success:
+    name: Editor Success
+    needs: build-editors
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create build.sha for Version Verification Later
+        run: |
+          echo ${{ inputs.build_sha }} >> build.sha
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: build.sha
+          out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
+
