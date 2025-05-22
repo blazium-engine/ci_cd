@@ -168,7 +168,7 @@ jobs:
     name: 🏁 Windows
     needs: [monoglue-build, get-latest-sha]
     if: contains(github.event.client_payload.build, 'windows') && !github.event.client_payload.run_id
-    uses: ./.github/workflows/windows_builds.yml
+    uses: ./.github/workflows/windows_build-copy.yml
     secrets: inherit
     with:
       build_sha: ${{ needs.get-latest-sha.outputs.build_sha }}
