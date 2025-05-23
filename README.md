@@ -116,7 +116,7 @@ jobs:
 
 ## 🏁 Windows Builds - GitHub Action
 
-The **Windows Builds** GitHub Action is designed to handle the complete build lifecycle for the Windows platform in the Blazium Engine. This action supports the compilation of both editors and templates, including Mono-enabled builds, for various architectures such as `x86_64`, `x86_32`, `arm64`, and `arm32`. It integrates with Cerebro for build notifications, leverages DigitalOcean Spaces for artifact storage, and ensures robust build and deployment workflows.
+The **Windows Builds** GitHub Action is designed to handle the complete build lifecycle for the Windows platform in the Blazium Engine. This action supports the compilation of both editors and templates, including Mono-enabled builds, for various architectures such as `x86_64`, `x86_32`, `arm64`. It integrates with Cerebro for build notifications, leverages DigitalOcean Spaces for artifact storage, and ensures robust build and deployment workflows.
 
 ---
 
@@ -148,7 +148,7 @@ The **Windows Builds** GitHub Action is designed to handle the complete build li
    - Provides granular control for forcing builds regardless of SHA comparison.
 
 2. **Editor Builds**:
-   - Compiles editor binaries for `x86_64`, `x86_32`, `arm64`, and `arm32` architectures.
+   - Compiles editor binaries for `x86_64`, `x86_32`, `arm64` architectures.
    - Supports Mono-enabled builds for enhanced compatibility with C#.
 
 3. **Template Builds**:
@@ -262,7 +262,7 @@ This workflow manages the Linux builds for the Blazium Engine, supporting both e
 ### Features
 
 - **Supports multiple architectures and configurations:**
-  - x86_64, x86_32, arm64, arm32.
+  - x86_64, x86_32, arm64.
   - Mono-enabled and standard builds.
   - Debug and release templates.
 
@@ -310,7 +310,7 @@ Checks if templates require a rebuild, similar to `editor-check`.
 
 #### `build-editors`
 Compiles editor builds across architectures:
-- Handles x86_64, x86_32, arm64, and arm32 builds.
+- Handles x86_64, x86_32, arm64 builds.
 - Supports Mono-enabled builds.
 - Skips builds marked with `skip: true`.
 
@@ -586,7 +586,7 @@ This GitHub Action automates the building and packaging process for Android edit
 ## Features
 
 ### ✅ Multi-Architecture Support
-- **ARM32**, **ARM64**, **x86_32**, and **x86_64** architectures supported.
+- **ARM64**, **x86_32**, and **x86_64** architectures supported.
 - Separate configurations for Android templates and editors.
 
 ### ✅ Mono and Non-Mono Builds
@@ -625,7 +625,6 @@ This GitHub Action automates the building and packaging process for Android edit
 
 ### **`build-editors`**
 - Builds Android editors for supported architectures:
-  - **ARM32**
   - **ARM64**
   - **x86_32**
   - **x86_64**

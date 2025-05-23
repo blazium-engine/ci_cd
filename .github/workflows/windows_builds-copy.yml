@@ -36,8 +36,8 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  SCONSFLAGS: verbose=yes warnings=no progress=no "angle_libs=${{github.workspace}}/deps/angle"
-  D3D12FLAGS: d3d12=yes "mesa_libs=${{ github.workspace }}/deps/mesa" "agility_sdk_path=${{github.workspace}}/bin/build_deps/agility_sdk"
+  SCONSFLAGS: verbose=yes warnings=no progress=no
+  D3D12FLAGS: d3d12=yes
   SCONS_CACHE_MSVC_CONFIG: true
   DEPLOY_TYPE: windows
   DEBUG_SCONSFLAGS: debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
@@ -112,28 +112,24 @@ jobs:
             target: editor
             sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: false
-            d3d12: true
 
           - name: Editor w/ Mono (64bit)
             cache-name: windows-editor-mono-64bit
             target: editor
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: true
-            d3d12: true
             
           - name: Editor (32bit)
             cache-name: windows-editor-32bit
             target: editor
             sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: false
-            d3d12: true
 
           - name: Editor w/ Mono (32bit)
             cache-name: windows-editor-mono-32bit
             target: editor
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
             mono: true
-            d3d12: true
             
           - name: Editor (arm64)
             cache-name: windows-editor-arm64
@@ -142,7 +138,6 @@ jobs:
             mono: false
             arm: true
             skip: false
-            d3d12: true
 
           - name: Editor w/ Mono (arm64)
             cache-name: windows-editor-mono-arm64
@@ -151,25 +146,6 @@ jobs:
             mono: true
             arm: true
             skip: false
-            d3d12: true
-
-          - name: Editor (arm32)
-            cache-name: windows-editor-arm32
-            target: editor
-            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
-            mono: false
-            arm: true
-            skip: false
-            d3d12: false
-
-          - name: Editor w/ Mono (arm32)
-            cache-name: windows-editor-mono-arm32
-            target: editor
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
-            mono: true
-            arm: true
-            skip: false
-            d3d12: false
 
     steps:
       - name: Skip Action?
@@ -198,10 +174,17 @@ jobs:
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
+      - name: Normalize path
+        id: normalize
+        shell: bash
+        run: |
+          normalized_workspace="$(echo "${{ github.workspace }}" | sed 's|\\|/|g')"
+          echo "normalized_workspace=$normalized_workspace" >> "$GITHUB_OUTPUT"
+
       - name: Update new Version Information to version.py
         uses: ./.github/actions/set-repos-version
         with:
-          file_path: ${{ github.workspace }}/version.py
+          file_path: ${{ steps.normalize.outputs.normalized_workspace }}/version.py
           external_major: ${{ inputs.new_major }}
           external_minor: ${{ inputs.new_minor }}
           external_patch: ${{ inputs.new_patch }}
@@ -263,7 +246,6 @@ jobs:
 
       - name: Download Direct3D 12 SDK components
         shell: bash
-        if: matrix.d3d12
         run: |
           python ./misc/scripts/install_d3d12_sdk_windows.py
 
@@ -271,19 +253,18 @@ jobs:
         uses: ./.github/actions/download-angle-action
         with:
           angle_url_base: "https://github.com/blazium-engine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
-          angle_folder: "${{ github.workspace }}/deps/angle"
+          angle_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
       
       - name: Download Mesa Libraries
-        if: matrix.d3d12
         uses: ./.github/actions/download-mesa-action
         with:
           mesa_url_base: "https://github.com/blazium-engine/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
-          mesa_folder: "${{ github.workspace }}/deps/mesa"
+          mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa" "agility_sdk_path=${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps/agility_sdk" "angle_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
           platform: windows
           target: ${{ matrix.target }}
 
@@ -335,9 +316,8 @@ jobs:
 
       - name: Clean D3D12 deps
         shell: bash
-        if: matrix.d3d12
         run: |
-          rm -rf "${{ github.workspace }}/bin/build_deps"
+          rm -rf "${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps"
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
@@ -374,56 +354,48 @@ jobs:
             target: template_release
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
-            d3d12: true
 
           - name: Template (64bit)
             cache-name: windows-template-64bit
             target: template_release
             sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
-            d3d12: true
 
           - name: Template w/ Mono (64bit)
             cache-name: windows-debug-template-mono-64bit
             target: template_debug
             sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
-            d3d12: true
 
           - name: Template (64bit)
             cache-name: windows-debug-template-64bit
             target: template_debug
             sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
-            d3d12: true
 
           - name: Template w/ Mono (32bit)
             cache-name: windows-template-mono-32bit
             target: template_release
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
-            d3d12: true
 
           - name: Template (32bit)
             cache-name: windows-template-32bit
             target: template_release
             sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
-            d3d12: true
 
           - name: Template w/ Mono (32bit)
             cache-name: windows-debug-template-mono-32bit
             target: template_debug
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: true
-            d3d12: true
 
           - name: Template (32bit)
             cache-name: windows-debug-template-32bit
             target: template_debug
             sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
             mono: false
-            d3d12: true
 
           - name: Template w/ Mono (arm64)
             cache-name: windows-template-mono-arm64
@@ -431,7 +403,6 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arm: true
-            d3d12: true
 
           - name: Template (arm64)
             cache-name: windows-template-arm64
@@ -439,7 +410,6 @@ jobs:
             sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
-            d3d12: true
 
           - name: Template w/ Mono (arm64)
             cache-name: windows-debug-template-mono-arm64
@@ -447,7 +417,6 @@ jobs:
             sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arm: true
-            d3d12: true
 
           - name: Template (arm64)
             cache-name: windows-debug-template-arm64
@@ -455,40 +424,6 @@ jobs:
             sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
-            d3d12: true
-
-          - name: Template w/ Mono (arm32)
-            cache-name: windows-template-mono-arm32
-            target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: true
-            arm: true
-            d3d12: false
-
-          - name: Template (arm32)
-            cache-name: windows-template-arm32
-            target: template_release
-            sconsflags: arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: false
-            arm: true
-            d3d12: false
-
-          - name: Template w/ Mono (arm32)
-            cache-name: windows-debug-template-mono-arm32
-            target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm32 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: true
-            arm: true
-            d3d12: false
-
-          - name: Template (arm32)
-            cache-name: windows-debug-template-arm32
-            target: template_debug
-            sconsflags: arch=arm32 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: false
-            arm: true
-            d3d12: false
-
 
     steps:
       - name: Skip Action?
@@ -518,10 +453,17 @@ jobs:
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
+      - name: Normalize path
+        id: normalize
+        shell: bash
+        run: |
+          normalized_workspace="$(echo "${{ github.workspace }}" | sed 's|\\|/|g')"
+          echo "normalized_workspace=$normalized_workspace" >> "$GITHUB_OUTPUT"
+
       - name: Update new Version Information to version.py
         uses: ./.github/actions/set-repos-version
         with:
-          file_path: ${{ github.workspace }}/version.py
+          file_path: ${{ steps.normalize.outputs.normalized_workspace }}/version.py
           external_major: ${{ inputs.new_major }}
           external_minor: ${{ inputs.new_minor }}
           external_patch: ${{ inputs.new_patch }}
@@ -586,7 +528,6 @@ jobs:
 
       - name: Download Direct3D 12 SDK components
         shell: bash
-        if: matrix.d3d12
         run: |
           python ./misc/scripts/install_d3d12_sdk_windows.py
 
@@ -594,19 +535,18 @@ jobs:
         uses: ./.github/actions/download-angle-action
         with:
           angle_url_base: "https://github.com/blazium-engine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
-          angle_folder: "${{ github.workspace }}/deps/angle"
+          angle_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
 
       - name: Download Mesa Libraries
-        if: matrix.d3d12
         uses: ./.github/actions/download-mesa-action
         with:
           mesa_url_base: "https://github.com/blazium-engine/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
-          mesa_folder: "${{ github.workspace }}/deps/mesa"
+          mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ matrix.d3d12 && env.D3D12FLAGS || '' }} ${{ env.SCONSFLAGS }}  ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa" "agility_sdk_path=${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps/agility_sdk" "angle_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
           platform: windows
           target: ${{ matrix.target }}
 
@@ -632,9 +572,8 @@ jobs:
 
       - name: Clean D3D12 deps
         shell: bash
-        if: matrix.d3d12
         run: |
-          rm -rf "${{ github.workspace }}/bin/build_deps"
+          rm -rf "${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps"
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
