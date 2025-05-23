@@ -182,6 +182,8 @@ jobs:
     name: Deploy
     needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha, static-checks]
     if: >-
+      github.event.client_payload.deploy != null &&
+      github.event.client_payload.deploy != '' &&
       join(github.event.client_payload.deploy, '') != '' &&
       !failure() && 
       !cancelled() && 
