@@ -55,7 +55,7 @@ runs:
       shell: bash
       run: |
         angle_folder="$(echo "${{ inputs.angle_folder }}" | sed 's|\\|/|g')"
-        if [ -z "$(ls -A $angle_folder" ]; then
+        if [ -z "$(ls -A $angle_folder)" ]; then
           echo "Validation failed: ANGLE folder is empty." >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
