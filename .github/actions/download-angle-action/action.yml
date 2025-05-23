@@ -15,14 +15,15 @@ runs:
     - name: Set up ANGLE Folder
       shell: bash
       run: |
-        mkdir -p "${{ inputs.angle_folder }}"
-        echo "ANGLE folder created at: ${{ inputs.angle_folder }}"
+        angle_folder="$(echo "${{ inputs.angle_folder }}" | sed 's|\\|/|g')"
+        mkdir -p "$angle_folder"
+        echo "ANGLE folder created at: $angle_folder"
     
     - name: Download ANGLE Libraries
       shell: bash
       run: |
+        angle_folder="$(echo "${{ inputs.angle_folder }}" | sed 's|\\|/|g')"
         base_url="${{ inputs.angle_url_base }}"
-        angle_folder="${{ inputs.angle_folder }}"
 
         files=(
           "windows_arm64.zip:$base_url-arm64-windows-release.zip"
@@ -53,14 +54,21 @@ runs:
     - name: Validate ANGLE Libraries
       shell: bash
       run: |
-        if [ -z "$(ls -A ${{ inputs.angle_folder }})" ]; then
+        angle_folder="$(echo "${{ inputs.angle_folder }}" | sed 's|\\|/|g')"
+        if [ -z "$(ls -A $angle_folder" ]; then
           echo "Validation failed: ANGLE folder is empty." >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
         echo "ANGLE libraries downloaded and validated successfully." >> $GITHUB_STEP_SUMMARY
-        ls -la ${{ inputs.angle_folder }} >> $GITHUB_STEP_SUMMARY
+        ls -la $angle_folder >> $GITHUB_STEP_SUMMARY
 
+    - name: Set normalized output
+      id: set_normalized_output
+      shell: bash
+      run: |
+        angle_folder="$(echo "${{ inputs.angle_folder }}" | sed 's|\\|/|g')"
+        echo "angle_folder=$angle_folder" >> "$GITHUB_OUTPUT"
 outputs:
   angle_folder:
     description: Path to the ANGLE libraries folder.
-    value: ${{ inputs.angle_folder }}
+    value: ${{ steps.set_normalized_output.outputs.angle_folder }}

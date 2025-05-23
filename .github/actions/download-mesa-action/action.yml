@@ -15,14 +15,15 @@ runs:
     - name: Set up Mesa Folder
       shell: bash
       run: |
+        mesa_folder="$(echo "${{ inputs.mesa_folder }}" | sed 's|\\|/|g')"
         mkdir -p "${{ inputs.mesa_folder }}"
         echo "Mesa folder created at: ${{ inputs.mesa_folder }}"
     
     - name: Download Mesa Libraries
       shell: bash
       run: |
+        mesa_folder="$(echo "${{ inputs.mesa_folder }}" | sed 's|\\|/|g')"
         base_url="${{ inputs.mesa_url_base }}"
-        mesa_folder="${{ inputs.mesa_folder }}"
 
         files=(
           "mesa_arm64.zip:$base_url-arm64-release.zip"
@@ -47,14 +48,21 @@ runs:
     - name: Validate Mesa Libraries
       shell: bash
       run: |
-        if [ -z "$(ls -A ${{ inputs.mesa_folder }})" ]; then
+        mesa_folder="$(echo "${{ inputs.mesa_folder }}" | sed 's|\\|/|g')"
+        if [ -z "$(ls -A $mesa_folder)" ]; then
           echo "Validation failed: Mesa folder is empty." >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
         echo "Mesa libraries downloaded and validated successfully." >> $GITHUB_STEP_SUMMARY
-        ls -la ${{ inputs.mesa_folder }} >> $GITHUB_STEP_SUMMARY
+        ls -la $mesa_folder >> $GITHUB_STEP_SUMMARY
 
+    - name: Set normalized output
+      id: set_normalized_output
+      shell: bash
+      run: |
+        mesa_folder="$(echo "${{ inputs.mesa_folder }}" | sed 's|\\|/|g')"
+        echo "mesa_folder=$mesa_folder" >> "$GITHUB_OUTPUT"
 outputs:
   mesa_folder:
     description: Path to the Mesa libraries folder.
-    value: ${{ inputs.mesa_folder }}
+    value: ${{ steps.set_normalized_output.outputs.mesa_folder }}
