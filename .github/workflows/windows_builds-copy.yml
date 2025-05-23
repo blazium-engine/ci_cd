@@ -2,6 +2,10 @@ name: 🏁 Windows Builds
 on:
   workflow_call:
     inputs:
+      mono:
+        description: "Is Mono enabled?"
+        required: true
+        type: boolean
       build_sha:
         description: "Build commit SHA to use for this job"
         required: true
@@ -169,7 +173,7 @@ jobs:
 
     steps:
       - name: Skip Action?
-        if: matrix.skip
+        if: matrix.skip || (inputs.mono == false && matrix.mono == true)
         run: |
           echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
           exit 0
@@ -486,7 +490,7 @@ jobs:
 
     steps:
       - name: Skip Action?
-        if: matrix.skip
+        if: matrix.skip || (inputs.mono == false && matrix.mono == true)
         run: |
           echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
           exit 0
