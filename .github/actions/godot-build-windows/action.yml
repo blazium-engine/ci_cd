@@ -1,0 +1,48 @@
+name: Build Godot (Windows with CMD)
+description: Build Godot using MSVC environment.
+inputs:
+  arch:
+    description: Target architecture (e.g., x64, x86, arm64)
+    default: "x64"
+  target:
+    description: Build target (editor, template_release, template_debug)
+    default: "editor"
+  sconsflags:
+    description: SCons flags
+    default: ""
+  scons-cache:
+    description: SCons cache directory
+    default: "${{ github.workspace }}\\.scons-cache"
+  scons-cache-limit:
+    description: SCons cache limit in MB
+    default: "7168"
+  build-name:
+    description: Optional build name
+    default: "gh"
+runs:
+  using: "composite"
+  steps:
+    - name: Build with MSVC and SCons
+      shell: cmd
+      run: |
+        echo Setting up VS Dev Environment for %{{ inputs.arch }}%
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" {{ inputs.arch }}
+        
+        echo Build Name: {{ inputs.build-name }}
+        echo Building Godot with SCons...
+
+        if not "{{ inputs.target }}" == "editor" (
+          echo Removing editor sources for template build...
+          rmdir /s /q editor
+        )
+
+        if not "${{ inputs.build-name }}"=="" (
+          set BUILD_NAME=${{ inputs.build-name }}
+        ) else if not "${{ github.event.number }}"=="" (
+          set BUILD_NAME=gh-${{ github.event.number }}
+        ) else (
+          set BUILD_NAME=gh
+        )
+
+        echo Build name is: %BUILD_NAME%
+        scons platform={{ inputs.platform }} target={{ inputs.target }} cache_path={{ inputs.scons-cache }} cache_limit={{ inputs.scons-cache-limit }} {{ inputs.sconsflags }}

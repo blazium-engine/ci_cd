@@ -110,41 +110,65 @@ jobs:
           - name: Editor (64bit)
             cache-name: windows-editor-64bit
             target: editor
-            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x64
             mono: false
 
           - name: Editor w/ Mono (64bit)
             cache-name: windows-editor-mono-64bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            sconsflags: module_mono_enabled=yes arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x64
             mono: true
             
           - name: Editor (32bit)
             cache-name: windows-editor-32bit
             target: editor
-            sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x86
             mono: false
 
           - name: Editor w/ Mono (32bit)
             cache-name: windows-editor-mono-32bit
             target: editor
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}  
+            sconsflags: module_mono_enabled=yes arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x86
             mono: true
             
           - name: Editor (arm64)
             cache-name: windows-editor-arm64
             target: editor
-            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
+            arch: arm64
             skip: false
 
           - name: Editor w/ Mono (arm64)
             cache-name: windows-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            sconsflags: module_mono_enabled=yes arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: true
             arm: true
+            arch: arm64
+            skip: false
+            
+          - name: Editor (arm32)
+            cache-name: windows-editor-arm32
+            target: editor
+            sconsflags: arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: false
+            arm: true
+            arch: arm
+            skip: false
+
+          - name: Editor w/ Mono (arm32)
+            cache-name: windows-editor-mono-arm32
+            target: editor
+            sconsflags: module_mono_enabled=yes arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            mono: true
+            arm: true
+            arch: arm
             skip: false
 
     steps:
@@ -262,11 +286,9 @@ jobs:
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Compilation
-        uses: ./.github/actions/godot-build
+        uses: ./.github/actions/godot-build-windows
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa" "agility_sdk_path=${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps/agility_sdk" "angle_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
-          platform: windows
-          target: ${{ matrix.target }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ github.workspace }}\deps\mesa" "agility_sdk_path=${{ github.workspace }}\bin\build_deps\agility_sdk" "angle_libs=${{ github.workspace }}\deps\angle"
 
       - name: Building C# Assemblies
         shell: bash
@@ -352,79 +374,122 @@ jobs:
           - name: Template w/ Mono (64bit)
             cache-name: windows-template-mono-64bit
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x64
             mono: true
 
           - name: Template (64bit)
             cache-name: windows-template-64bit
             target: template_release
-            sconsflags: arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x64
             mono: false
 
           - name: Template w/ Mono (64bit)
             cache-name: windows-debug-template-mono-64bit
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=x86_64  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x64
             mono: true
 
           - name: Template (64bit)
             cache-name: windows-debug-template-64bit
             target: template_debug
             sconsflags: arch=x86_64 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x64
             mono: false
 
           - name: Template w/ Mono (32bit)
             cache-name: windows-template-mono-32bit
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            sconsflags: module_mono_enabled=yes arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x86
             mono: true
 
           - name: Template (32bit)
             cache-name: windows-template-32bit
             target: template_release
             sconsflags: arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x86
             mono: false
 
           - name: Template w/ Mono (32bit)
             cache-name: windows-debug-template-mono-32bit
             target: template_debug
             sconsflags: module_mono_enabled=yes arch=x86_32  ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x86
             mono: true
 
           - name: Template (32bit)
             cache-name: windows-debug-template-32bit
             target: template_debug
             sconsflags: arch=x86_32 ${{ github.event.client_payload.production && 'production=yes' || '' }}
+            arch: x86
             mono: false
 
           - name: Template w/ Mono (arm64)
             cache-name: windows-template-mono-arm64
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
+            arch: arm64
             arm: true
 
           - name: Template (arm64)
             cache-name: windows-template-arm64
             target: template_release
-            sconsflags: arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
+            arch: arm64
             arm: true
 
           - name: Template w/ Mono (arm64)
             cache-name: windows-debug-template-mono-arm64
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
+            arch: arm64
             arm: true
 
           - name: Template (arm64)
             cache-name: windows-debug-template-arm64
             target: template_debug
-            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
+            arch: arm64
             arm: true
 
+          - name: Template w/ Mono (arm32)
+            cache-name: windows-template-mono-arm32
+            target: template_release
+            sconsflags: module_mono_enabled=yes arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: true
+            arch: arm
+            arm: true
+
+          - name: Template (arm32)
+            cache-name: windows-template-arm32
+            target: template_release
+            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: false
+            arch: arm
+            arm: true
+
+          - name: Template w/ Mono (arm32)
+            cache-name: windows-debug-template-mono-arm32
+            target: template_debug
+            sconsflags: module_mono_enabled=yes arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: true
+            arch: arm
+            arm: true
+
+          - name: Template (arm32)
+            cache-name: windows-debug-template-arm32
+            target: template_debug
+            sconsflags: arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            mono: false
+            arch: arm
+            arm: true
     steps:
       - name: Skip Action?
         shell: bash
@@ -544,10 +609,10 @@ jobs:
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Compilation
-        uses: ./.github/actions/godot-build
+        uses: ./.github/actions/godot-build-windows
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa" "agility_sdk_path=${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps/agility_sdk" "angle_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
-          platform: windows
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa" "agility_sdk_path=${{ steps.normalize.outputs.normalized_workspace }}\bin\build_deps\agility_sdk" "angle_libs=${{ steps.normalize.outputs.normalized_workspace }}\deps\angle"
+          arch: ${{ matrix.arch }}
           target: ${{ matrix.target }}
 
       - name: Save Godot build cache
