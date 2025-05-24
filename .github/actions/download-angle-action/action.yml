@@ -25,9 +25,9 @@ runs:
         angle_folder="${{ inputs.angle_folder }}"
 
         files=(
-          "windows_arm64.zip:$base_url-arm64-windows-release.zip"
-          "windows_x86_64.zip:$base_url-x86_64-windows-release.zip"
-          "windows_x86_32.zip:$base_url-x86_32-windows-release.zip"
+          "windows_arm64.zip:$base_url-arm64-msvc-release.zip"
+          "windows_x86_64.zip:$base_url-x86_64-msvc-release.zip"
+          "windows_x86_32.zip:$base_url-x86_32-msvc-release.zip"
           "macos_arm64.zip:$base_url-arm64-macos-release.zip"
           "macos_x86_64.zip:$base_url-x86_64-macos-release.zip"
           "ios_arm64.zip:$base_url-arm64-ios-release.zip"

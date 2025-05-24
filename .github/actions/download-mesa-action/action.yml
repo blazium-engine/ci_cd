@@ -25,9 +25,9 @@ runs:
         mesa_folder="${{ inputs.mesa_folder }}"
 
         files=(
-          "mesa_arm64.zip:$base_url-arm64-release.zip"
-          "mesa_x86_64.zip:$base_url-x86_64-release.zip"
-          "mesa_x86_32.zip:$base_url-x86_32-release.zip"
+          "mesa_arm64.zip:$base_url-arm64-msvc-release.zip"
+          "mesa_x86_64.zip:$base_url-x86_64-msvc-release.zip"
+          "mesa_x86_32.zip:$base_url-x86_32-msvc-release.zip"
         )
 
         pushd "$mesa_folder"
