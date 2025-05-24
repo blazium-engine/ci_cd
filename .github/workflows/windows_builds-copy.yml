@@ -534,13 +534,13 @@ jobs:
       - name: Download ANGLE Libraries
         uses: ./.github/actions/download-angle-action
         with:
-          angle_url_base: "https://github.com/godotengine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
+          angle_url_base: "https://github.com/godotengine/godot-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
           angle_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
 
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
         with:
-          mesa_url_base: "https://github.com/godotengine/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
+          mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Compilation
