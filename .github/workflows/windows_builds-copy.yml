@@ -534,7 +534,7 @@ jobs:
       - name: Download ANGLE Libraries
         uses: ./.github/actions/download-angle-action
         with:
-          angle_url_base: "https://github.com/blazium-engine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
+          angle_url_base: "https://github.com/godotengine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
           angle_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
 
       - name: Download Mesa Libraries
