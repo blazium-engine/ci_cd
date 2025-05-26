@@ -26,7 +26,7 @@ runs:
       shell: cmd
       run: |
         echo Setting up VS Dev Environment for %${{ inputs.arch }}%
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ inputs.arch }}
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64_${{ inputs.arch }}
         
         echo Build Name: ${{ inputs.build-name }}
         echo Building Godot with SCons...
