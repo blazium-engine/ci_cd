@@ -25,13 +25,13 @@ runs:
     - name: Build with MSVC and SCons
       shell: cmd
       run: |
-        echo Setting up VS Dev Environment for %{{ inputs.arch }}%
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" {{ inputs.arch }}
+        echo Setting up VS Dev Environment for %${{ inputs.arch }}%
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ inputs.arch }}
         
-        echo Build Name: {{ inputs.build-name }}
+        echo Build Name: ${{ inputs.build-name }}
         echo Building Godot with SCons...
 
-        if not "{{ inputs.target }}" == "editor" (
+        if not "${{ inputs.target }}" == "editor" (
           echo Removing editor sources for template build...
           rmdir /s /q editor
         )
@@ -45,4 +45,4 @@ runs:
         )
 
         echo Build name is: %BUILD_NAME%
-        scons platform={{ inputs.platform }} target={{ inputs.target }} cache_path={{ inputs.scons-cache }} cache_limit={{ inputs.scons-cache-limit }} {{ inputs.sconsflags }}
+        scons platform=${{ inputs.platform }} target=${{ inputs.target }} cache_path=${{ inputs.scons-cache }} cache_limit=${{ inputs.scons-cache-limit }} ${{ inputs.sconsflags }}
