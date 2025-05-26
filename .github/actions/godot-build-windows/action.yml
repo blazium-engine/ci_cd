@@ -2,7 +2,7 @@ name: Build Godot (Windows with CMD)
 description: Build Godot using MSVC environment.
 inputs:
   arch:
-    description: Target architecture (e.g., x64, x86, arm64)
+    description: Target architecture (e.g., x64, x86, arm64, arm)
     default: "x64"
   target:
     description: Build target (editor, template_release, template_debug)

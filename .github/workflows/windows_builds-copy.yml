@@ -302,6 +302,34 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
+      - name: Clone sslcom-code-signer
+        uses: actions/checkout@v4
+        with:
+          repository: bioblaze/sslcom-code-signer
+          path: codesign-tool
+          ref: v5
+          fetch-depth: 1
+
+      - name: Unzip and Setup CodeSignTool
+        working-directory: codesign-tool
+        shell: bash
+        run: |
+          unzip "/tmp/CodeSignTool-v1.3.2.zip" -d "/tmp/CodeSignTool-v1.3.2"
+          mkdir -p /codesign
+          mv "/tmp/CodeSignTool-v1.3.2" "/codesign"
+          chmod +x "/codesign/CodeSignTool.sh"
+          ln -s "/codesign/CodeSignTool.sh" "/usr/bin/codesign"
+
+          mv ./codesign-tool/ /codesign
+          mv ./entrypoint.sh /entrypoint.sh
+          chmod +x /entrypoint.sh
+
+      - name: Sign Code
+        working-directory: /codesign
+        shell: bash
+        run: |
+          /entrypoint.sh
+
       - uses: bioblaze/sslcom-code-signer@v5
         with:
           command: sign
@@ -470,7 +498,7 @@ jobs:
           - name: Template (arm32)
             cache-name: windows-template-arm32
             target: template_release
-            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arch: arm
             arm: true
