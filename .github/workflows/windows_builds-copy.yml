@@ -152,24 +152,6 @@ jobs:
             arm: true
             arch: arm64
             skip: false
-            
-          - name: Editor (arm32)
-            cache-name: windows-editor-arm32
-            target: editor
-            sconsflags: arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: false
-            arm: true
-            arch: arm
-            skip: false
-
-          - name: Editor w/ Mono (arm32)
-            cache-name: windows-editor-mono-arm32
-            target: editor
-            sconsflags: module_mono_enabled=yes arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
-            mono: true
-            arm: true
-            arch: arm
-            skip: false
 
     steps:
       - name: Skip Action?
@@ -486,37 +468,6 @@ jobs:
             arch: arm64
             arm: true
 
-          - name: Template w/ Mono (arm32)
-            cache-name: windows-template-mono-arm32
-            target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: true
-            arch: arm
-            arm: true
-
-          - name: Template (arm32)
-            cache-name: windows-template-arm32
-            target: template_release
-            sconsflags: arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: false
-            arch: arm
-            arm: true
-
-          - name: Template w/ Mono (arm32)
-            cache-name: windows-debug-template-mono-arm32
-            target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: true
-            arch: arm
-            arm: true
-
-          - name: Template (arm32)
-            cache-name: windows-debug-template-arm32
-            target: template_debug
-            sconsflags: arch=arm32 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
-            mono: false
-            arch: arm
-            arm: true
     steps:
       - name: Skip Action?
         shell: bash
