@@ -302,53 +302,52 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
-      - name: Clone sslcom-code-signer
-        uses: actions/checkout@v4
-        with:
-          repository: bioblaze/sslcom-code-signer
-          path: codesign-tool
-          ref: v5
-          fetch-depth: 1
+      #- name: Clone sslcom-code-signer
+      #  uses: actions/checkout@v4
+      #  with:
+      #    repository: bioblaze/sslcom-code-signer
+      #    path: codesign-tool
+      #    ref: v5
+      #    fetch-depth: 1
 
-      - name: Unzip and Setup CodeSignTool
-        working-directory: codesign-tool
-        shell: bash
-        run: |
-          unzip "/tmp/CodeSignTool-v1.3.2.zip" -d "/tmp/CodeSignTool-v1.3.2"
-          mkdir -p /codesign
-          mv "/tmp/CodeSignTool-v1.3.2" "/codesign"
-          chmod +x "/codesign/CodeSignTool.sh"
-          ln -s "/codesign/CodeSignTool.sh" "/usr/bin/codesign"
+      #- name: Unzip and Setup CodeSignTool
+      #  working-directory: codesign-tool
+      #  shell: bash
+      #  run: |
+      #    unzip "/tmp/CodeSignTool-v1.3.2.zip" -d "/tmp/CodeSignTool-v1.3.2"
+      #    mkdir -p /codesign
+      #    mv "/tmp/CodeSignTool-v1.3.2" "/codesign"
+      #    chmod +x "/codesign/CodeSignTool.sh"
+      #    ln -s "/codesign/CodeSignTool.sh" "/usr/bin/codesign"
+      #    mv ./codesign-tool/ /codesign
+      #    mv ./entrypoint.sh /entrypoint.sh
+      #    chmod +x /entrypoint.sh
 
-          mv ./codesign-tool/ /codesign
-          mv ./entrypoint.sh /entrypoint.sh
-          chmod +x /entrypoint.sh
+      #- name: Sign Code
+      #  working-directory: /codesign
+      #  shell: bash
+      #  run: |
+      #    /entrypoint.sh
 
-      - name: Sign Code
-        working-directory: /codesign
-        shell: bash
-        run: |
-          /entrypoint.sh
+      #- uses: bioblaze/sslcom-code-signer@v5
+      #  with:
+      #    command: sign
+      #    username: ${{ secrets.ES_USERNAME }}
+      #    password: ${{ secrets.ES_PASSWORD }}
+      #    credential_id: ${{ secrets.CREDENTIAL_ID }}
+      #    totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+      #    dir_path: ./bin
+      #    output_path: ./signed
+      #    environment_name: PROD
 
-      - uses: bioblaze/sslcom-code-signer@v5
-        with:
-          command: sign
-          username: ${{ secrets.ES_USERNAME }}
-          password: ${{ secrets.ES_PASSWORD }}
-          credential_id: ${{ secrets.CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          dir_path: ./bin
-          output_path: ./signed
-          environment_name: PROD
-
-      - name: Move into the bin directory.
-        shell: bash
-        run: |
-          ls -la
-          sudo chown -R $(whoami) ./signed ./bin
-          sudo chmod -R u+rw ./signed ./bin
-          rm -rf ./signed/build_deps
-          mv -f ./signed/* ./bin/
+      #- name: Move into the bin directory.
+      #  shell: bash
+      #  run: |
+      #    ls -la
+      #    sudo chown -R $(whoami) ./signed ./bin
+      #    sudo chmod -R u+rw ./signed ./bin
+      #    rm -rf ./signed/build_deps
+      #    mv -f ./signed/* ./bin/
 
       - name: Create tar.gz Archive
         shell: bash
