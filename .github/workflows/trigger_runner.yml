@@ -33,7 +33,7 @@ on:
         default: true
       deploy:
         description: 'Deploy (comma-separated list like templates, editors)'
-        required: false
+        required: true
         type: string
         default: 'templates,editors'
 
