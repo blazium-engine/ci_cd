@@ -177,7 +177,7 @@ jobs:
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
       new_version: ${{ needs.get-latest-sha.outputs.version_string }}
-      
+
   deploy:
     name: Deploy
     needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha, static-checks]

@@ -24,12 +24,11 @@ inputs:
   build-name:
     description: Build Name
     default: "blazium"
-  mingw-prefix:
-    description: Setting of MINGW_PREFIX before running
 runs:
   using: "composite"
   steps:
     - name: Scons Build
+      if: ${{ inputs.platform != 'windows' }}
       shell: sh
       env:
           SCONSFLAGS: ${{ inputs.sconsflags }}
@@ -41,10 +40,6 @@ runs:
         if [ "${{ inputs.target }}" != "editor" ]; then
           # Ensure we don't include editor code in export template builds.
           rm -rf editor
-        fi
-
-        if [ "${{ inputs.mingw-prefix }}" != "" ]; then
-          export MINGW_PREFIX="${{ inputs.mingw-prefix }}"
         fi
 
         if [ -n "${{ inputs.build-name }}" ]; then
@@ -59,10 +54,32 @@ runs:
           fi
         fi
 
-        if [ "${{ inputs.mingw-prefix }}" != "" ]; then
-          scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }} use_mingw=yes
-        else
-          scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }}
-        fi
+        scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }}
 
         ls -l bin/
+
+    - name: Build with MSVC and SCons
+      if: ${{ inputs.platform == 'windows' }}
+      shell: cmd
+      run: |
+        echo Setting up VS Dev Environment for %${{ inputs.arch }}%
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64_${{ inputs.arch }}
+        
+        echo Build Name: ${{ inputs.build-name }}
+        echo Building Godot with SCons...
+
+        if not "${{ inputs.target }}" == "editor" (
+          echo Removing editor sources for template build...
+          rmdir /s /q editor
+        )
+
+        if not "${{ inputs.build-name }}"=="" (
+          set BUILD_NAME=${{ inputs.build-name }}
+        ) else if not "${{ github.event.number }}"=="" (
+          set BUILD_NAME=gh-${{ github.event.number }}
+        ) else (
+          set BUILD_NAME=gh
+        )
+
+        echo Build name is: %BUILD_NAME%
+        scons platform=${{ inputs.platform }} target=${{ inputs.target }} cache_path=${{ inputs.scons-cache }} cache_limit=${{ inputs.scons-cache-limit }} ${{ inputs.sconsflags }}
