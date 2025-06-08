@@ -274,7 +274,7 @@ jobs:
         shell: bash
         if: matrix.mono
         run: |
-          ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows
+          python ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
