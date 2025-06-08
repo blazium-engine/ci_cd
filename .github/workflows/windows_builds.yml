@@ -267,6 +267,7 @@ jobs:
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ github.workspace }}\deps\mesa" "agility_sdk_path=${{ github.workspace }}\bin\build_deps\agility_sdk" "angle_libs=${{ github.workspace }}\deps\angle"
+          platform: windows
           # The default one has path separators for Linux
           scons-cache: "${{ github.workspace }}\\.scons-cache"
 
@@ -590,6 +591,7 @@ jobs:
           sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa" "agility_sdk_path=${{ steps.normalize.outputs.normalized_workspace }}\bin\build_deps\agility_sdk" "angle_libs=${{ steps.normalize.outputs.normalized_workspace }}\deps\angle"
           arch: ${{ matrix.arch }}
           target: ${{ matrix.target }}
+          platform: windows
           # The default one has path separators for Linux
           scons-cache: "${{ github.workspace }}\\.scons-cache"
 
