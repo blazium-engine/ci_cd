@@ -121,6 +121,9 @@ jobs:
           submodules: recursive
           fetch-depth: 2
 
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
       # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
       - name: Install the Apple certificate
         env:
@@ -417,6 +420,9 @@ jobs:
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
+
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
 
       - name: Remove existing workflows folder
         run: |
