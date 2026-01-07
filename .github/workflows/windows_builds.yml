@@ -250,12 +250,6 @@ jobs:
         run: |
           python ./misc/scripts/install_d3d12_sdk_windows.py
 
-      - name: Download ANGLE Libraries
-        uses: ./.github/actions/download-angle-action
-        with:
-          angle_url_base: "https://github.com/godotengine/godot-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
-          angle_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
-      
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
         with:
@@ -265,7 +259,7 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ github.workspace }}\deps\mesa" "agility_sdk_path=${{ github.workspace }}\bin\build_deps\agility_sdk" "angle_libs=${{ github.workspace }}\deps\angle"
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ github.workspace }}\deps\mesa"
           platform: windows
           # The default one has path separators for Linux
           scons-cache: "${{ github.workspace }}\\.scons-cache"
@@ -573,12 +567,6 @@ jobs:
         run: |
           python ./misc/scripts/install_d3d12_sdk_windows.py
 
-      - name: Download ANGLE Libraries
-        uses: ./.github/actions/download-angle-action
-        with:
-          angle_url_base: "https://github.com/godotengine/godot-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
-          angle_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/angle"
-
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
         with:
@@ -588,7 +576,7 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa" "agility_sdk_path=${{ steps.normalize.outputs.normalized_workspace }}\bin\build_deps\agility_sdk" "angle_libs=${{ steps.normalize.outputs.normalized_workspace }}\deps\angle"
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
           arch: ${{ matrix.arch }}
           target: ${{ matrix.target }}
           platform: windows
