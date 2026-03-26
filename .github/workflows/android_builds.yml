@@ -98,7 +98,8 @@ jobs:
           is_template: 'true'
 
   build-editors: 
-    runs-on: release-builder
+    runs-on:  
+      group: release-builder
     name: Building Development Android ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}

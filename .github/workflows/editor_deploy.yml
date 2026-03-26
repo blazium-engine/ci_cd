@@ -103,7 +103,8 @@ jobs:
           echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}"
 
   deploy-editors:
-    runs-on: "release-builder"
+    runs-on:  
+      group: release-builder
     needs: do-we-deploy-lol
     if: >
       needs.do-we-deploy-lol.outputs.proceed == 'true' ||
