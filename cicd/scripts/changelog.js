@@ -36,7 +36,7 @@ function httpsGet(url, additionalHeaders = {}) {
             headers: {
                 'Authorization': `token ${token}`,
                 'Accept': 'application/vnd.github.v3+json',
-                'User-Agent': 'blazium-engine/blazium ci/cd v1.0.0',
+                'User-Agent': 'blazium-games/blazium ci/cd v1.0.0',
                 ...additionalHeaders
             },
         };

@@ -37,7 +37,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          repository: blazium-engine/blazium
+          repository: blazium-games/blazium
           ref: ${{ github.event.client_payload.branch }}
           fetch-depth: 1
 

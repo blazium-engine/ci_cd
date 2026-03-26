@@ -52,7 +52,7 @@ function sendSecret(owner, repo, secretName, encryptedValue, token, keyId) {
             'Accept': 'application/vnd.github+json',
             'Authorization': `Bearer ${token}`,
             'X-GitHub-Api-Version': '2022-11-28',
-            'User-Agent': 'blazium-engine/blazium ci/cd cli v0.0.1'
+            'User-Agent': 'blazium-games/blazium ci/cd cli v0.0.1'
         }
     };
 

@@ -113,7 +113,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/ci_cd
+          repository: blazium-games/ci_cd
           submodules: recursive
 
       - name: Free Disk Space (Ubuntu)
@@ -453,7 +453,7 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
           itch_username: blaziumengine
-          itch_game: blazium-engine
+          itch_game: blazium-games
           version: ${{ inputs.new_version }}
           tag: ${{ github.event.client_payload.type || 'nightly' }}
           butler_credentials: ${{ secrets.BUTLER_CREDENTIALS }}

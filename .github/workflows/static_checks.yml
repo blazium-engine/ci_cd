@@ -28,7 +28,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/blazium
+          repository: blazium-games/blazium
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2

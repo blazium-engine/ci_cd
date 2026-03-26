@@ -55,7 +55,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/ci_cd
+          repository: blazium-games/ci_cd
           ref: nightly-testing
           fetch-depth: 1
 
@@ -79,7 +79,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/ci_cd
+          repository: blazium-games/ci_cd
           ref: nightly-testing
           fetch-depth: 1
 
@@ -177,7 +177,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/blazium
+          repository: blazium-games/blazium
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
@@ -188,7 +188,7 @@ jobs:
 
       - name: Pull .github folder from ci_cd repository
         run: |
-          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
@@ -372,14 +372,14 @@ jobs:
       - name: Download ANGLE Libraries
         uses: ./.github/actions/download-angle-action
         with:
-          angle_url_base: "https://github.com/blazium-engine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
+          angle_url_base: "https://github.com/blazium-games/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
           angle_folder: "${{ github.workspace }}/deps/angle"
       
       - name: Download Mesa Libraries
         if: matrix.d3d12
         uses: ./.github/actions/download-mesa-action
         with:
-          mesa_url_base: "https://github.com/blazium-engine/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
+          mesa_url_base: "https://github.com/blazium-games/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
           mesa_folder: "${{ github.workspace }}/deps/mesa"
 
       - name: Compilation
@@ -598,7 +598,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/blazium
+          repository: blazium-games/blazium
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
@@ -609,7 +609,7 @@ jobs:
 
       - name: Pull .github folder from ci_cd repository
         run: |
-          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
@@ -798,14 +798,14 @@ jobs:
       - name: Download ANGLE Libraries
         uses: ./.github/actions/download-angle-action
         with:
-          angle_url_base: "https://github.com/blazium-engine/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
+          angle_url_base: "https://github.com/blazium-games/blazium-angle-static/releases/download/chromium%2F6601.2/godot-angle-static"
           angle_folder: "${{ github.workspace }}/deps/angle"
 
       - name: Download Mesa Libraries
         if: matrix.d3d12
         uses: ./.github/actions/download-mesa-action
         with:
-          mesa_url_base: "https://github.com/blazium-engine/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
+          mesa_url_base: "https://github.com/blazium-games/blazium-nir-static/releases/download/23.1.9-1/godot-nir-static"
           mesa_folder: "${{ github.workspace }}/deps/mesa"
 
       - name: Compilation

@@ -55,7 +55,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/ci_cd
+          repository: blazium-games/ci_cd
           ref: nightly-testing
           fetch-depth: 1
 
@@ -79,7 +79,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/ci_cd
+          repository: blazium-games/ci_cd
           ref: nightly-testing
           fetch-depth: 1
 
@@ -159,7 +159,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/blazium
+          repository: blazium-games/blazium
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
@@ -172,7 +172,7 @@ jobs:
       - name: Pull .github folder from ci_cd repository
         shell: bash
         run: |
-          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
@@ -471,7 +471,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/blazium
+          repository: blazium-games/blazium
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
@@ -484,7 +484,7 @@ jobs:
       - name: Pull .github folder from ci_cd repository
         shell: bash
         run: |
-          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 

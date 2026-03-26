@@ -36,7 +36,7 @@ jobs:
     steps:
       - name: Get Engine Repo from Branch ${{ github.event.client_payload.branch }}
         run: |
-          git clone https://github.com/blazium-engine/blazium.git --depth 1 --branch ${{ github.event.client_payload.branch }} ${{ github.event.client_payload.branch }}
+          git clone https://github.com/blazium-games/blazium.git --depth 1 --branch ${{ github.event.client_payload.branch }} ${{ github.event.client_payload.branch }}
       
 
       - name: Get BASE_PATH

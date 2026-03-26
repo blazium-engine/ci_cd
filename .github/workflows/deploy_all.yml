@@ -70,13 +70,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          repository: blazium-engine/blazium
+          repository: blazium-games/blazium
           ref: ${{ github.event.client_payload.branch || env.GODOT_BASE_BRANCH }}
           fetch-depth: 2
 
       - name: Pull .github folder from ci_cd repository
         run: |
-          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           mv ci_cd_repo/cicd ./
           rm -rf ci_cd_repo
@@ -94,7 +94,7 @@ jobs:
       - name: Generate Changelog.json
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_OWNER: blazium-engine
+          GITHUB_OWNER: blazium-games
           GITHUB_REPO: blazium
           BASE_BRANCH: ${{ steps.version.outputs.external_sha }}
           CURRENT_BRANCH: ${{ steps.get_sha.outputs.sha }}
@@ -109,7 +109,7 @@ jobs:
         id: changelog-txt
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_OWNER: blazium-engine
+          GITHUB_OWNER: blazium-games
           GITHUB_REPO: blazium
           BASE_BRANCH: ${{ steps.version.outputs.external_sha }}
           CURRENT_BRANCH: ${{ steps.get_sha.outputs.sha }}
@@ -123,7 +123,7 @@ jobs:
         id: changelog-html
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_OWNER: blazium-engine
+          GITHUB_OWNER: blazium-games
           GITHUB_REPO: blazium
           BASE_BRANCH: ${{ steps.version.outputs.external_sha }}
           CURRENT_BRANCH: ${{ steps.get_sha.outputs.sha }}
@@ -157,7 +157,7 @@ jobs:
         uses: ./.github/actions/create-github-release
         with:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_PAT }}
-          OWNER: blazium-engine
+          OWNER: blazium-games
           REPO: blazium
           TARGET_COMMIT: ${{ inputs.build_sha }}
           TAG_NAME: v${{ inputs.new_version }}${{ github.event.client_payload.type != 'release' && format('-{0}', github.event.client_payload.type || 'nightly') || '' }} 
@@ -211,7 +211,7 @@ jobs:
 
       - name: Pull .github folder from ci_cd repository
         run: |
-          git clone --depth=1 https://github.com/blazium-engine/ci_cd.git ci_cd_repo
+          git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github ./
           mv ci_cd_repo/cicd ./
           rm -rf ci_cd_repo
