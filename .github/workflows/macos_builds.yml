@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: blazium-games/ci_cd
-          ref: nightly-testing
+          
           fetch-depth: 1
 
       - name: Compilation
@@ -77,7 +77,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: blazium-games/ci_cd
-          ref: nightly-testing
+          
           fetch-depth: 1
 
       - name: Compilation
