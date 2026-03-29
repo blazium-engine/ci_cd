@@ -133,8 +133,13 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Verify Butler Installation
-        run: butler -V
+      - name: Install and Verify Butler
+        run: |
+          curl -L -o butler.zip https://github.com/itchio/butler/releases/download/v15.26.1/butler-linux-amd64.zip
+          unzip butler.zip
+          chmod +x butler
+          sudo mv butler /usr/local/bin/
+          butler -V
 
       - name: Download All Template Files
         uses: ./.github/actions/cerebro-download-multi-build
