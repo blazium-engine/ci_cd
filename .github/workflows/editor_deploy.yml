@@ -137,9 +137,9 @@ jobs:
         run: |
           curl -L -o butler.zip https://github.com/itchio/butler/releases/download/v15.26.1/butler-linux-amd64.zip
           unzip butler.zip
-          chmod +x butler
-          sudo mv butler /usr/local/bin/
-          butler -V
+          chmod +x linux-amd64/butler
+          echo "$PWD/linux-amd64" >> $GITHUB_PATH
+          linux-amd64/butler -V
 
       - name: Download All Template Files
         uses: ./.github/actions/cerebro-download-multi-build
