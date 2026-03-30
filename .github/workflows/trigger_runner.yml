@@ -58,7 +58,7 @@ jobs:
           -v \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ secrets.PRIVATE_GITHUB_PAT }}" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -H "X-GitHub-Api-Version: 2026-03-10" \
           https://api.github.com/repos/${{ github.repository }}/dispatches \
           -d "{
             \"event_type\": \"trigger_build\",
