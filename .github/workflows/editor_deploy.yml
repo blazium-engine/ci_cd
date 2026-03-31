@@ -459,7 +459,7 @@ jobs:
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
             ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
           itch_username: blaziumengine
-          itch_game: blazium-games
+          itch_game: blazium-engine
           version: ${{ inputs.new_version }}
           tag: ${{ github.event.client_payload.type || 'nightly' }}
           butler_credentials: ${{ secrets.BUTLER_CREDENTIALS }}
