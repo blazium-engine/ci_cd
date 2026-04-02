@@ -245,10 +245,7 @@ jobs:
           # Clean up the temporary directory
           rm -rf temp_extract monoglue.tar.gz
 
-      - name: Download Direct3D 12 SDK components
-        shell: bash
-        run: |
-          python ./misc/scripts/install_d3d12_sdk_windows.py
+
 
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
@@ -337,10 +334,7 @@ jobs:
           source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
 
-      - name: Clean D3D12 deps
-        shell: bash
-        run: |
-          rm -rf "${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps"
+
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful
@@ -562,10 +556,7 @@ jobs:
           # Clean up the temporary directory
           rm -rf temp_extract monoglue.tar.gz
 
-      - name: Download Direct3D 12 SDK components
-        shell: bash
-        run: |
-          python ./misc/scripts/install_d3d12_sdk_windows.py
+
 
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
@@ -603,10 +594,7 @@ jobs:
           source: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.target, 'template_') && '/template' || '' }}
 
-      - name: Clean D3D12 deps
-        shell: bash
-        run: |
-          rm -rf "${{ steps.normalize.outputs.normalized_workspace }}/bin/build_deps"
+
 
       - name: Notify Cerebro of Build Success
         if: success() # Only runs if the job was successful

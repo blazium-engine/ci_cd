@@ -296,7 +296,11 @@ jobs:
           input_dir: ${{ github.workspace }}/extracted
           items_to_delete: |
             build_deps/
-
+            obj/
+            *.pdb
+            *.exp
+            *.lib
+            .web_zip/
 
       - name: Rename Folders then Zip/Move Folders
         uses: ./.github/actions/multi-folder-zip

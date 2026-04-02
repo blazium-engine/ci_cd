@@ -63,20 +63,17 @@ runs:
 
           # Loop through each item to delete in the target directory
           echo "$ITEMS_TO_DELETE" | while IFS= read -r ITEM; do
-            TARGET_ITEM="$TARGET_DIR/$ITEM"
-
-            if [ ! -e "$TARGET_ITEM" ]; then
-              echo "Error: File or folder $TARGET_ITEM does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
-              continue
-            fi
-
-            rm -rf "$TARGET_ITEM"
-            if [ $? -eq 0 ]; then
-              echo "Successfully deleted $TARGET_ITEM" >> $GITHUB_STEP_SUMMARY
-              DELETED_ITEMS+=("$TARGET_ITEM")
-            else
-              echo "Error: Failed to delete $TARGET_ITEM" >> $GITHUB_STEP_SUMMARY
-            fi
+            for TARGET_ITEM in "$TARGET_DIR"/$ITEM; do
+              if [ -e "$TARGET_ITEM" ] || [ -L "$TARGET_ITEM" ]; then
+                rm -rf "$TARGET_ITEM"
+                if [ $? -eq 0 ]; then
+                  echo "Successfully deleted $TARGET_ITEM" >> $GITHUB_STEP_SUMMARY
+                  DELETED_ITEMS+=("$TARGET_ITEM")
+                else
+                  echo "Error: Failed to delete $TARGET_ITEM" >> $GITHUB_STEP_SUMMARY
+                fi
+              fi
+            done
           done
         done
 
