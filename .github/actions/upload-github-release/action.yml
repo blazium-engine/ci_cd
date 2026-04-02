@@ -38,6 +38,12 @@ runs:
         CLEANED_URL=$(echo "$INPUT_UPLOAD_URL" | sed 's/{.*}//')
 
         for file in ${INPUT_FILES}; do
+          if [[ ! -e "$file" ]]; then
+            echo "::error::File $file does not exist. Skipping."
+            echo "Error: File $file does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            continue
+          fi
+
           BASENAME=$(basename "$file")
           MIME_TYPE=$(file -b --mime-type "$file")
           URL="$CLEANED_URL?name=$BASENAME"
