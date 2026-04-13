@@ -302,6 +302,131 @@ jobs:
             *.lib
             .web_zip/
 
+      # Sign Windows .exe trees with SSL.com (same inputs as windows_builds.yml), then merge outputs before zip.
+      - name: Verify Windows editor folders exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          INPUT_DIR="${GITHUB_WORKSPACE}/extracted"
+          SUFFIX="${{ github.event.client_payload.type || 'nightly' }}"
+          for base in \
+            windows-editor-mono-64bit \
+            windows-editor-64bit \
+            windows-editor-mono-32bit \
+            windows-editor-32bit \
+            windows-editor-arm64 \
+            windows-editor-mono-arm64
+          do
+            DIR="${INPUT_DIR}/${base}-${SUFFIX}"
+            if [ ! -d "$DIR" ]; then
+              echo "::error::Missing Windows editor folder: $DIR"
+              exit 1
+            fi
+          done
+          echo "All six Windows editor folders present under ${INPUT_DIR}"
+
+      - name: Sign windows-editor-mono-64bit
+        uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}/extracted/windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+          output_path: ${{ github.workspace }}/extracted/.__sign_out/windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
+          environment_name: PROD
+
+      - name: Sign windows-editor-64bit
+        uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}/extracted/windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+          output_path: ${{ github.workspace }}/extracted/.__sign_out/windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
+          environment_name: PROD
+
+      - name: Sign windows-editor-mono-32bit
+        uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}/extracted/windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          output_path: ${{ github.workspace }}/extracted/.__sign_out/windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          environment_name: PROD
+
+      - name: Sign windows-editor-32bit
+        uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}/extracted/windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          output_path: ${{ github.workspace }}/extracted/.__sign_out/windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
+          environment_name: PROD
+
+      - name: Sign windows-editor-arm64
+        uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}/extracted/windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+          output_path: ${{ github.workspace }}/extracted/.__sign_out/windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
+          environment_name: PROD
+
+      - name: Sign windows-editor-mono-arm64
+        uses: bioblaze/sslcom-code-signer@v5
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: ${{ github.workspace }}/extracted/windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+          output_path: ${{ github.workspace }}/extracted/.__sign_out/windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+          environment_name: PROD
+
+      - name: Move signed Windows outputs into editor folders
+        shell: bash
+        run: |
+          set -euo pipefail
+          INPUT_DIR="${GITHUB_WORKSPACE}/extracted"
+          SUFFIX="${{ github.event.client_payload.type || 'nightly' }}"
+          for base in \
+            windows-editor-mono-64bit \
+            windows-editor-64bit \
+            windows-editor-mono-32bit \
+            windows-editor-32bit \
+            windows-editor-arm64 \
+            windows-editor-mono-arm64
+          do
+            SRC="${INPUT_DIR}/.__sign_out/${base}-${SUFFIX}"
+            DST="${INPUT_DIR}/${base}-${SUFFIX}"
+            if [ ! -d "$SRC" ]; then
+              echo "::error::Expected signed output directory missing: $SRC"
+              exit 1
+            fi
+            sudo chown -R "$(whoami)" "$SRC" "$DST" 2>/dev/null || true
+            sudo chmod -R u+rw "$SRC" "$DST" 2>/dev/null || true
+            rm -rf "${SRC}/build_deps" 2>/dev/null || true
+            rm -rf "${DST}/build_deps" 2>/dev/null || true
+            mv -f "$SRC"/* "$DST"/
+            rm -rf "$SRC"
+          done
+          rm -rf "${INPUT_DIR}/.__sign_out"
+          echo "Merged signed Windows binaries back into editor folders."
+
       - name: Rename Folders then Zip/Move Folders
         uses: ./.github/actions/multi-folder-zip
         with:
