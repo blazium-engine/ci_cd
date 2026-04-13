@@ -5,6 +5,12 @@ set -e
 
 CODE_SIGN_ROOT="${CODE_SIGN_ROOT:-/codesign}"
 
+# CodeSignTool resolves jars/config relative to its install dir (Dockerfile WORKDIR /codesign).
+cd "$CODE_SIGN_ROOT" || {
+  echo "::error::Cannot cd to CODE_SIGN_ROOT: $CODE_SIGN_ROOT"
+  exit 1
+}
+
 echo "::group::Run CodeSigner"
 
 echo "Running ESigner.com CodeSign Action (local) ====>"
@@ -15,7 +21,7 @@ if [[ "${INPUT_ENVIRONMENT_NAME:-}" != "PROD" ]]; then
   cp "${CODE_SIGN_ROOT}/conf/code_sign_tool_demo.properties" "${CODE_SIGN_ROOT}/conf/code_sign_tool.properties"
 fi
 
-BASE_COMMAND="${CODE_SIGN_ROOT}/CodeSignTool.sh"
+BASE_COMMAND="./CodeSignTool.sh"
 
 # Supported file types
 SUPPORTED_FILE_TYPES="acm ax bin cab cpl dll drv efi exe mui ocx scr sys tsp msi ps1 ps1xml js vbs wsf jar nupkg"
@@ -51,7 +57,16 @@ if [ ! -z "${INPUT_DIR_PATH:-}" ] && [ -d "${INPUT_DIR_PATH}" ]; then
       FILE_COMMAND="$BASE_COMMAND $COMMON_FLAGS -input_file_path \"$file\""
       echo "Processing file: $file"
       echo "$FILE_COMMAND"
-      FILE_RESULT=$(bash -c "set -e; $FILE_COMMAND 2>&1")
+      # Do not use set -e around $(...): a failed sign would exit before we print CodeSignTool output.
+      set +e
+      FILE_RESULT=$(bash -c "$FILE_COMMAND 2>&1")
+      FILE_EXIT=$?
+      set -e
+      if [ "$FILE_EXIT" -ne 0 ]; then
+        echo "::error::CodeSignTool exited with status $FILE_EXIT for $file"
+        echo "$FILE_RESULT"
+        exit 1
+      fi
       if [[ "$FILE_RESULT" =~ .*"Error".* || "$FILE_RESULT" =~ .*"Exception".* ]]; then
         echo "::error::Something Went Wrong with file $file. Please try again."
         echo "::error::$FILE_RESULT"
@@ -74,7 +89,15 @@ elif [ ! -z "${INPUT_FILE_PATH:-}" ]; then
   if [[ $SUPPORTED_FILE_TYPES =~ (^|[[:space:]])$file_ext($|[[:space:]]) ]]; then
     FINAL_COMMAND="$BASE_COMMAND $COMMON_FLAGS -input_file_path \"$INPUT_FILE_PATH\""
     echo "$FINAL_COMMAND"
-    RESULT=$(bash -c "set -e; $FINAL_COMMAND 2>&1")
+    set +e
+    RESULT=$(bash -c "$FINAL_COMMAND 2>&1")
+    RES_EXIT=$?
+    set -e
+    if [ "$RES_EXIT" -ne 0 ]; then
+      echo "::error::CodeSignTool exited with status $RES_EXIT"
+      echo "$RESULT"
+      exit 1
+    fi
     if [[ "$RESULT" =~ .*"Error".* || "$RESULT" =~ .*"Exception".* ]]; then
       echo "::error::Something Went Wrong. Please try again."
       echo "::error::$RESULT"

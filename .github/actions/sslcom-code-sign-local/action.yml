@@ -59,6 +59,7 @@ runs:
 
     - name: Run CodeSigner
       shell: bash
+      working-directory: ${{ steps.setup.outputs.codesign_root }}
       env:
         CODE_SIGN_ROOT: ${{ steps.setup.outputs.codesign_root }}
         INPUT_COMMAND: ${{ inputs.command }}
