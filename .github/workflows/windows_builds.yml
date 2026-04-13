@@ -300,25 +300,25 @@ jobs:
       #  run: |
       #    /entrypoint.sh
 
-      - uses: bioblaze/sslcom-code-signer@v5
-        with:
-          command: sign
-          username: ${{ secrets.ES_USERNAME }}
-          password: ${{ secrets.ES_PASSWORD }}
-          credential_id: ${{ secrets.CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          dir_path: ./bin
-          output_path: ./signed
-          environment_name: PROD
+      # - uses: bioblaze/sslcom-code-signer@v5
+      #   with:
+      #     command: sign
+      #     username: ${{ secrets.ES_USERNAME }}
+      #     password: ${{ secrets.ES_PASSWORD }}
+      #     credential_id: ${{ secrets.CREDENTIAL_ID }}
+      #     totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+      #     dir_path: ./bin
+      #     output_path: ./signed
+      #     environment_name: PROD
 
-      - name: Move into the bin directory.
-        shell: bash
-        run: |
-          ls -la
-          sudo chown -R $(whoami) ./signed ./bin
-          sudo chmod -R u+rw ./signed ./bin
-          rm -rf ./signed/build_deps
-          mv -f ./signed/* ./bin/
+      # - name: Move into the bin directory.
+      #   shell: bash
+      #   run: |
+      #     ls -la
+      #     sudo chown -R $(whoami) ./signed ./bin
+      #     sudo chmod -R u+rw ./signed ./bin
+      #     rm -rf ./signed/build_deps
+      #     mv -f ./signed/* ./bin/
 
       - name: Create tar.gz Archive
         shell: bash
