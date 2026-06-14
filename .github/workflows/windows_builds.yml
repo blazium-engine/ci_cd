@@ -32,9 +32,8 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  SCONSFLAGS: verbose=yes warnings=no progress=no
+  SCONSFLAGS: use_llvm=yes verbose=yes warnings=no progress=no
   D3D12FLAGS: d3d12=yes
-  SCONS_CACHE_MSVC_CONFIG: true
   DEPLOY_TYPE: windows
   DEBUG_SCONSFLAGS: debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
 
@@ -94,7 +93,7 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    runs-on: "windows-latest"
+    runs-on: "ubuntu-latest"
     name: ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -170,7 +169,6 @@ jobs:
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
-        shell: bash
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
@@ -178,7 +176,6 @@ jobs:
 
       - name: Normalize path
         id: normalize
-        shell: bash
         run: |
           normalized_workspace="$(echo "${{ github.workspace }}" | sed 's|\\|/|g')"
           echo "normalized_workspace=$normalized_workspace" >> "$GITHUB_OUTPUT"
@@ -209,6 +206,110 @@ jobs:
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
 
+      # TODO: Figure out somehow how to embed this one.
+      - name: Distro-specific Deps Install
+        run: |
+          # Remove all existing third-party repositories
+          #sudo rm -f /etc/apt/sources.list.d/*
+
+          # Add architecture support for 32-bit
+          sudo dpkg --add-architecture i386
+
+          # Update sources list to include default Ubuntu repositories
+          #sudo bash -c 'cat > /etc/apt/sources.list <<EOF
+          #deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse
+          #deb http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse
+          #EOF'
+
+          # Update package lists
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+            bash bzip2 curl file gettext wget \
+            git make nano patch scons pkg-config unzip xz-utils cmake gdb
+
+          # Install required packages
+          sudo apt-get install -y \
+            build-essential \
+            gcc-multilib g++-multilib \
+            libc6-dev libc6-dev-i386 \
+            libx11-dev libx11-dev:i386 \
+            libxcursor-dev libxcursor-dev:i386 \
+            libxinerama-dev libxinerama-dev:i386 \
+            libxi-dev libxi-dev:i386 \
+            libxrandr-dev libxrandr-dev:i386 \
+            libgl1-mesa-dev libgl1-mesa-dev:i386
+          sudo apt-get install -y \
+            libglu1-mesa-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libudev-dev \
+            libwayland-dev \
+            libstdc++6 \
+            libatomic1 \
+            libfreetype6-dev \
+            libssl-dev \
+            libc++-dev \
+            libc++abi-dev \
+            libgl-dev \
+            liblzma-dev \
+            liblzma5 \
+            libglu-dev \
+            libdbus-1-dev \
+            libwayland-bin
+          sudo apt-get install -y \
+            yasm \
+            xvfb \
+            llvm \
+            gcc \
+            g++ \
+            libspeechd-dev \
+            speech-dispatcher \
+            fontconfig \
+            libfontconfig-dev \
+            dotnet-sdk-8.0 \
+            directx-headers-dev \
+            binutils
+          # mingw-w64 \
+          # mingw-w64-common \
+          # mingw-w64-tools \
+          #   gcc-mingw-w64 g++-mingw-w64
+          # sudo update-alternatives --config x86_64-w64-mingw32-g++
+          # sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+          # sudo update-alternatives --config x86_64-w64-mingw32-gcc
+          # sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+          # sudo update-alternatives --config i686-w64-mingw32-g++
+          # sudo update-alternatives --set i686-w64-mingw32-g++ /usr/bin/i686-w64-mingw32-g++-posix
+          # sudo update-alternatives --config i686-w64-mingw32-gcc
+          # sudo update-alternatives --set i686-w64-mingw32-gcc /usr/bin/i686-w64-mingw32-gcc-posix
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo apt-get purge -y --auto-remove
+          sudo apt-get autoremove
+          sudo apt-get clean
+
+      - name: Install llvm-mingw
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20260602/llvm-mingw-20260602-ucrt-ubuntu-22.04-x86_64.tar.xz && \
+          tar xf llvm-mingw-20260602-ucrt-ubuntu-22.04-x86_64.tar.xz && \
+          rm -f llvm-mingw-20260602-ucrt-ubuntu-22.04-x86_64.tar.xz
+          cd llvm-mingw-20260602-ucrt-ubuntu-22.04-x86_64
+          echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
+
+      - name: Download and extract llvm-mingw SDK
+        env:
+          CURRENT_DIR: ${{ github.workspace }}
+        if: matrix.arm
+        run: |
+          mkdir -p "$CURRENT_DIR/sdks"
+          cd "$CURRENT_DIR/sdks"
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20260602/llvm-mingw-20260602-msvcrt-ubuntu-22.04-x86_64.tar.xz
+          xz -dc llvm-mingw-20260602-msvcrt-ubuntu-22.04-x86_64.tar.xz | tar -xvf -
+          rm -f llvm-mingw-20260602-msvcrt-ubuntu-22.04-x86_64.tar.xz
+          cd llvm-mingw-20260602-msvcrt-ubuntu-22.04-x86_644
+          echo "LLVM_MINGW=$(pwd)" >> $GITHUB_ENV
+
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
@@ -219,7 +320,6 @@ jobs:
         uses: ./.github/actions/godot-deps
 
       - name: Download and extract mono-glue
-        shell: bash
         if: matrix.mono
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
@@ -262,7 +362,6 @@ jobs:
           scons-cache: "${{ github.workspace }}\\.scons-cache"
 
       - name: Building C# Assemblies
-        shell: bash
         if: matrix.mono
         run: |
           python ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows
@@ -283,7 +382,6 @@ jobs:
 
       #- name: Unzip and Setup CodeSignTool
       #  working-directory: codesign-tool
-      #  shell: bash
       #  run: |
       #    unzip "/tmp/CodeSignTool-v1.3.2.zip" -d "/tmp/CodeSignTool-v1.3.2"
       #    mkdir -p /codesign
@@ -296,7 +394,6 @@ jobs:
 
       #- name: Sign Code
       #  working-directory: /codesign
-      #  shell: bash
       #  run: |
       #    /entrypoint.sh
 
@@ -312,7 +409,6 @@ jobs:
       #     environment_name: PROD
 
       # - name: Move into the bin directory.
-      #   shell: bash
       #   run: |
       #     ls -la
       #     sudo chown -R $(whoami) ./signed ./bin
@@ -321,7 +417,6 @@ jobs:
       #     mv -f ./signed/* ./bin/
 
       - name: Create tar.gz Archive
-        shell: bash
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
@@ -456,7 +551,6 @@ jobs:
 
     steps:
       - name: Skip Action?
-        shell: bash
         if: matrix.skip
         run: |
           echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
@@ -471,12 +565,10 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
-        shell: bash
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
-        shell: bash
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
@@ -484,7 +576,6 @@ jobs:
 
       - name: Normalize path
         id: normalize
-        shell: bash
         run: |
           normalized_workspace="$(echo "${{ github.workspace }}" | sed 's|\\|/|g')"
           echo "normalized_workspace=$normalized_workspace" >> "$GITHUB_OUTPUT"
@@ -528,7 +619,6 @@ jobs:
         uses: ammaraskar/gcc-problem-matcher@master
 
       - name: Download and extract mono-glue
-        shell: bash
         if: matrix.mono
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
@@ -581,7 +671,6 @@ jobs:
         continue-on-error: true
 
       - name: Create tar.gz Archive
-        shell: bash
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
