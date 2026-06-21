@@ -32,8 +32,8 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
-  SCONSFLAGS: verbose=yes warnings=no progress=no
-  D3D12FLAGS: d3d12=yes
+  BLAZIUM_BASE_BRANCH: blazium-dev
+  SCONSFLAGS: verbose=yes warnings=no progress=no module_text_server_fb_enabled=yes d3d12=yes strict_checks=yes module_xbox_module_enabled=no use_mingw=no "angle_libs=${{ github.workspace }}/"
   SCONS_CACHE_MSVC_CONFIG: true
   DEPLOY_TYPE: windows
   DEBUG_SCONSFLAGS: debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
@@ -247,19 +247,39 @@ jobs:
 
 
 
+      - name: Download Direct3D 12 SDK components
+        run: python ./misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Download pre-built ANGLE static libraries
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-${{ matrix.arch == 'x86' && 'x86_32' || (matrix.arch == 'arm64' && 'arm64' || 'x86_64') }}-msvc-release.zip
+          target: angle/angle.zip
+
+      - name: Extract pre-built ANGLE static libraries
+        run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
+
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
         with:
           mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ github.workspace }}\deps\mesa"
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
           platform: windows
-          # The default one has path separators for Linux
-          scons-cache: "${{ github.workspace }}\\.scons-cache"
+          target: ${{ matrix.target }}
+          build-name: blazium
+          scons-cache: "${{ github.workspace }}/.scons_cache/"
 
       - name: Building C# Assemblies
         shell: bash
@@ -558,21 +578,39 @@ jobs:
 
 
 
+      - name: Download Direct3D 12 SDK components
+        run: python ./misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Download pre-built ANGLE static libraries
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-${{ matrix.arch == 'x86' && 'x86_32' || (matrix.arch == 'arm64' && 'arm64' || 'x86_64') }}-msvc-release.zip
+          target: angle/angle.zip
+
+      - name: Extract pre-built ANGLE static libraries
+        run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
+
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
         with:
           mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          sconsflags: ${{ matrix.sconsflags }} ${{ env.D3D12FLAGS }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
-          arch: ${{ matrix.arch }}
-          target: ${{ matrix.target }}
+          sconsflags: ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
           platform: windows
-          # The default one has path separators for Linux
-          scons-cache: "${{ github.workspace }}\\.scons-cache"
+          target: ${{ matrix.target }}
+          build-name: blazium
+          scons-cache: "${{ github.workspace }}/.scons_cache/"
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
