@@ -597,29 +597,16 @@ jobs:
         with:
           directory: ${{ github.workspace }}/export
 
-      - name: Upload Template Release Asset
+      - name: Upload Template Release Assets
         continue-on-error: ${{ github.event.client_payload.run_id != '' }}
         id: template-upload
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_PAT }}
+        uses: ./.github/actions/upload-github-release
         with:
-          upload_url: ${{ inputs.release_url }}
-          asset_path: ${{ github.workspace }}/export/${{ env.BASE_NAME }}_export_templates.tpz
-          asset_name: ${{ env.BASE_NAME }}_export_templates.tpz
-          asset_content_type: application/zip
-
-      - name: Upload Mono Template Release Asset
-        continue-on-error: ${{ github.event.client_payload.run_id != '' }}
-        id: mono-template-upload
-        uses: actions/upload-release-asset@v1.0.1
-        env:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_PAT }}
-        with:
-          upload_url: ${{ inputs.release_url }}
-          asset_path: ${{ github.workspace }}/export/${{ env.BASE_NAME }}_mono_export_templates.tpz
-          asset_name: ${{ env.BASE_NAME }}_mono_export_templates.tpz
-          asset_content_type: application/zip
+          UPLOAD_URL: ${{ inputs.release_url }}
+          FILES: |
+            ${{ github.workspace }}/export/${{ env.BASE_NAME }}_export_templates.tpz
+            ${{ github.workspace }}/export/${{ env.BASE_NAME }}_mono_export_templates.tpz
 
       - uses: BetaHuhn/do-spaces-action@v2
         with:

@@ -34,21 +34,56 @@ runs:
         INPUT_FILES: ${{ inputs.FILES }}
         INPUT_DEBUG: ${{ inputs.DEBUG }}
       run: |
+        set -euo pipefail
+
+        api() {
+          curl -L -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "$@"
+        }
+
         UPLOADED_FILES=()
+        FAILED=0
         CLEANED_URL=$(echo "$INPUT_UPLOAD_URL" | sed 's/{.*}//')
+
+        if [[ "$CLEANED_URL" =~ repos/([^/]+)/([^/]+)/releases/([0-9]+)/assets ]]; then
+          OWNER="${BASH_REMATCH[1]}"
+          REPO="${BASH_REMATCH[2]}"
+          RELEASE_ID="${BASH_REMATCH[3]}"
+        else
+          echo "::error::Could not parse owner, repo, and release id from upload URL."
+          exit 1
+        fi
+
+        delete_existing_asset() {
+          local asset_name="$1"
+          local asset_id
+          asset_id=$(api "https://api.github.com/repos/$OWNER/$REPO/releases/$RELEASE_ID" \
+            | jq -r --arg name "$asset_name" '.assets[] | select(.name == $name) | .id' \
+            | head -n 1)
+
+          if [[ -n "$asset_id" && "$asset_id" != "null" ]]; then
+            echo "Deleting existing release asset: $asset_name (id $asset_id)" >> $GITHUB_STEP_SUMMARY
+            api -X DELETE "https://api.github.com/repos/$OWNER/$REPO/releases/assets/$asset_id" > /dev/null
+          fi
+        }
 
         for file in ${INPUT_FILES}; do
           if [[ ! -e "$file" ]]; then
-            echo "::error::File $file does not exist. Skipping."
-            echo "Error: File $file does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
+            echo "::error::File $file does not exist."
+            echo "Error: File $file does not exist." >> $GITHUB_STEP_SUMMARY
+            FAILED=1
             continue
           fi
 
           BASENAME=$(basename "$file")
           MIME_TYPE=$(file -b --mime-type "$file")
+          delete_existing_asset "$BASENAME"
           URL="$CLEANED_URL?name=$BASENAME"
 
-          RESPONSE=$(curl -L \
+          RESPONSE=$(curl -L -sS \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -57,12 +92,13 @@ runs:
             --data-binary "@$file" \
             "$URL")
 
-          BROWSER_DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.browser_download_url')
+          BROWSER_DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.browser_download_url // empty')
 
           if [[ -z "$BROWSER_DOWNLOAD_URL" || "$BROWSER_DOWNLOAD_URL" == "null" ]]; then
             echo "::error::Failed to upload $file. Response: $RESPONSE"
             echo "Error uploading $file" >> $GITHUB_STEP_SUMMARY
             echo "Response: $RESPONSE" >> $GITHUB_STEP_SUMMARY
+            FAILED=1
             continue
           fi
 
@@ -76,3 +112,7 @@ runs:
         fi
 
         echo "uploaded_files=$(printf ",%s" "${UPLOADED_FILES[@]}" | cut -c 2-)" >> $GITHUB_OUTPUT
+
+        if [[ "$FAILED" -ne 0 ]]; then
+          exit 1
+        fi
