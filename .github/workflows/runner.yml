@@ -97,7 +97,24 @@ jobs:
   monoglue-build:
     name: Mono Glue
     needs: [get-latest-sha, static-checks]
-    if: contains(github.event.client_payload.build, 'monoglue') && !github.event.client_payload.run_id
+    if: >-
+      !github.event.client_payload.run_id &&
+      (
+        contains(github.event.client_payload.build, 'monoglue') ||
+        (
+          (
+            contains(github.event.client_payload.build, 'windows') ||
+            contains(github.event.client_payload.build, 'linux') ||
+            contains(github.event.client_payload.build, 'macos') ||
+            contains(github.event.client_payload.build, 'android') ||
+            contains(github.event.client_payload.build, 'ios')
+          ) &&
+          (
+            contains(github.event.client_payload.build_type, 'editors') ||
+            contains(github.event.client_payload.build_type, 'templates')
+          )
+        )
+      )
     uses: ./.github/workflows/mono_glue_build.yml
     secrets: inherit
     with:
@@ -166,7 +183,7 @@ jobs:
 
   windows-build:
     name: 🏁 Windows
-    needs: [get-latest-sha, static-checks]
+    needs: [monoglue-build, get-latest-sha]
     if: contains(github.event.client_payload.build, 'windows') && !github.event.client_payload.run_id
     uses: ./.github/workflows/windows_builds.yml
     secrets: inherit
