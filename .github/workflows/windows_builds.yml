@@ -294,7 +294,7 @@ jobs:
         with:
           repo: godotengine/godot-angle-static
           version: tags/chromium/6601.2
-          file: godot-angle-static-arm64-gcc-release.zip
+          file: godot-angle-static-arm64-llvm-release.zip
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries (ARM cross)
@@ -667,7 +667,7 @@ jobs:
         with:
           repo: godotengine/godot-angle-static
           version: tags/chromium/6601.2
-          file: godot-angle-static-arm64-gcc-release.zip
+          file: godot-angle-static-arm64-llvm-release.zip
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries (ARM cross)
