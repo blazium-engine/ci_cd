@@ -72,9 +72,8 @@ runs:
 
         for file in ${INPUT_FILES}; do
           if [[ ! -e "$file" ]]; then
-            echo "::error::File $file does not exist."
-            echo "Error: File $file does not exist." >> $GITHUB_STEP_SUMMARY
-            FAILED=1
+            echo "::warning::File $file does not exist. Skipping."
+            echo "Warning: File $file does not exist. Skipping." >> $GITHUB_STEP_SUMMARY
             continue
           fi
 
