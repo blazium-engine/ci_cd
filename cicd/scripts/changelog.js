@@ -65,10 +65,12 @@ function httpsGet(url, additionalHeaders = {}) {
 
 async function setBaseBranch() {
     console.log(`[DEBUG] Getting baseBranch`);
+    const envBaseBranch = baseBranch;
     const response = await httpsGet(`${apiBaseUrl}/releases`, {
         'X-GitHub-Api-Version': '2022-11-28',
     });
     const gh_releases = response.data;
+    const currentTagPrefix = `v${version.major}.${version.minor}.${version.patch}`;
 
     // We want to check for the version/commithash in lower buildtype
     // if it fails to find it in the current one, aka the buildtype is missing
@@ -85,45 +87,58 @@ async function setBaseBranch() {
         for (let release_i = 0; release_i < gh_releases.length; release_i++) {
             const release = gh_releases[release_i];
 
-            if (release.name.includes(build_type)) {
-                // Get base commit hash
-                baseBranch = release.target_commitish;
-                console.log(`[DEBUG] The baseBranch was found: ${baseBranch}`);
-
-                // Get version number too
-                let dash_index = release.tag_name.indexOf("-");
-                if (dash_index === -1) {
-                    dash_index = release.tag_name.length;
-                }
-                const version_array = release.tag_name.slice(1, dash_index).split(".");
-
-                let prev = {
-                    major: parseInt(version_array[0]),
-                    minor: parseInt(version_array[1]),
-                    patch: parseInt(version_array[2])
-                };
-
-                if (prev.major > version.major) {
-                    version.major = prev.major;
-                    console.log(`[DEBUG] Warning: version.py major number is outdated`);
-                }
-                if (prev.minor > version.minor) {
-                    version.minor = prev.minor;
-                    console.log(`[DEBUG] Warning: version.py minor number is outdated`);
-                }
-                if (prev.patch > version.patch) {
-                    version.patch = prev.patch;
-                    console.log(`[DEBUG] Warning: version.py patch number is outdated`);
-                }
-                console.log(`[DEBUG] Base version: ${version.major}.${version.minor}.${version.patch}`);
-
-                is_version_py_major_greater = prev.major < version.major;
-                is_version_py_minor_greater = prev.minor < version.minor;
-
-                return;
+            if (!release.name.includes(build_type)) {
+                continue;
             }
+
+            if (release.tag_name === currentTagPrefix || release.tag_name.startsWith(`${currentTagPrefix}-`)) {
+                console.log(`[DEBUG] Skipping current version release: ${release.tag_name}`);
+                continue;
+            }
+
+            if (release.target_commitish === currentBranch) {
+                console.log(`[DEBUG] Skipping release with same target as current build: ${release.tag_name}`);
+                continue;
+            }
+
+            // Get base commit hash from the previous release
+            baseBranch = release.target_commitish;
+            console.log(`[DEBUG] The baseBranch was found from ${release.tag_name}: ${baseBranch}`);
+
+            // Get version number too
+            let dash_index = release.tag_name.indexOf("-");
+            if (dash_index === -1) {
+                dash_index = release.tag_name.length;
+            }
+            const version_array = release.tag_name.slice(1, dash_index).split(".");
+
+            let prev = {
+                major: parseInt(version_array[0]),
+                minor: parseInt(version_array[1]),
+                patch: parseInt(version_array[2])
+            };
+
+            if (prev.major > version.major) {
+                version.major = prev.major;
+                console.log(`[DEBUG] Warning: version.py major number is outdated`);
+            }
+            if (prev.minor > version.minor) {
+                version.minor = prev.minor;
+                console.log(`[DEBUG] Warning: version.py minor number is outdated`);
+            }
+            if (prev.patch > version.patch) {
+                version.patch = prev.patch;
+                console.log(`[DEBUG] Warning: version.py patch number is outdated`);
+            }
+            console.log(`[DEBUG] Base version: ${version.major}.${version.minor}.${version.patch}`);
+
+            is_version_py_major_greater = prev.major < version.major;
+            is_version_py_minor_greater = prev.minor < version.minor;
+
+            return;
         }
     }
+    baseBranch = envBaseBranch;
     console.log(`[DEBUG] Warning: using env baseBranch! ${baseBranch}`);
     console.log(`[DEBUG] Warning: using env version! ${version.major}.${version.minor}.${version.patch}`);
 }
@@ -210,6 +225,7 @@ async function generateChangelog(outputDir = __dirname) {
 
     const commits = comparisonData.commits;
     const filesChanged = new Set();
+    comparisonData.files.forEach(file => filesChanged.add(file));
     let totalPRs = 0;
     let firstChangeDate = null;
     let lastChangeDate = null;
@@ -282,8 +298,11 @@ async function generateChangelog(outputDir = __dirname) {
         currentBranch,
         totalCommits: commits.length,
         totalPRs,
+        totalFilesChanged: filesChanged.size,
         daysSinceFirstChange,
         daysSinceLastChange,
+        timeSinceFirstChange: daysSinceFirstChange,
+        timeSinceLastChange: daysSinceLastChange,
         totalContributors: Object.keys(contributorStats).length,
         contributors: Object.keys(contributorStats).map(user => ({ username: user, contributions: contributorStats[user].count, names: contributorStats[user].names })),
         changelog,

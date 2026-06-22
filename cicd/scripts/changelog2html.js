@@ -19,6 +19,8 @@ function generateChangelogHTML(jsonFilePath, shortSummary = false) {
             totalCommits,
             totalPRs,
             totalFilesChanged,
+            daysSinceFirstChange,
+            daysSinceLastChange,
             timeSinceFirstChange,
             timeSinceLastChange,
             totalContributors,
@@ -26,6 +28,9 @@ function generateChangelogHTML(jsonFilePath, shortSummary = false) {
             changelog,
             version
         } = changelogData;
+
+        timeSinceFirstChange = timeSinceFirstChange ?? daysSinceFirstChange;
+        timeSinceLastChange = timeSinceLastChange ?? daysSinceLastChange;
 
         // Check if `changelog` is defined and is an array
         if (!Array.isArray(changelog)) {
@@ -54,7 +59,7 @@ changelogText += `<details><summary><h2>Commits and PRs:</h2></summary>`;
         // Template: Commits and PRs Section
 if (shortSummary) {
    new_changelog = new_changelog.concat(changelog.slice(0, 24))
-   changelogText += `<h2>Showing 25 out of ${changelog.length+1}</h2>`
+   changelogText += `<h2>Showing 25 out of ${changelog.length}</h2>`
 } else {
     new_changelog = new_changelog.concat(changelog)
 }

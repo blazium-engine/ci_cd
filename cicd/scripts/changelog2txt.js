@@ -19,6 +19,8 @@ function generateChangelogText(jsonFilePath) {
             totalCommits,
             totalPRs,
             totalFilesChanged,
+            daysSinceFirstChange,
+            daysSinceLastChange,
             timeSinceFirstChange,
             timeSinceLastChange,
             totalContributors,
@@ -26,6 +28,9 @@ function generateChangelogText(jsonFilePath) {
             changelog,
             version
         } = changelogData;
+
+        const firstChangeDays = timeSinceFirstChange ?? daysSinceFirstChange;
+        const lastChangeDays = timeSinceLastChange ?? daysSinceLastChange;
 
         // Ensure `changelog` is an array before iterating
         if (!Array.isArray(changelog)) {
@@ -41,8 +46,8 @@ Summary:
 - Total Commits: ${totalCommits || 0}
 - Total PRs: ${totalPRs || 0}
 - Total Files Changed: ${totalFilesChanged || 0}
-- Time Since First Change: ${timeSinceFirstChange || 'N/A'}
-- Time Since Last Change: ${timeSinceLastChange || 'N/A'}
+- Time Since First Change: ${firstChangeDays ?? 'N/A'}
+- Time Since Last Change: ${lastChangeDays ?? 'N/A'}
 - Total Contributors: ${totalContributors || 0}
 
 ---

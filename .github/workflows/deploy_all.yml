@@ -98,38 +98,20 @@ jobs:
           GITHUB_REPO: blazium
           BASE_BRANCH: ${{ steps.version.outputs.external_sha }}
           CURRENT_BRANCH: ${{ steps.get_sha.outputs.sha }}
-          MAJOR_VERSION: ${{ steps.version.outputs.external_major }}
-          MINOR_VERSION: ${{ steps.version.outputs.external_minor }}
-          PATCH_VERSION: ${{ steps.version.outputs.external_patch }}
+          MAJOR_VERSION: ${{ inputs.new_major }}
+          MINOR_VERSION: ${{ inputs.new_minor }}
+          PATCH_VERSION: ${{ inputs.new_patch }}
           BUILD_TYPE: ${{ github.event.client_payload.type || 'nightly' }}
         run: |
           node ./cicd/scripts/changelog.js $(pwd)
 
       - name: Generate changelog.txt
         id: changelog-txt
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_OWNER: blazium-games
-          GITHUB_REPO: blazium
-          BASE_BRANCH: ${{ steps.version.outputs.external_sha }}
-          CURRENT_BRANCH: ${{ steps.get_sha.outputs.sha }}
-          MAJOR_VERSION: ${{ steps.version.outputs.external_major }}
-          MINOR_VERSION: ${{ steps.version.outputs.external_minor }}
-          PATCH_VERSION: ${{ steps.version.outputs.external_patch }}
         run: |
           node ./cicd/scripts/changelog2txt.js $(pwd)/changelog.json
 
       - name: Generate changelog.html
         id: changelog-html
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_OWNER: blazium-games
-          GITHUB_REPO: blazium
-          BASE_BRANCH: ${{ steps.version.outputs.external_sha }}
-          CURRENT_BRANCH: ${{ steps.get_sha.outputs.sha }}
-          MAJOR_VERSION: ${{ steps.version.outputs.external_major }}
-          MINOR_VERSION: ${{ steps.version.outputs.external_minor }}
-          PATCH_VERSION: ${{ steps.version.outputs.external_patch }}
         run: |
           node ./cicd/scripts/changelog2html.js $(pwd)/changelog.json
 
