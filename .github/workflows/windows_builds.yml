@@ -268,7 +268,7 @@ jobs:
 
 
       - name: Download Direct3D 12 SDK components
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download Direct3D 12 SDK components (ARM cross)
@@ -276,7 +276,7 @@ jobs:
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download pre-built ANGLE static libraries
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -285,7 +285,7 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
 
       - name: Download pre-built ANGLE static libraries (ARM cross)
@@ -309,7 +309,7 @@ jobs:
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Setup MSVC
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || matrix.arch }}
@@ -641,7 +641,7 @@ jobs:
 
 
       - name: Download Direct3D 12 SDK components
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download Direct3D 12 SDK components (ARM cross)
@@ -649,7 +649,7 @@ jobs:
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download pre-built ANGLE static libraries
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -658,7 +658,7 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
 
       - name: Download pre-built ANGLE static libraries (ARM cross)
@@ -682,7 +682,7 @@ jobs:
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Setup MSVC
-        if: !matrix.arm
+        if: ${{ !matrix.arm }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || matrix.arch }}
