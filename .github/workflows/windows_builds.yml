@@ -94,7 +94,7 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    runs-on: "windows-latest"
+    runs-on: ${{ matrix.arm && 'ubuntu-22.04' || 'windows-latest' }}
     name: ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -134,7 +134,7 @@ jobs:
           - name: Editor (arm64)
             cache-name: windows-editor-arm64
             target: editor
-            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arm: true
             arch: arm64
@@ -143,7 +143,7 @@ jobs:
           - name: Editor w/ Mono (arm64)
             cache-name: windows-editor-mono-arm64
             target: editor
-            sconsflags: module_mono_enabled=yes arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arm: true
             arch: arm64
@@ -218,6 +218,26 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Install llvm-mingw
+        if: matrix.arm
+        shell: bash
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          echo "MINGW_PREFIX=$(pwd)/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> $GITHUB_ENV
+
+      - name: Download and extract llvm-mingw SDK
+        if: matrix.arm
+        shell: bash
+        run: |
+          mkdir -p sdks
+          cd sdks
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20241015/llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          xz -dc llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz | tar -xvf -
+          rm -f llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          echo "LLVM_MINGW=$(pwd)/llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64" >> $GITHUB_ENV
+
       - name: Download and extract mono-glue
         shell: bash
         if: matrix.mono
@@ -248,9 +268,15 @@ jobs:
 
 
       - name: Download Direct3D 12 SDK components
+        if: !matrix.arm
+        run: python ./misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Download Direct3D 12 SDK components (ARM cross)
+        if: matrix.arm
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download pre-built ANGLE static libraries
+        if: !matrix.arm
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -259,7 +285,22 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries
+        if: !matrix.arm
         run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
+
+      - name: Download pre-built ANGLE static libraries (ARM cross)
+        if: matrix.arm
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-arm64-gcc-release.zip
+          target: angle/angle.zip
+
+      - name: Extract pre-built ANGLE static libraries (ARM cross)
+        if: matrix.arm
+        shell: bash
+        run: unzip -o angle/angle.zip -d .
 
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
@@ -268,9 +309,10 @@ jobs:
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Setup MSVC
+        if: !matrix.arm
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || (matrix.arch == 'arm64' && 'amd64_arm64' || matrix.arch) }}
+          arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || matrix.arch }}
 
       - name: Compilation
         uses: ./.github/actions/godot-build
@@ -377,7 +419,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
   build-templates:
-    runs-on: "windows-latest"
+    runs-on: ${{ matrix.arm && 'ubuntu-22.04' || 'windows-latest' }}
     name: ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -445,7 +487,7 @@ jobs:
           - name: Template w/ Mono (arm64)
             cache-name: windows-template-mono-arm64
             target: template_release
-            sconsflags: module_mono_enabled=yes arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none  
             mono: true
             arch: arm64
             arm: true
@@ -453,7 +495,7 @@ jobs:
           - name: Template (arm64)
             cache-name: windows-template-arm64
             target: template_release
-            sconsflags: arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arch: arm64
             arm: true
@@ -461,7 +503,7 @@ jobs:
           - name: Template w/ Mono (arm64)
             cache-name: windows-debug-template-mono-arm64
             target: template_debug
-            sconsflags: module_mono_enabled=yes arch=arm64  ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: module_mono_enabled=yes arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: true
             arch: arm64
             arm: true
@@ -469,7 +511,7 @@ jobs:
           - name: Template (arm64)
             cache-name: windows-debug-template-arm64
             target: template_debug
-            sconsflags: arch=arm64 ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
+            sconsflags: arch=arm64 use_llvm=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} lto=none
             mono: false
             arch: arm64
             arm: true
@@ -544,6 +586,26 @@ jobs:
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
+      - name: Install llvm-mingw
+        if: matrix.arm
+        shell: bash
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          rm -f llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
+          echo "MINGW_PREFIX=$(pwd)/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> $GITHUB_ENV
+
+      - name: Download and extract llvm-mingw SDK
+        if: matrix.arm
+        shell: bash
+        run: |
+          mkdir -p sdks
+          cd sdks
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20241015/llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          xz -dc llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz | tar -xvf -
+          rm -f llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64.tar.xz
+          echo "LLVM_MINGW=$(pwd)/llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64" >> $GITHUB_ENV
+
       - name: Setup GCC problem matcher
         uses: ammaraskar/gcc-problem-matcher@master
 
@@ -579,9 +641,15 @@ jobs:
 
 
       - name: Download Direct3D 12 SDK components
+        if: !matrix.arm
+        run: python ./misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Download Direct3D 12 SDK components (ARM cross)
+        if: matrix.arm
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download pre-built ANGLE static libraries
+        if: !matrix.arm
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -590,7 +658,22 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries
+        if: !matrix.arm
         run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
+
+      - name: Download pre-built ANGLE static libraries (ARM cross)
+        if: matrix.arm
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          repo: godotengine/godot-angle-static
+          version: tags/chromium/6601.2
+          file: godot-angle-static-arm64-gcc-release.zip
+          target: angle/angle.zip
+
+      - name: Extract pre-built ANGLE static libraries (ARM cross)
+        if: matrix.arm
+        shell: bash
+        run: unzip -o angle/angle.zip -d .
 
       - name: Download Mesa Libraries
         uses: ./.github/actions/download-mesa-action
@@ -599,9 +682,10 @@ jobs:
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
 
       - name: Setup MSVC
+        if: !matrix.arm
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || (matrix.arch == 'arm64' && 'amd64_arm64' || matrix.arch) }}
+          arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || matrix.arch }}
 
       - name: Compilation
         uses: ./.github/actions/godot-build
