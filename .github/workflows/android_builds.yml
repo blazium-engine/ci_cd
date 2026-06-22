@@ -798,6 +798,17 @@ jobs:
           submodules: recursive
           fetch-depth: 2
 
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: false
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Remove existing workflows folder
         run: |
           rm -rf .github/workflows
@@ -1027,6 +1038,17 @@ jobs:
           ref: ${{ inputs.build_sha }}
           submodules: recursive
           fetch-depth: 2
+
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: false
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - name: Remove existing workflows folder
         run: |
