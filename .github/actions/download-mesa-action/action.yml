@@ -8,6 +8,12 @@ inputs:
   mesa_folder:
     description: Directory to download and extract Mesa libraries.
     required: true
+  variant:
+    description: Prebuilt library variant (msvc or llvm).
+    default: msvc
+  architectures:
+    description: Comma-separated architectures to download (x86_64, x86_32, arm64).
+    default: x86_64,x86_32,arm64
 
 runs:
   using: "composite"
@@ -17,23 +23,27 @@ runs:
       run: |
         mkdir -p "${{ inputs.mesa_folder }}"
         echo "Mesa folder created at: ${{ inputs.mesa_folder }}"
-    
+
     - name: Download Mesa Libraries
       shell: bash
       run: |
         base_url="${{ inputs.mesa_url_base }}"
         mesa_folder="${{ inputs.mesa_folder }}"
-
-        files=(
-          "mesa_arm64.zip:$base_url-arm64-msvc-release.zip"
-          "mesa_x86_64.zip:$base_url-x86_64-msvc-release.zip"
-          "mesa_x86_32.zip:$base_url-x86_32-msvc-release.zip"
-        )
+        variant="${{ inputs.variant }}"
+        architectures="${{ inputs.architectures }}"
 
         pushd "$mesa_folder"
-        for file in "${files[@]}"; do
-          name=${file%%:*}
-          url=${file#*:}
+        for arch in ${architectures//,/ }; do
+          case "$arch" in
+            x86_64) name="mesa_x86_64.zip" ;;
+            x86_32) name="mesa_x86_32.zip" ;;
+            arm64) name="mesa_arm64.zip" ;;
+            *)
+              echo "Error: Unknown architecture '$arch'." >> $GITHUB_STEP_SUMMARY
+              exit 1
+              ;;
+          esac
+          url="$base_url-$arch-$variant-release.zip"
           echo "Downloading $name from $url..."
           curl -L -o "$name" "$url"
           if [ $? -ne 0 ]; then
@@ -53,6 +63,7 @@ runs:
         fi
         echo "Mesa libraries downloaded and validated successfully." >> $GITHUB_STEP_SUMMARY
         ls -la ${{ inputs.mesa_folder }} >> $GITHUB_STEP_SUMMARY
+        ls -la ${{ inputs.mesa_folder }}/bin >> $GITHUB_STEP_SUMMARY || true
 
 outputs:
   mesa_folder:

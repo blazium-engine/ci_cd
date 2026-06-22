@@ -307,6 +307,8 @@ jobs:
         with:
           mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
+          variant: ${{ matrix.arm && 'llvm' || 'msvc' }}
+          architectures: ${{ matrix.arm && 'arm64' || 'x86_64,x86_32,arm64' }}
 
       - name: Setup MSVC
         if: ${{ !matrix.arm }}
@@ -680,6 +682,8 @@ jobs:
         with:
           mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
           mesa_folder: "${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
+          variant: ${{ matrix.arm && 'llvm' || 'msvc' }}
+          architectures: ${{ matrix.arm && 'arm64' || 'x86_64,x86_32,arm64' }}
 
       - name: Setup MSVC
         if: ${{ !matrix.arm }}
