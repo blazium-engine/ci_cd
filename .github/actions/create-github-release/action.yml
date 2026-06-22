@@ -95,13 +95,18 @@ runs:
         DRAFT: ${{ inputs.DRAFT }}
         PRERELEASE: ${{ inputs.PRERELEASE }}
         GENERATE_RELEASE_NOTES: ${{ inputs.GENERATE_RELEASE_NOTES }}
+        DEBUG: ${{ inputs.DEBUG }}
       run: |
-        RESPONSE=$(curl -L \
-          -X POST \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer $GITHUB_TOKEN" \
-          -H "X-GitHub-Api-Version: 2026-03-10" \
-          https://api.github.com/repos/$OWNER/$REPO/releases \
+        api() {
+          curl -L -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "$@"
+        }
+
+        RESPONSE=$(api -X POST \
+          "https://api.github.com/repos/$OWNER/$REPO/releases" \
           -d "$(jq -n \
               --arg tag_name "$TAG_NAME" \
               --arg name "$NAME" \
@@ -112,7 +117,32 @@ runs:
               --argjson generate_release_notes "$GENERATE_RELEASE_NOTES" \
               '{tag_name: $tag_name, target_commitish: $target, name: $name, body: $body, draft: $draft, prerelease: $prerelease, generate_release_notes: $generate_release_notes}')")
 
-        UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.upload_url')
+        UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.upload_url // empty')
+        RELEASE_ACTION="created"
+
+        if [[ -z "$UPLOAD_URL" || "$UPLOAD_URL" == "null" ]]; then
+          ERROR_CODE=$(echo "$RESPONSE" | jq -r '.errors[0].code // empty')
+          if [[ "$ERROR_CODE" == "already_exists" ]]; then
+            echo "Release tag $TAG_NAME already exists; reusing and updating the existing release." >> $GITHUB_STEP_SUMMARY
+            RESPONSE=$(api "https://api.github.com/repos/$OWNER/$REPO/releases/tags/${TAG_NAME//\//%2F}")
+            UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.upload_url // empty')
+            RELEASE_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
+
+            if [[ -n "$RELEASE_ID" && "$RELEASE_ID" != "null" ]]; then
+              RESPONSE=$(api -X PATCH \
+                "https://api.github.com/repos/$OWNER/$REPO/releases/$RELEASE_ID" \
+                -d "$(jq -n \
+                    --arg name "$NAME" \
+                    --arg body "$BODY" \
+                    --arg target "$TARGET" \
+                    --argjson draft "$DRAFT" \
+                    --argjson prerelease "$PRERELEASE" \
+                    '{name: $name, body: $body, target_commitish: $target, draft: $draft, prerelease: $prerelease}')")
+              UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.upload_url // empty')
+              RELEASE_ACTION="updated"
+            fi
+          fi
+        fi
 
         if [[ -z "$UPLOAD_URL" || "$UPLOAD_URL" == "null" ]]; then
           echo "::error::Failed to retrieve upload_url from the release response."
@@ -124,8 +154,8 @@ runs:
 
         echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
 
-        echo "Debug: Release created successfully." >> $GITHUB_STEP_SUMMARY
-        if [[ "$INPUT_DEBUG" == "true" ]]; then
+        echo "Debug: Release ${RELEASE_ACTION} successfully." >> $GITHUB_STEP_SUMMARY
+        if [[ "$DEBUG" == "true" ]]; then
           echo "Debug: Full response payload:" >> $GITHUB_STEP_SUMMARY
           echo "$RESPONSE" >> $GITHUB_STEP_SUMMARY
         fi
