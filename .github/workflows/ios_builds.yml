@@ -67,7 +67,7 @@ jobs:
           is_template: 'true'
 
   build-templates:
-    runs-on: macos-latest
+    runs-on: macos-15
     name: Building ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}

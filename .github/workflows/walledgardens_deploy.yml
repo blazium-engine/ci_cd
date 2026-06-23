@@ -103,7 +103,7 @@ jobs:
           echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}"
 
   deploy-mac-appstore:
-    runs-on: "macos-latest"
+    runs-on: macos-15
     needs: do-we-deploy-lol
     if: >
       needs.do-we-deploy-lol.outputs.proceed == 'true' ||

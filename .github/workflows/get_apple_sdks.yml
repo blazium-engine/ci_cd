@@ -35,7 +35,7 @@ env:
 jobs:
   build-osxcross-sdk:
     name: Build osxcross SDK for Linux
-    runs-on: macos-latest
+    runs-on: macos-15
     if: false
     steps:
 
@@ -115,7 +115,7 @@ jobs:
 
   gather:
     name: Process XCode SDKs
-    runs-on: "macos-latest"
+    runs-on: macos-15
     steps:
 
       - name: Set up Base Folder
