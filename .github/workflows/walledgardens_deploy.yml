@@ -114,6 +114,14 @@ jobs:
         with:
           repository: blazium-games/ci_cd
           submodules: recursive
+
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Verify Xcode selection
+        run: |
+          xcode-select -p
+          xcodebuild -version
       
       - name: Download Editor
         uses: ./.github/actions/cerebro-download-multi-build

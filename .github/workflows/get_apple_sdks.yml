@@ -21,7 +21,7 @@ on:
         description: Version of Xcode to copy the SDKs from
         required: true
         type: string
-        default: "15.4"
+        default: "16.2"
       build_type:
         description: nightly, prerelease, release
         required: true
@@ -124,10 +124,16 @@ jobs:
           mkdir -p "$(pwd)/$BASE_FOLDER"
           echo "base_folder=$(pwd)/$BASE_FOLDER" >> $GITHUB_OUTPUT
 
-      - name:  XCode
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select -switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      - name: Verify Xcode selection
         run: |
-          xcode-select --print-path  >> $GITHUB_STEP_SUMMARY
-          sudo xcodebuild -license accept
+          xcode-select -p
+          xcodebuild -version
+
+      - name: Accept Xcode license
+        run: sudo xcodebuild -license accept
 
       - name: List SDKs and Developer Platforms
         run: |
