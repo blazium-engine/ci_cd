@@ -91,7 +91,7 @@ jobs:
           is_template: 'true'
 
   build-editors:
-    runs-on: "macos-latest"
+    runs-on: macos-15
     name: Building ${{ matrix.name }}
     needs: editor-check
     if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -121,8 +121,13 @@ jobs:
           submodules: recursive
           fetch-depth: 2
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Verify Xcode selection
+        run: |
+          xcode-select -p
+          xcodebuild -version
 
       # https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
       - name: Install the Apple certificate
@@ -392,7 +397,7 @@ jobs:
           out_dir: ${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}
 
   build-templates:
-    runs-on: "macos-latest"
+    runs-on: macos-15
     name: Building ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -421,8 +426,13 @@ jobs:
           submodules: recursive
           fetch-depth: 2
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Verify Xcode selection
+        run: |
+          xcode-select -p
+          xcodebuild -version
 
       - name: Remove existing workflows folder
         run: |
