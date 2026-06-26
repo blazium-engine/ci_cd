@@ -67,7 +67,7 @@ jobs:
           is_template: 'true'
 
   build-templates:
-    runs-on: macos-latest
+    runs-on: macos-15
     name: Building ${{ matrix.name }}
     needs: template-check
     if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
@@ -132,9 +132,13 @@ jobs:
           version: ${{ inputs.new_version }}
 
 
-      - uses: maxim-lobanov/setup-xcode@v1.6.0
-        with:
-          xcode-version: '16.1.0'
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Verify Xcode selection
+        run: |
+          xcode-select -p
+          xcodebuild -version
 
       - name: Download and extract MoltenVK
         run: |

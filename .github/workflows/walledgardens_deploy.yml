@@ -103,7 +103,7 @@ jobs:
           echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}"
 
   deploy-mac-appstore:
-    runs-on: "macos-latest"
+    runs-on: macos-15
     needs: do-we-deploy-lol
     if: >
       needs.do-we-deploy-lol.outputs.proceed == 'true' ||
@@ -114,6 +114,14 @@ jobs:
         with:
           repository: blazium-games/ci_cd
           submodules: recursive
+
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Verify Xcode selection
+        run: |
+          xcode-select -p
+          xcodebuild -version
       
       - name: Download Editor
         uses: ./.github/actions/cerebro-download-multi-build
