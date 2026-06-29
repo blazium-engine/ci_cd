@@ -14,6 +14,14 @@ inputs:
   version:
     description: Version of Project for File
     required: true
+  checksum:
+    description: SHA256 checksum of the uploaded artifact
+    required: false
+    default: ""
+  artifact_path:
+    description: Local path to compute sha256 when checksum is not provided
+    required: false
+    default: ""
   cerebro_url:
     description: The full URL to send the update.
     required: true
@@ -27,17 +35,31 @@ runs:
     - name: Send Cerebro Update
       shell: bash
       run: |
+        CHECKSUM="${{ inputs.checksum }}"
+        ARTIFACT="${{ inputs.artifact_path }}"
+        if [ -z "$ARTIFACT" ]; then
+          ARTIFACT=$(basename "${{ inputs.file_url }}")
+        fi
+        if [ -z "$CHECKSUM" ] && [ -n "$ARTIFACT" ] && [ -f "$ARTIFACT" ]; then
+          CHECKSUM=$(sha256sum "$ARTIFACT" | awk '{print $1}')
+        fi
+
+        if [ -n "$CHECKSUM" ]; then
+          CHECKSUM_JSON="\"checksum\": \"$CHECKSUM\","
+        else
+          CHECKSUM_JSON=""
+        fi
+
         response=$(curl -s -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds/${{ inputs.run_id }}/completed/${{ inputs.name }}" \
           -H "Content-Type: application/json" \
           -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}" \
-          -d '{
-                "file_url": "${{ inputs.file_url }}",
-                "version": "${{ inputs.version }}"
-              }')
-
+          -d "{
+                \"file_url\": \"${{ inputs.file_url }}\",
+                $CHECKSUM_JSON
+                \"version\": \"${{ inputs.version }}\"
+              }")
 
         echo "## Build (Completed)" >> $GITHUB_STEP_SUMMARY
-        # Check if the response contains "success: false"
         if echo "$response" | grep -q '"success":false'; then
           echo "Error: Cerebro update failed." >> $GITHUB_STEP_SUMMARY
           echo "Response: $response" >> $GITHUB_STEP_SUMMARY

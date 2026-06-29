@@ -188,6 +188,12 @@ jobs:
   update-version:
     name: Update Version Publically
     needs: [editor-deploy, template-deploy, changelog-deploy]
+    if: >-
+      always() &&
+      needs.changelog-deploy.result == 'success' &&
+      (needs.editor-deploy.result == 'success' || needs.editor-deploy.result == 'skipped') &&
+      (needs.template-deploy.result == 'success' || needs.template-deploy.result == 'skipped') &&
+      (needs.editor-deploy.result == 'success' || needs.template-deploy.result == 'success')
     runs-on: ubuntu-latest
     steps:
 

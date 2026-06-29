@@ -243,11 +243,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: editor
+          build_type: Editor
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -303,11 +304,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: template
+          build_type: Template
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -363,11 +365,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: template
+          build_type: Template
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -559,11 +562,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: editor
+          build_type: Editor
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -622,11 +626,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: template
+          build_type: Template
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -683,11 +688,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: template
+          build_type: Template
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -826,11 +832,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: template
+          build_type: Template
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -1067,11 +1074,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: template
+          build_type: Template
           mono: ${{ matrix.mono }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: android
+          arch: ${{ contains(matrix.cache-name, '32bit') && 'arm32' || 'arm64' }}
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}

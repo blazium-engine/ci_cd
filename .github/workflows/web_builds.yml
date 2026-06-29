@@ -142,11 +142,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
+          build_type: ${{ startsWith(matrix.target, 'template_') && 'Template' || 'Editor' }}
           mono: ${{ matrix.mono || false }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: web
+          arch: wasm32
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -269,11 +270,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
+          build_type: ${{ startsWith(matrix.target, 'template_') && 'Template' || 'Editor' }}
           mono: ${{ matrix.mono || false }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: web
+          arch: wasm32
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -469,11 +471,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
+          build_type: ${{ startsWith(matrix.target, 'template_') && 'Template' || 'Editor' }}
           mono: ${{ matrix.mono || false }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: web
+          arch: wasm32
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}
@@ -632,11 +635,12 @@ jobs:
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
-          build_type: ${{ startsWith(matrix.target, 'template_') && 'template' || 'editor' }}
+          build_type: ${{ startsWith(matrix.target, 'template_') && 'Template' || 'Editor' }}
           mono: ${{ matrix.mono || false }}
           deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
           branch: ${{ github.event.client_payload.branch }}
           build_os: web
+          arch: wasm32
           checksum: ${{ inputs.build_sha }}
           production: ${{ github.event.client_payload.production }}
           version: ${{ inputs.new_version }}

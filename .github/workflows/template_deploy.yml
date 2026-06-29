@@ -524,6 +524,246 @@ jobs:
           echo "New version written to $TARGET_FILE:" >> $GITHUB_STEP_SUMMARY
           cat "$TARGET_FILE" >> $GITHUB_STEP_SUMMARY
 
+      - name: Package per-file template CDN artifacts
+        shell: bash
+        run: |
+          CDN_DIR="${GITHUB_WORKSPACE}/templates_cdn"
+          rm -rf "$CDN_DIR"
+          mkdir -p "$CDN_DIR"
+
+          package_tree() {
+            local SRC="$1"
+            for f in "$SRC"/*; do
+              [ -e "$f" ] || continue
+              base=$(basename "$f")
+              case "$base" in
+                version.txt|checksum.txt) continue ;;
+              esac
+              if [ -f "$CDN_DIR/$base" ] || [ -f "$CDN_DIR/${base}.zip" ]; then
+                echo "Skipping duplicate $base"
+                continue
+              fi
+              if [[ "$base" == *.zip ]] || [[ "$base" == *.apk ]]; then
+                cp "$f" "$CDN_DIR/$base"
+              elif [[ "$base" == *.exe ]]; then
+                cp "$f" "$CDN_DIR/$base"
+              else
+                (cd "$SRC" && zip -q -9 "$CDN_DIR/${base}.zip" "$base")
+              fi
+            done
+          }
+
+          package_tree "${GITHUB_WORKSPACE}/templates"
+          if [ -d "${GITHUB_WORKSPACE}/templates/mono" ]; then
+            for f in "${GITHUB_WORKSPACE}/templates/mono"/*; do
+              [ -e "$f" ] || continue
+              base=$(basename "$f")
+              case "$base" in
+                version.txt|checksum.txt) continue ;;
+              esac
+              mono_name="$base"
+              if [[ "$base" != *.mono.* ]] && [[ "$base" != mono_* ]]; then
+                if [[ "$base" == *.zip ]]; then
+                  mono_name="${base%.zip}.mono.zip"
+                elif [[ "$base" == *.exe ]]; then
+                  mono_name="${base%.exe}.mono.exe"
+                else
+                  mono_name="${base}.mono"
+                fi
+              fi
+              if [ -f "$CDN_DIR/$mono_name" ] || [ -f "$CDN_DIR/${mono_name}.zip" ]; then
+                continue
+              fi
+              if [[ "$base" == *.zip ]] || [[ "$base" == *.apk ]]; then
+                cp "$f" "$CDN_DIR/$mono_name"
+              elif [[ "$base" == *.exe ]]; then
+                cp "$f" "$CDN_DIR/$mono_name"
+              else
+                (cd "${GITHUB_WORKSPACE}/templates/mono" && zip -q -9 "$CDN_DIR/${mono_name}.zip" "$base")
+              fi
+            done
+          fi
+
+          echo "CDN template artifacts:" >> $GITHUB_STEP_SUMMARY
+          ls -la "$CDN_DIR" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate per-file templates.json
+        shell: bash
+        env:
+          VERSION_FULL: ${{ inputs.new_version }}.${{ github.event.client_payload.type || 'nightly' }}
+          URL_BASE: ${{ secrets.CDN_URL }}/${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+        run: |
+          CDN_DIR="${GITHUB_WORKSPACE}/templates_cdn"
+          OUTPUT_FILE="${CDN_DIR}/templates.json"
+
+          infer_platform() {
+            case "$1" in
+              web_*) echo web ;;
+              linux_*) echo linux ;;
+              windows_*) echo windows ;;
+              macos*) echo macos ;;
+              android_*) echo android ;;
+              ios*) echo ios ;;
+              *) echo "" ;;
+            esac
+          }
+
+          infer_arch() {
+            case "$1" in
+              web_*) echo wasm32 ;;
+              *x86_64*) echo x86_64 ;;
+              *x86_32*) echo x86_32 ;;
+              *arm64*) echo arm64 ;;
+              *arm32*) echo arm32 ;;
+              macos.zip) echo universal ;;
+              ios.zip) echo arm64 ;;
+              *) echo "" ;;
+            esac
+          }
+
+          JSON_ARRAY="[]"
+          for FILE_PATH in "$CDN_DIR"/*; do
+            [ -f "$FILE_PATH" ] || continue
+            FILE_NAME=$(basename "$FILE_PATH")
+            [ "$FILE_NAME" = "templates.json" ] && continue
+
+            MONO=false
+            if [[ "$FILE_NAME" == *.mono.zip ]] || [[ "$FILE_NAME" == *.mono.exe ]] || [[ "$FILE_NAME" == *.mono ]]; then
+              MONO=true
+            fi
+
+            FILE_SHA256=$(sha256sum "$FILE_PATH" | awk '{print $1}')
+            FILE_SIZE=$(stat -c%s "$FILE_PATH")
+            PLATFORM=$(infer_platform "$FILE_NAME")
+            ARCH=$(infer_arch "$FILE_NAME")
+
+            JSON_ARRAY=$(echo "$JSON_ARRAY" | jq \
+              --arg name "$FILE_NAME" \
+              --arg sha256 "$FILE_SHA256" \
+              --arg size "$FILE_SIZE" \
+              --arg url "${URL_BASE}/$FILE_NAME" \
+              --arg platform "$PLATFORM" \
+              --arg arch "$ARCH" \
+              --arg version "$VERSION_FULL" \
+              --argjson mono "$MONO" \
+              '. + [{
+                "filename": $name,
+                "download_url": $url,
+                "sha256": $sha256,
+                "size": ($size | tonumber),
+                "platform": $platform,
+                "arch": $arch,
+                "mono": $mono,
+                "version": $version
+              }]'
+            )
+          done
+
+          echo "$JSON_ARRAY" > "$OUTPUT_FILE"
+          echo "Generated per-file templates.json" >> $GITHUB_STEP_SUMMARY
+          cat "$OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload per-file templates to CDN
+        shell: bash
+        env:
+          SPACE: ${{ secrets.DO_SPACE_NAME }}
+          REGION: ${{ secrets.DO_SPACE_REGION }}
+          KEY: ${{ secrets.DO_ACCESS_KEY }}
+          SECRET: ${{ secrets.DO_SECRET_KEY }}
+          SPACE_PATH: /${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}/
+        run: |
+          CDN_DIR="${GITHUB_WORKSPACE}/templates_cdn"
+          putS3() {
+            local path=$1
+            local file=$2
+            local space_path=$3
+            local date=$(date +"%a, %d %b %Y %T %z")
+            local acl="x-amz-acl:public-read"
+            local content_type=$(file --mime-type -b "$path/$file")
+            local storage_type="x-amz-storage-class:STANDARD"
+            local string="PUT\n\n$content_type\n$date\n$acl\n$storage_type\n/$SPACE$space_path$file"
+            local signature=$(echo -en "${string}" | openssl sha1 -hmac "${SECRET}" -binary | base64)
+            curl -s -X PUT -T "$path/$file" \
+              -H "Host: $SPACE.${REGION}.digitaloceanspaces.com" \
+              -H "Date: $date" \
+              -H "Content-Type: $content_type" \
+              -H "$storage_type" \
+              -H "$acl" \
+              -H "Authorization: AWS ${KEY}:$signature" \
+              "https://$SPACE.${REGION}.digitaloceanspaces.com$space_path$file"
+          }
+
+          for FILE_PATH in "$CDN_DIR"/*; do
+            [ -f "$FILE_PATH" ] || continue
+            FILE_NAME=$(basename "$FILE_PATH")
+            echo "Uploading $FILE_NAME to CDN" >> $GITHUB_STEP_SUMMARY
+            putS3 "$CDN_DIR" "$FILE_NAME" "$SPACE_PATH"
+          done
+
+      - name: Register per-file templates in Cerebro
+        shell: bash
+        env:
+          CEREBRO_URL: ${{ secrets.CEREBRO_URL }}
+          CEREBRO_AUTH: ${{ secrets.BLAZIUM_AUTH }}
+          RUN_ID: ${{ inputs.runner_id }}
+          DEPLOY_TYPE: ${{ github.event.client_payload.type || 'nightly' }}
+          VERSION: ${{ inputs.new_version }}
+          BRANCH: ${{ github.event.client_payload.branch }}
+          PRODUCTION: ${{ github.event.client_payload.production }}
+        run: |
+          MANIFEST="${GITHUB_WORKSPACE}/templates_cdn/templates.json"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "No templates.json manifest; skipping Cerebro registration."
+            exit 0
+          fi
+
+          jq -c '.[]' "$MANIFEST" | while read -r entry; do
+            FILENAME=$(echo "$entry" | jq -r '.filename')
+            FILE_URL=$(echo "$entry" | jq -r '.download_url')
+            CHECKSUM=$(echo "$entry" | jq -r '.sha256')
+            PLATFORM=$(echo "$entry" | jq -r '.platform')
+            ARCH=$(echo "$entry" | jq -r '.arch')
+            MONO=$(echo "$entry" | jq -r '.mono')
+            VERSION=$(echo "$entry" | jq -r '.version')
+            SAFE_NAME=$(echo -n "$FILENAME" | sha256sum | awk '{print $1}' | cut -c1-16)
+            BUILD_NAME="template-file-${SAFE_NAME}-${DEPLOY_TYPE}"
+
+            START_BODY=$(echo "$entry" | jq \
+              --arg name "$BUILD_NAME" \
+              --arg run_id "$RUN_ID" \
+              --arg build_type "Template" \
+              --arg deploy_type "$DEPLOY_TYPE" \
+              --arg branch "${BRANCH:-main}" \
+              --arg build_os "$PLATFORM" \
+              --arg arch "$ARCH" \
+              --arg checksum "$CHECKSUM" \
+              --arg version "$VERSION" \
+              --argjson production "${PRODUCTION:-false}" \
+              '{name: $name, run_id: $run_id, build_type: $build_type, mono: .mono, deploy_type: $deploy_type, branch: $branch, build_os: $build_os, arch: $arch, checksum: $checksum, production: $production, version: $version}')
+
+            curl -s -X POST "${CEREBRO_URL}/api/v1/enginebuilds" \
+              -H "Content-Type: application/json" \
+              -H "BLAZIUM_AUTH: ${CEREBRO_AUTH}" \
+              -d "$START_BODY" > /dev/null
+
+            COMPLETE_BODY=$(jq -n \
+              --arg file_url "$FILE_URL" \
+              --arg version "$VERSION" \
+              --arg checksum "$CHECKSUM" \
+              '{file_url: $file_url, version: $version, checksum: $checksum}')
+
+            response=$(curl -s -X POST "${CEREBRO_URL}/api/v1/enginebuilds/${RUN_ID}/completed/${BUILD_NAME}" \
+              -H "Content-Type: application/json" \
+              -H "BLAZIUM_AUTH: ${CEREBRO_AUTH}" \
+              -d "$COMPLETE_BODY")
+
+            if echo "$response" | grep -q '"success":false'; then
+              echo "Warning: Cerebro registration failed for $FILENAME: $response" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "Registered template file $FILENAME in Cerebro" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
       - name: Compress Templates/Mono Directory
         shell: bash
         run: |
@@ -626,7 +866,7 @@ jobs:
           source: export/${{ env.BASE_NAME }}_mono_export_templates.tpz
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
-      - name: Generate JSON with File Info and Checksums
+      - name: Generate bundle details.json with File Info and Checksums
         shell: bash
         env:
           BASE_NAME: ${{ env.BASE_NAME }}
@@ -638,7 +878,7 @@ jobs:
           TARGET_DIR="${GITHUB_WORKSPACE}/export"
           BASE_FILE="${TARGET_DIR}/${BASE_NAME}_export_templates.tpz"
           MONO_FILE="${TARGET_DIR}/${BASE_NAME}_mono_export_templates.tpz"
-          OUTPUT_FILE="${TARGET_DIR}/templates.json"
+          OUTPUT_FILE="${TARGET_DIR}/details.json"
 
           # Ensure files exist
           if [ ! -f "$BASE_FILE" ]; then
@@ -748,5 +988,5 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: export/templates.json
+          source: export/details.json
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}

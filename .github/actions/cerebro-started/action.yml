@@ -29,6 +29,10 @@ inputs:
   checksum:
     description: The SHA-256 checksum of the file.
     required: true
+  arch:
+    description: Target architecture (e.g. x86_64, arm64, wasm32).
+    required: false
+    default: ""
   production:
     description: Whether the build is for production (true/false).
     required: true
@@ -48,23 +52,30 @@ runs:
     - name: Send Cerebro Update
       shell: bash
       run: |
+        ARCH="${{ inputs.arch }}"
+        if [ -n "$ARCH" ]; then
+          ARCH_JSON="\"arch\": \"$ARCH\","
+        else
+          ARCH_JSON=""
+        fi
+
         response=$(curl -s -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds" \
           -H "Content-Type: application/json" \
           -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}" \
-          -d '{
-                "name": "${{ inputs.name }}",
-                "run_id": "${{ inputs.run_id }}",
-                "build_type": "${{ inputs.build_type }}",
-                "mono": ${{ inputs.mono }},
-                "deploy_type": "${{ inputs.deploy_type }}",
-                "branch": "${{ inputs.branch }}",
-                "build_os": "${{ inputs.build_os }}",
-                "checksum": "${{ inputs.checksum }}",
-                "production": ${{ inputs.production }}
-              }')
+          -d "{
+                \"name\": \"${{ inputs.name }}\",
+                \"run_id\": \"${{ inputs.run_id }}\",
+                \"build_type\": \"${{ inputs.build_type }}\",
+                \"mono\": ${{ inputs.mono }},
+                \"deploy_type\": \"${{ inputs.deploy_type }}\",
+                \"branch\": \"${{ inputs.branch }}\",
+                \"build_os\": \"${{ inputs.build_os }}\",
+                $ARCH_JSON
+                \"checksum\": \"${{ inputs.checksum }}\",
+                \"production\": ${{ inputs.production }}
+              }")
 
         echo "## Build (Started)" >> $GITHUB_STEP_SUMMARY
-        # Check if the response contains "success": false
         if echo "$response" | grep -q '"success":false'; then
           echo "Error: Cerebro update failed." >> $GITHUB_STEP_SUMMARY
           echo "Response: $response" >> $GITHUB_STEP_SUMMARY
