@@ -52,34 +52,53 @@ runs:
     - name: Send Cerebro Update
       shell: bash
       run: |
-        ARCH="${{ inputs.arch }}"
-        if [ -n "$ARCH" ]; then
-          ARCH_JSON="\"arch\": \"$ARCH\","
-        else
-          ARCH_JSON=""
-        fi
+        set -euo pipefail
 
-        response=$(curl -s -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds" \
+        BODY=$(jq -n \
+          --arg name "${{ inputs.name }}" \
+          --arg run_id "${{ inputs.run_id }}" \
+          --arg build_type "${{ inputs.build_type }}" \
+          --argjson mono ${{ inputs.mono }} \
+          --arg deploy_type "${{ inputs.deploy_type }}" \
+          --arg branch "${{ inputs.branch }}" \
+          --arg build_os "${{ inputs.build_os }}" \
+          --arg checksum "${{ inputs.checksum }}" \
+          --arg arch "${{ inputs.arch }}" \
+          --arg version "${{ inputs.version }}" \
+          --argjson production ${{ inputs.production }} \
+          '{
+            name: $name,
+            run_id: $run_id,
+            build_type: $build_type,
+            mono: $mono,
+            deploy_type: $deploy_type,
+            branch: $branch,
+            build_os: $build_os,
+            checksum: $checksum,
+            production: $production
+          }
+          + (if ($arch | length) > 0 then {arch: $arch} else {} end)
+          + (if ($version | length) > 0 then {version: $version} else {} end)')
+
+        HTTP_CODE=$(curl -sS -o /tmp/cerebro_started_response.json -w "%{http_code}" \
+          -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds" \
           -H "Content-Type: application/json" \
           -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}" \
-          -d "{
-                \"name\": \"${{ inputs.name }}\",
-                \"run_id\": \"${{ inputs.run_id }}\",
-                \"build_type\": \"${{ inputs.build_type }}\",
-                \"mono\": ${{ inputs.mono }},
-                \"deploy_type\": \"${{ inputs.deploy_type }}\",
-                \"branch\": \"${{ inputs.branch }}\",
-                \"build_os\": \"${{ inputs.build_os }}\",
-                $ARCH_JSON
-                \"checksum\": \"${{ inputs.checksum }}\",
-                \"production\": ${{ inputs.production }}
-              }")
+          -d "$BODY")
 
-        echo "## Build (Started)" >> $GITHUB_STEP_SUMMARY
-        if echo "$response" | grep -q '"success":false'; then
-          echo "Error: Cerebro update failed." >> $GITHUB_STEP_SUMMARY
-          echo "Response: $response" >> $GITHUB_STEP_SUMMARY
+        response=$(cat /tmp/cerebro_started_response.json)
+        echo "## Build (Started)" >> "$GITHUB_STEP_SUMMARY"
+        echo "HTTP $HTTP_CODE" >> "$GITHUB_STEP_SUMMARY"
+        echo "Response: $response" >> "$GITHUB_STEP_SUMMARY"
+
+        if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+          echo "Error: Cerebro update failed with HTTP $HTTP_CODE." >> "$GITHUB_STEP_SUMMARY"
           exit 1
-        else
-          echo "Cerebro update was successful." >> $GITHUB_STEP_SUMMARY
         fi
+
+        if ! echo "$response" | jq -e '.success == true' >/dev/null 2>&1; then
+          echo "Error: Cerebro update failed." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+        fi
+
+        echo "Cerebro update was successful." >> "$GITHUB_STEP_SUMMARY"
