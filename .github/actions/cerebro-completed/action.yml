@@ -43,7 +43,16 @@ runs:
           ARTIFACT="${GITHUB_WORKSPACE}/$(basename "${{ inputs.file_url }}")"
         fi
         if [ -z "$CHECKSUM" ] && [ -f "$ARTIFACT" ]; then
-          CHECKSUM=$(sha256sum "$ARTIFACT" | awk '{print $1}')
+          if command -v openssl >/dev/null 2>&1; then
+            CHECKSUM=$(openssl dgst -sha256 -r "$ARTIFACT" | awk '{print $1}')
+          else
+            CHECKSUM=$(sha256sum "$ARTIFACT" | awk '{print $1}')
+          fi
+        fi
+        CHECKSUM=$(printf '%s' "$CHECKSUM" | tr -d '\r\n*' | tr '[:upper:]' '[:lower:]')
+        if [ -n "$CHECKSUM" ] && ! echo "$CHECKSUM" | grep -Eq '^[a-f0-9]{64}$'; then
+          echo "Error: invalid checksum length/format: ${#CHECKSUM} chars" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
         fi
 
         BODY=$(jq -n \
@@ -63,6 +72,8 @@ runs:
 
         response=$(cat /tmp/cerebro_completed_response.json)
         echo "## Build (Completed)" >> "$GITHUB_STEP_SUMMARY"
+        echo "Artifact: $ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
+        echo "Checksum length: ${#CHECKSUM}" >> "$GITHUB_STEP_SUMMARY"
         echo "HTTP $HTTP_CODE" >> "$GITHUB_STEP_SUMMARY"
         echo "Response: $response" >> "$GITHUB_STEP_SUMMARY"
 

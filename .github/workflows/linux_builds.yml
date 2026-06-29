@@ -348,18 +348,20 @@ jobs:
 
 
       - name: Notify Cerebro of Build Success
+        id: cerebro-notify-completed
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.config.target, 'template_') && '/template' || '' }}/${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          artifact_path: ${{ github.workspace }}/${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           version: ${{ inputs.new_version }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.Notify_Cerebro_of_Build_Success.outcome != 'failure'
+        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -699,18 +701,20 @@ jobs:
 
 
       - name: Notify Cerebro of Build Success
+        id: cerebro-notify-completed
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
           run_id: ${{ inputs.runner_id }}
           file_url: ${{ secrets.CDN_URL }}/${{ env.DEPLOY_TYPE }}/${{ github.event.client_payload.type || 'nightly' }}${{ startsWith(matrix.config.target, 'template_') && '/template' || '' }}/${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
+          artifact_path: ${{ github.workspace }}/${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz
           version: ${{ inputs.new_version }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.Notify_Cerebro_of_Build_Success.outcome != 'failure'
+        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
