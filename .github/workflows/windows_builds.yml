@@ -402,6 +402,7 @@ jobs:
 
 
       - name: Notify Cerebro of Build Success
+        id: cerebro-completed
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
         with:
@@ -413,7 +414,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        if: (failure() || cancelled()) && steps.cerebro-completed.outcome != 'failure'
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -725,6 +726,7 @@ jobs:
 
 
       - name: Notify Cerebro of Build Success
+        id: cerebro-completed
         if: success() # Only runs if the job was successful
         uses: ./.github/actions/cerebro-completed
         with:
@@ -736,7 +738,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: failure() || cancelled() # Triggers if the job fails or is canceled
+        if: (failure() || cancelled()) && steps.cerebro-completed.outcome != 'failure'
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
