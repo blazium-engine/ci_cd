@@ -36,6 +36,78 @@ runs:
       run: |
         set -euo pipefail
 
+        log_both() {
+          echo "$@"
+          echo "$@" >> "$GITHUB_STEP_SUMMARY"
+        }
+
+        human_bytes() {
+          local bytes="$1"
+          if command -v numfmt >/dev/null 2>&1; then
+            numfmt --to=iec-i --suffix=B "$bytes"
+          else
+            echo "${bytes}B"
+          fi
+        }
+
+        meminfo_kb() {
+          local key="$1"
+          awk -v k="$key" '$1 == k ":" { print $2; exit }' /proc/meminfo 2>/dev/null || echo "0"
+        }
+
+        log_host_diagnostics() {
+          local title="${1:-Host diagnostics}"
+          log_both "### $title"
+          log_both "- curl: $(curl --version | head -1)"
+          log_both "- OS: $(uname -a)"
+          log_both "- CPUs: $(nproc 2>/dev/null || echo unknown)"
+          if [[ -r /proc/meminfo ]]; then
+            local mem_total mem_available mem_free swap_total swap_free
+            mem_total=$(meminfo_kb MemTotal)
+            mem_available=$(meminfo_kb MemAvailable)
+            mem_free=$(meminfo_kb MemFree)
+            swap_total=$(meminfo_kb SwapTotal)
+            swap_free=$(meminfo_kb SwapFree)
+            log_both "- MemTotal: ${mem_total} kB ($(human_bytes $((mem_total * 1024))))"
+            log_both "- MemAvailable: ${mem_available} kB ($(human_bytes $((mem_available * 1024))))"
+            log_both "- MemFree: ${mem_free} kB ($(human_bytes $((mem_free * 1024))))"
+            log_both "- SwapTotal: ${swap_total} kB ($(human_bytes $((swap_total * 1024))))"
+            log_both "- SwapFree: ${swap_free} kB ($(human_bytes $((swap_free * 1024))))"
+          else
+            log_both "- /proc/meminfo: unavailable"
+          fi
+          log_both "- Disk (workspace):"
+          df -h "${GITHUB_WORKSPACE:-/}" 2>/dev/null | while IFS= read -r line; do log_both "  $line"; done || true
+          log_both "- Disk (/):"
+          df -h / 2>/dev/null | while IFS= read -r line; do log_both "  $line"; done || true
+          log_both "- Memory-related ulimits:"
+          ulimit -a 2>/dev/null | grep -Ei 'memory|data|stack|file size|virtual|rss|address' | while IFS= read -r line; do
+            log_both "  $line"
+          done || log_both "  (ulimit unavailable)"
+        }
+
+        log_file_diagnostics() {
+          local file="$1"
+          local basename="$2"
+          local mime_type="$3"
+          local file_size="$4"
+          local mem_available_kb
+          mem_available_kb=$(meminfo_kb MemAvailable)
+          local mem_available_bytes=$((mem_available_kb * 1024))
+
+          log_both "#### Pre-upload: $basename"
+          log_both "- path: $file"
+          log_both "- size: ${file_size} bytes ($(human_bytes "$file_size"))"
+          log_both "- mime: $mime_type"
+          log_both "- MemAvailable: ${mem_available_kb} kB ($(human_bytes "$mem_available_bytes"))"
+          if [[ "$mem_available_kb" != "0" && "$file_size" -gt "$mem_available_bytes" ]]; then
+            echo "::warning::File $basename ($(human_bytes "$file_size")) exceeds MemAvailable ($(human_bytes "$mem_available_bytes")). Streaming upload (-T) will be used."
+            log_both "- WARNING: file size exceeds MemAvailable (streaming upload still proceeds)"
+          else
+            log_both "- file fits in MemAvailable (or MemAvailable unknown)"
+          fi
+        }
+
         api() {
           curl -L -sS \
             -H "Accept: application/vnd.github+json" \
@@ -56,6 +128,8 @@ runs:
           echo "::error::Could not parse owner, repo, and release id from upload URL."
           exit 1
         fi
+
+        log_host_diagnostics "Upload host diagnostics (start)"
 
         delete_existing_asset() {
           local asset_name="$1"
@@ -79,17 +153,34 @@ runs:
 
           BASENAME=$(basename "$file")
           MIME_TYPE=$(file -b --mime-type "$file")
+          FILE_SIZE=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
           delete_existing_asset "$BASENAME"
           URL="$CLEANED_URL?name=$BASENAME"
 
+          log_file_diagnostics "$file" "$BASENAME" "$MIME_TYPE" "$FILE_SIZE"
+
+          set +e
           RESPONSE=$(curl -L -sS \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "X-GitHub-Api-Version: 2026-03-10" \
             -H "Content-Type: $MIME_TYPE" \
-            --data-binary "@$file" \
+            -H "Content-Length: $FILE_SIZE" \
+            -T "$file" \
             "$URL")
+          CURL_EXIT=$?
+          set -e
+
+          if [[ "$CURL_EXIT" -ne 0 ]]; then
+            echo "::error::curl failed uploading $file (exit $CURL_EXIT)"
+            log_both "Error: curl exit $CURL_EXIT uploading $file"
+            log_both "- file size: ${FILE_SIZE} bytes ($(human_bytes "$FILE_SIZE"))"
+            log_both "- MemAvailable after failure: $(meminfo_kb MemAvailable) kB"
+            log_host_diagnostics "Host diagnostics after curl failure ($BASENAME)"
+            FAILED=1
+            continue
+          fi
 
           BROWSER_DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.browser_download_url // empty')
 
@@ -97,6 +188,9 @@ runs:
             echo "::error::Failed to upload $file. Response: $RESPONSE"
             echo "Error uploading $file" >> $GITHUB_STEP_SUMMARY
             echo "Response: $RESPONSE" >> $GITHUB_STEP_SUMMARY
+            log_both "- file size: ${FILE_SIZE} bytes ($(human_bytes "$FILE_SIZE"))"
+            log_both "- MemAvailable after failure: $(meminfo_kb MemAvailable) kB"
+            log_host_diagnostics "Host diagnostics after upload API failure ($BASENAME)"
             FAILED=1
             continue
           fi
