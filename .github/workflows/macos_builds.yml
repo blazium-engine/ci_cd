@@ -158,7 +158,7 @@ jobs:
       - name: Install binutils
         run: |
           brew update
-          brew install binutils
+          brew install binutils sevenzip
           brew link --overwrite binutils
 
       - name: Remove existing workflows folder
@@ -168,6 +168,8 @@ jobs:
       - name: Pull .github folder from ci_cd repository
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
+          git -C ci_cd_repo fetch --depth=1 origin ${{ github.sha }}
+          git -C ci_cd_repo checkout ${{ github.sha }}
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
@@ -323,7 +325,7 @@ jobs:
             Blazium${MONO_SUFFIX}.app
 
           # Package the application into a zip file
-          zip -q -9 -r "Blazium_macos.universal.zip" Blazium${MONO_SUFFIX}.app
+          bash "${GITHUB_WORKSPACE}/.github/scripts/create_zip.sh" "Blazium_macos.universal.zip" "Blazium${MONO_SUFFIX}.app"
 
           /Applications/Xcode.app/Contents/Developer/usr/bin/notarytool store-credentials "AppleID" --apple-id "${{ secrets.APPLE_ID }}" --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" --team-id "${{ secrets.APPLE_TEAM_ID }}"
 
@@ -332,7 +334,7 @@ jobs:
           xcrun stapler staple Blazium${MONO_SUFFIX}.app
 
           # Package it again after stapling
-          zip -q -9 -r "Blazium_macos.universal.zip" Blazium${MONO_SUFFIX}.app
+          bash "${GITHUB_WORKSPACE}/.github/scripts/create_zip.sh" "Blazium_macos.universal.zip" "Blazium${MONO_SUFFIX}.app"
 
       - name: Upload Editor artifact
         run: |
@@ -444,6 +446,8 @@ jobs:
       - name: Pull .github folder from ci_cd repository
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
+          git -C ci_cd_repo fetch --depth=1 origin ${{ github.sha }}
+          git -C ci_cd_repo checkout ${{ github.sha }}
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
@@ -576,6 +580,8 @@ jobs:
 
       - name: Package Templates
         run: |
+          brew install sevenzip
+
           MONO_SUFFIX=""
           MONO_FSUFFIX=""
           
@@ -595,7 +601,7 @@ jobs:
           chmod +x macos_template.app/Contents/MacOS/blazium*
 
           # Package the application into a zip file
-          zip -q -9 -r "${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.zip" macos_template.app
+          bash "${GITHUB_WORKSPACE}/.github/scripts/create_zip.sh" "${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.zip" macos_template.app
           
       
       - name: Create tar.gz Archive

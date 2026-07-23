@@ -89,7 +89,8 @@ runs:
 
           # Attempt to zip the renamed folder
           ZIP_FILE="$OUTPUT_DIR/${NEW_FOLDER_NAME}.zip"
-          (cd "$NEW_FOLDER_PATH" && zip -q -9 -r -D "$ZIP_FILE" .)
+          CREATE_ZIP="${{ github.action_path }}/../../scripts/create_zip.sh"
+          (cd "$NEW_FOLDER_PATH" && bash "$CREATE_ZIP" "$ZIP_FILE" .)
           if [ $? -eq 0 ]; then
             echo "Zipped $NEW_FOLDER_PATH to $ZIP_FILE" >> $GITHUB_STEP_SUMMARY
             ZIPPED_FILES+=("$ZIP_FILE")
