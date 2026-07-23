@@ -102,8 +102,22 @@ jobs:
           MINOR_VERSION: ${{ inputs.new_minor }}
           PATCH_VERSION: ${{ inputs.new_patch }}
           BUILD_TYPE: ${{ github.event.client_payload.type || 'nightly' }}
+          # Do not re-bump: inputs.new_* already came from runner.yml changelog pass (issue #716).
+          FREEZE_VERSION: "1"
         run: |
           node ./cicd/scripts/changelog.js $(pwd)
+
+      - name: Assert changelog version matches release tag
+        env:
+          EXPECTED_VERSION: ${{ inputs.new_version }}
+        run: |
+          ACTUAL=$(node -e "const v=require('./changelog.json').version; process.stdout.write([v.major,v.minor,v.patch].join('.'))")
+          echo "Expected: ${EXPECTED_VERSION}"
+          echo "Actual:   ${ACTUAL}"
+          if [ "$ACTUAL" != "$EXPECTED_VERSION" ]; then
+            echo "ERROR: changelog.json version (${ACTUAL}) does not match release version (${EXPECTED_VERSION})"
+            exit 1
+          fi
 
       - name: Generate changelog.txt
         id: changelog-txt

@@ -17,10 +17,16 @@ if (!token || !owner || !repo || !currentBranch || !baseBranch) {
 }
 
 var version = {
-    major: process.env.MAJOR_VERSION || 0,
-    minor: process.env.MINOR_VERSION || 1,
-    patch: process.env.PATCH_VERSION || 0,
+    major: parseInt(process.env.MAJOR_VERSION || "0", 10) || 0,
+    minor: parseInt(process.env.MINOR_VERSION || "1", 10) || 0,
+    patch: parseInt(process.env.PATCH_VERSION || "0", 10) || 0,
     build_type: process.env.BUILD_TYPE || "nightly"
+}
+
+// When set (deploy_all release notes), keep seeded major/minor/patch and only rebuild commit lists.
+const freezeVersion = ["1", "true", "yes"].includes(String(process.env.FREEZE_VERSION || "").toLowerCase());
+if (freezeVersion) {
+    console.log(`[DEBUG] FREEZE_VERSION enabled; locking version at ${version.major}.${version.minor}.${version.patch}`);
 }
 
 var is_version_py_major_greater = false;
@@ -118,17 +124,19 @@ async function setBaseBranch() {
                 patch: parseInt(version_array[2])
             };
 
-            if (prev.major > version.major) {
-                version.major = prev.major;
-                console.log(`[DEBUG] Warning: version.py major number is outdated`);
-            }
-            if (prev.minor > version.minor) {
-                version.minor = prev.minor;
-                console.log(`[DEBUG] Warning: version.py minor number is outdated`);
-            }
-            if (prev.patch > version.patch) {
-                version.patch = prev.patch;
-                console.log(`[DEBUG] Warning: version.py patch number is outdated`);
+            if (!freezeVersion) {
+                if (prev.major > version.major) {
+                    version.major = prev.major;
+                    console.log(`[DEBUG] Warning: version.py major number is outdated`);
+                }
+                if (prev.minor > version.minor) {
+                    version.minor = prev.minor;
+                    console.log(`[DEBUG] Warning: version.py minor number is outdated`);
+                }
+                if (prev.patch > version.patch) {
+                    version.patch = prev.patch;
+                    console.log(`[DEBUG] Warning: version.py patch number is outdated`);
+                }
             }
             console.log(`[DEBUG] Base version: ${version.major}.${version.minor}.${version.patch}`);
 
@@ -267,22 +275,24 @@ async function generateChangelog(outputDir = __dirname) {
             // Track changelog
             changelog.push({ sha: commitSha, message: commitMessage, date: commitDate, user: commitLogin, name: commitUser, pr: prNumber, label: semVerLabel });
 
-            // Versioning
-            if (semVerLabel === "major") {
-                if (!is_version_py_major_greater) {
-                    version.major++;
-                    is_version_py_major_greater = false;
+            // Versioning (skipped when FREEZE_VERSION so deploy_all notes match the frozen tag)
+            if (!freezeVersion) {
+                if (semVerLabel === "major") {
+                    if (!is_version_py_major_greater) {
+                        version.major++;
+                        is_version_py_major_greater = false;
+                    }
+                    version.minor = 0;
+                    version.patch = 0;
+                } else if (semVerLabel === "minor") {
+                    if (!is_version_py_minor_greater) {
+                        version.minor++;
+                        is_version_py_minor_greater = false;
+                    }
+                    version.patch = 0;
+                } else {
+                    version.patch++;
                 }
-                version.minor = 0;
-                version.patch = 0;
-            } else if (semVerLabel === "minor") {
-                if (!is_version_py_minor_greater) {
-                    version.minor++;
-                    is_version_py_minor_greater = false;
-                }
-                version.patch = 0;
-            } else {
-                version.patch++;
             }
 
             if (prNumber) totalPRs++;
