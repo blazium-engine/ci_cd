@@ -47,7 +47,8 @@ runs:
 
         # Check if the request succeeded
         if [[ $(echo "$RESPONSE" | jq -r '.success') != "true" ]]; then
-          echo "Error: Failed to fetch build data. Response: $RESPONSE" >> $GITHUB_STEP_SUMMARY
+          echo "Error: Failed to fetch build data. Response: $RESPONSE"
+          echo "Error: Failed to fetch build data. Response: $RESPONSE" >> "$GITHUB_STEP_SUMMARY"
           exit 1
         fi
 
@@ -68,13 +69,15 @@ runs:
 
         # Check if completed_at is null
         if [[ "$completed_at" == "null" || -z "$completed_at" ]]; then
-          echo "Error: Build is not completed yet (completed_at is null)." >> $GITHUB_STEP_SUMMARY
+          echo "Error: Build is not completed yet (completed_at is null)."
+          echo "Error: Build is not completed yet (completed_at is null)." >> "$GITHUB_STEP_SUMMARY"
           exit 1
         fi
 
         # Check if file_url is valid
         if [[ "$file_url" == "null" || -z "$file_url" ]]; then
-          echo "Error: No file URL provided in the build data." >> $GITHUB_STEP_SUMMARY
+          echo "Error: No file URL provided in the build data."
+          echo "Error: No file URL provided in the build data." >> "$GITHUB_STEP_SUMMARY"
           exit 1
         fi
 
@@ -85,23 +88,34 @@ runs:
       id: download_file
       shell: bash
       run: |
+        set -euo pipefail
+
+        FOLDER="${{ inputs.folder }}"
+        # Git Bash cannot open mixed Windows paths (D:\a\...); normalize first.
+        if command -v cygpath >/dev/null 2>&1; then
+          FOLDER="$(cygpath -u "$FOLDER")"
+        else
+          FOLDER="${FOLDER//\\//}"
+        fi
+
         # Ensure the folder exists
-        if [ ! -d "${{ inputs.folder }}" ]; then
-          echo "Folder ${{ inputs.folder }} does not exist. Creating it."
-          mkdir -p "${{ inputs.folder }}"
+        if [ ! -d "$FOLDER" ]; then
+          echo "Folder $FOLDER does not exist. Creating it."
+          mkdir -p "$FOLDER"
         fi
 
         # Determine the file name and full path
         FILE_NAME=$(basename "${{ steps.parse_build.outputs.file_url }}")
-        FULL_PATH="${{ inputs.folder }}/$FILE_NAME"
+        FULL_PATH="$FOLDER/$FILE_NAME"
 
         # Download the file
         echo "Downloading file from ${{ steps.parse_build.outputs.file_url }} to $FULL_PATH"
-        curl -L -o "$FULL_PATH" "${{ steps.parse_build.outputs.file_url }}"
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to download the file from ${{ steps.parse_build.outputs.file_url }}" >> $GITHUB_STEP_SUMMARY
+        if ! curl -L -o "$FULL_PATH" "${{ steps.parse_build.outputs.file_url }}"; then
+          echo "Error: Failed to download the file from ${{ steps.parse_build.outputs.file_url }}"
+          echo "Error: Failed to download the file from ${{ steps.parse_build.outputs.file_url }}" >> "$GITHUB_STEP_SUMMARY"
           exit 1
         fi
 
-        echo "File downloaded successfully to $FULL_PATH" >> $GITHUB_STEP_SUMMARY
-        echo "file_path=$FULL_PATH" >> $GITHUB_OUTPUT
+        echo "File downloaded successfully to $FULL_PATH"
+        echo "File downloaded successfully to $FULL_PATH" >> "$GITHUB_STEP_SUMMARY"
+        echo "file_path=$FULL_PATH" >> "$GITHUB_OUTPUT"

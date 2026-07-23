@@ -37,14 +37,25 @@ runs:
       run: |
         set -euo pipefail
 
+        log_err() {
+          echo "$1"
+          echo "$1" >> "$GITHUB_STEP_SUMMARY"
+        }
+
         CHECKSUM="${{ inputs.checksum }}"
         ARTIFACT="${{ inputs.artifact_path }}"
         if [ -z "$ARTIFACT" ]; then
           ARTIFACT="${GITHUB_WORKSPACE}/$(basename "${{ inputs.file_url }}")"
         fi
+        # Git Bash cannot open mixed Windows paths (D:\a\.../file); normalize first.
+        if command -v cygpath >/dev/null 2>&1; then
+          ARTIFACT="$(cygpath -u "$ARTIFACT")"
+        else
+          ARTIFACT="${ARTIFACT//\\//}"
+        fi
         if [ -z "$CHECKSUM" ]; then
           if [ ! -f "$ARTIFACT" ]; then
-            echo "Error: artifact not found for checksum: $ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
+            log_err "Error: artifact not found for checksum: $ARTIFACT"
             exit 1
           fi
           # Prefer sha256sum (stable hex). openssl -r is not portable across OpenSSL builds
@@ -56,14 +67,14 @@ runs:
           elif command -v openssl >/dev/null 2>&1; then
             CHECKSUM=$(openssl dgst -sha256 "$ARTIFACT" | awk '{print $NF}')
           else
-            echo "Error: no sha256sum/shasum/openssl available to checksum $ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
+            log_err "Error: no sha256sum/shasum/openssl available to checksum $ARTIFACT"
             exit 1
           fi
         fi
         CHECKSUM=$(printf '%s' "$CHECKSUM" | tr -d '\r\n *' | tr '[:upper:]' '[:lower:]')
         if [ -z "$CHECKSUM" ] || ! echo "$CHECKSUM" | grep -Eq '^[a-f0-9]{64}$'; then
-          echo "Error: invalid checksum length/format: ${#CHECKSUM} chars (preview: ${CHECKSUM:0:80})" >> "$GITHUB_STEP_SUMMARY"
-          echo "Artifact: $ARTIFACT ($(wc -c < "$ARTIFACT" | tr -d ' ') bytes)" >> "$GITHUB_STEP_SUMMARY"
+          log_err "Error: invalid checksum length/format: ${#CHECKSUM} chars (preview: ${CHECKSUM:0:80})"
+          log_err "Artifact: $ARTIFACT ($(wc -c < "$ARTIFACT" | tr -d ' ') bytes)"
           exit 1
         fi
 
@@ -76,27 +87,33 @@ runs:
             version: $version
           } + (if ($checksum | length) > 0 then {checksum: $checksum} else {} end)')
 
-        HTTP_CODE=$(curl -sS -o /tmp/cerebro_completed_response.json -w "%{http_code}" \
+        RESP_FILE="${RUNNER_TEMP:-/tmp}/cerebro_completed_response.json"
+        HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" \
           -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds/${{ inputs.run_id }}/completed/${{ inputs.name }}" \
           -H "Content-Type: application/json" \
           -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}" \
           -d "$BODY")
 
-        response=$(cat /tmp/cerebro_completed_response.json)
+        response=$(cat "$RESP_FILE")
         echo "## Build (Completed)" >> "$GITHUB_STEP_SUMMARY"
         echo "Artifact: $ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
         echo "Checksum length: ${#CHECKSUM}" >> "$GITHUB_STEP_SUMMARY"
         echo "HTTP $HTTP_CODE" >> "$GITHUB_STEP_SUMMARY"
         echo "Response: $response" >> "$GITHUB_STEP_SUMMARY"
+        echo "Artifact: $ARTIFACT"
+        echo "Checksum length: ${#CHECKSUM}"
+        echo "HTTP $HTTP_CODE"
+        echo "Response: $response"
 
         if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-          echo "Error: Cerebro update failed with HTTP $HTTP_CODE." >> "$GITHUB_STEP_SUMMARY"
+          log_err "Error: Cerebro update failed with HTTP $HTTP_CODE."
           exit 1
         fi
 
         if ! echo "$response" | jq -e '.success == true' >/dev/null 2>&1; then
-          echo "Error: Cerebro update failed." >> "$GITHUB_STEP_SUMMARY"
+          log_err "Error: Cerebro update failed."
           exit 1
         fi
 
+        echo "Cerebro update was successful."
         echo "Cerebro update was successful." >> "$GITHUB_STEP_SUMMARY"

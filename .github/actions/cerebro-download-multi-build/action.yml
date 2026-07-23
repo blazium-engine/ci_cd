@@ -32,7 +32,13 @@ runs:
       run: |
         # Parse input names as a YAML array
         NAMES=$(echo "${{ inputs.names }}" | awk NF)
-        FOLDER=${{ inputs.folder }}
+        FOLDER="${{ inputs.folder }}"
+        # Git Bash cannot open mixed Windows paths (D:\a\...); normalize first.
+        if command -v cygpath >/dev/null 2>&1; then
+          FOLDER="$(cygpath -u "$FOLDER")"
+        else
+          FOLDER="${FOLDER//\\//}"
+        fi
         CEREBRO_URL=${{ inputs.cerebro_url }}
         CEREBRO_AUTH=${{ inputs.cerebro_auth }}
         RUN_ID=${{ inputs.run_id }}
@@ -141,6 +147,11 @@ runs:
     - name: List All Downloaded Files
       shell: bash
       run: |
-        FOLDER=${{ inputs.folder }}
-        echo "## Listing All Downloaded Files in $FOLDER" >> $GITHUB_STEP_SUMMARY
-        ls -la "$FOLDER" >> $GITHUB_STEP_SUMMARY
+        FOLDER="${{ inputs.folder }}"
+        if command -v cygpath >/dev/null 2>&1; then
+          FOLDER="$(cygpath -u "$FOLDER")"
+        else
+          FOLDER="${FOLDER//\\//}"
+        fi
+        echo "## Listing All Downloaded Files in $FOLDER" >> "$GITHUB_STEP_SUMMARY"
+        ls -la "$FOLDER" >> "$GITHUB_STEP_SUMMARY"
