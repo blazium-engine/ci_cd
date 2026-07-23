@@ -42,16 +42,28 @@ runs:
         if [ -z "$ARTIFACT" ]; then
           ARTIFACT="${GITHUB_WORKSPACE}/$(basename "${{ inputs.file_url }}")"
         fi
-        if [ -z "$CHECKSUM" ] && [ -f "$ARTIFACT" ]; then
-          if command -v openssl >/dev/null 2>&1; then
-            CHECKSUM=$(openssl dgst -sha256 -r "$ARTIFACT" | awk '{print $1}')
-          else
+        if [ -z "$CHECKSUM" ]; then
+          if [ ! -f "$ARTIFACT" ]; then
+            echo "Error: artifact not found for checksum: $ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          # Prefer sha256sum (stable hex). openssl -r is not portable across OpenSSL builds
+          # and has produced non-64-hex digests that fail validation (CI job failures).
+          if command -v sha256sum >/dev/null 2>&1; then
             CHECKSUM=$(sha256sum "$ARTIFACT" | awk '{print $1}')
+          elif command -v shasum >/dev/null 2>&1; then
+            CHECKSUM=$(shasum -a 256 "$ARTIFACT" | awk '{print $1}')
+          elif command -v openssl >/dev/null 2>&1; then
+            CHECKSUM=$(openssl dgst -sha256 "$ARTIFACT" | awk '{print $NF}')
+          else
+            echo "Error: no sha256sum/shasum/openssl available to checksum $ARTIFACT" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
         fi
-        CHECKSUM=$(printf '%s' "$CHECKSUM" | tr -d '\r\n*' | tr '[:upper:]' '[:lower:]')
-        if [ -n "$CHECKSUM" ] && ! echo "$CHECKSUM" | grep -Eq '^[a-f0-9]{64}$'; then
-          echo "Error: invalid checksum length/format: ${#CHECKSUM} chars" >> "$GITHUB_STEP_SUMMARY"
+        CHECKSUM=$(printf '%s' "$CHECKSUM" | tr -d '\r\n *' | tr '[:upper:]' '[:lower:]')
+        if [ -z "$CHECKSUM" ] || ! echo "$CHECKSUM" | grep -Eq '^[a-f0-9]{64}$'; then
+          echo "Error: invalid checksum length/format: ${#CHECKSUM} chars (preview: ${CHECKSUM:0:80})" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact: $ARTIFACT ($(wc -c < "$ARTIFACT" | tr -d ' ') bytes)" >> "$GITHUB_STEP_SUMMARY"
           exit 1
         fi
 
