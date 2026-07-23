@@ -121,6 +121,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: blazium-games/ci_cd
+          ref: ${{ github.sha }}
           submodules: recursive
 
       - name: Free Disk Space (Ubuntu)
@@ -548,7 +549,7 @@ jobs:
               elif [[ "$base" == *.exe ]]; then
                 cp "$f" "$CDN_DIR/$base"
               else
-                (cd "$SRC" && zip -q -9 "$CDN_DIR/${base}.zip" "$base")
+                (cd "$SRC" && bash "$GITHUB_WORKSPACE/.github/scripts/create_zip.sh" "$CDN_DIR/${base}.zip" "$base")
               fi
             done
           }
@@ -579,7 +580,7 @@ jobs:
               elif [[ "$base" == *.exe ]]; then
                 cp "$f" "$CDN_DIR/$mono_name"
               else
-                (cd "${GITHUB_WORKSPACE}/templates/mono" && zip -q -9 "$CDN_DIR/${mono_name}.zip" "$base")
+                (cd "${GITHUB_WORKSPACE}/templates/mono" && bash "$GITHUB_WORKSPACE/.github/scripts/create_zip.sh" "$CDN_DIR/${mono_name}.zip" "$base")
               fi
             done
           fi
@@ -784,8 +785,8 @@ jobs:
             mkdir -p "$RELDIR"
           fi
 
-          # Create the zip file
-          (cd "$TARGET_DIR" && zip -q -9 -r -D "$ZIP_FILE" .)
+          # Create the zip file (ZIP format via 7z for .tpz)
+          (cd "$TARGET_DIR" && bash "$GITHUB_WORKSPACE/.github/scripts/create_zip.sh" "$ZIP_FILE" .)
 
           # Log the result
           if [ $? -eq 0 ]; then
@@ -821,8 +822,8 @@ jobs:
             mkdir -p "$RELDIR"
           fi
 
-          # Create the zip file
-          (cd "$TARGET_DIR" && zip -q -9 -r -D "$ZIP_FILE" .)
+          # Create the zip file (ZIP format via 7z for .tpz)
+          (cd "$TARGET_DIR" && bash "$GITHUB_WORKSPACE/.github/scripts/create_zip.sh" "$ZIP_FILE" .)
 
           # Log the result
           if [ $? -eq 0 ]; then

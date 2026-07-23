@@ -169,6 +169,11 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
+      - name: Install p7zip for web template ZIP compression
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
@@ -298,6 +303,11 @@ jobs:
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
+
+      - name: Install p7zip for web template ZIP compression
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
 
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
@@ -502,6 +512,11 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
+      - name: Install p7zip for web template ZIP compression
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
 
@@ -667,6 +682,11 @@ jobs:
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
+
+      - name: Install p7zip for web template ZIP compression
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
 
       - name: Setup Python and SCons
         uses: ./.github/actions/godot-deps
