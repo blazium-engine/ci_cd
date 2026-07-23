@@ -21,16 +21,35 @@ runs:
     - name: Send Cerebro Update
       shell: bash
       run: |
-        response=$(curl -s -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds/${{ inputs.run_id }}/failed/${{ inputs.name }}" \
+        set -euo pipefail
+
+        log_err() {
+          echo "$1"
+          echo "$1" >> "$GITHUB_STEP_SUMMARY"
+        }
+
+        RESP_FILE="${RUNNER_TEMP:-/tmp}/cerebro_failed_response.json"
+        HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" \
+          -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds/${{ inputs.run_id }}/failed/${{ inputs.name }}" \
           -H "Content-Type: application/json" \
           -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}")
 
-        echo "## Build (Failed)" >> $GITHUB_STEP_SUMMARY
-        # Check if the response contains "success": false
-        if echo "$response" | grep -q '"success":false'; then
-          echo "Error: Cerebro update failed." >> $GITHUB_STEP_SUMMARY
-          echo "Response: $response" >> $GITHUB_STEP_SUMMARY
+        response=$(cat "$RESP_FILE")
+        echo "## Build (Failed)" >> "$GITHUB_STEP_SUMMARY"
+        echo "HTTP $HTTP_CODE" >> "$GITHUB_STEP_SUMMARY"
+        echo "Response: $response" >> "$GITHUB_STEP_SUMMARY"
+        echo "HTTP $HTTP_CODE"
+        echo "Response: $response"
+
+        if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+          log_err "Error: Cerebro update failed with HTTP $HTTP_CODE."
           exit 1
-        else
-          echo "Cerebro update was successful." >> $GITHUB_STEP_SUMMARY
         fi
+
+        if echo "$response" | grep -q '"success":false'; then
+          log_err "Error: Cerebro update failed."
+          exit 1
+        fi
+
+        echo "Cerebro update was successful."
+        echo "Cerebro update was successful." >> "$GITHUB_STEP_SUMMARY"
