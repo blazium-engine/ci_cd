@@ -588,14 +588,15 @@ jobs:
           echo "CDN template artifacts:" >> $GITHUB_STEP_SUMMARY
           ls -la "$CDN_DIR" >> $GITHUB_STEP_SUMMARY
 
-      - name: Generate per-file templates.json
+      - name: Generate per-file template_files.json
         shell: bash
         env:
           VERSION_FULL: ${{ inputs.new_version }}.${{ github.event.client_payload.type || 'nightly' }}
           URL_BASE: ${{ secrets.CDN_URL }}/${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
         run: |
           CDN_DIR="${GITHUB_WORKSPACE}/templates_cdn"
-          OUTPUT_FILE="${CDN_DIR}/templates.json"
+          # Per-file Cerebro manifest — must not overwrite Godot bundle templates.json
+          OUTPUT_FILE="${CDN_DIR}/template_files.json"
 
           infer_platform() {
             case "$1" in
@@ -626,7 +627,9 @@ jobs:
           for FILE_PATH in "$CDN_DIR"/*; do
             [ -f "$FILE_PATH" ] || continue
             FILE_NAME=$(basename "$FILE_PATH")
+            [ "$FILE_NAME" = "template_files.json" ] && continue
             [ "$FILE_NAME" = "templates.json" ] && continue
+            [ "$FILE_NAME" = "details.json" ] && continue
 
             MONO=false
             if [[ "$FILE_NAME" == *.mono.zip ]] || [[ "$FILE_NAME" == *.mono.exe ]] || [[ "$FILE_NAME" == *.mono ]]; then
@@ -661,7 +664,7 @@ jobs:
           done
 
           echo "$JSON_ARRAY" > "$OUTPUT_FILE"
-          echo "Generated per-file templates.json" >> $GITHUB_STEP_SUMMARY
+          echo "Generated per-file template_files.json" >> $GITHUB_STEP_SUMMARY
           cat "$OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload per-file templates to CDN
@@ -712,9 +715,9 @@ jobs:
           BRANCH: ${{ github.event.client_payload.branch }}
           PRODUCTION: ${{ github.event.client_payload.production }}
         run: |
-          MANIFEST="${GITHUB_WORKSPACE}/templates_cdn/templates.json"
+          MANIFEST="${GITHUB_WORKSPACE}/templates_cdn/template_files.json"
           if [ ! -f "$MANIFEST" ]; then
-            echo "No templates.json manifest; skipping Cerebro registration."
+            echo "No template_files.json manifest; skipping Cerebro registration."
             exit 0
           fi
 
@@ -872,8 +875,7 @@ jobs:
         env:
           BASE_NAME: ${{ env.BASE_NAME }}
           URL_BASE: ${{ secrets.CDN_URL }}/${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
-          MONO_GITHUB_TEMPLATE: ${{ steps.mono-template-upload.outputs.browser_download_url }}
-          GITHUB_TEMPLATE: ${{ steps.template-upload.outputs.browser_download_url }}
+          UPLOADED_FILES: ${{ steps.template-upload.outputs.uploaded_files }}
         run: |
           # Define file paths and output file
           TARGET_DIR="${GITHUB_WORKSPACE}/export"
@@ -890,6 +892,20 @@ jobs:
             echo "Error: File $MONO_FILE does not exist."
             exit 1
           fi
+
+          # Parse multi-file upload-github-release output (comma-separated browser_download_urls)
+          GITHUB_TEMPLATE=""
+          MONO_GITHUB_TEMPLATE=""
+          IFS=',' read -ra UPLOADED_URLS <<< "${UPLOADED_FILES:-}"
+          for u in "${UPLOADED_URLS[@]}"; do
+            u="$(echo "$u" | xargs)"
+            [[ -z "$u" ]] && continue
+            if [[ "$u" == *"_mono_export_templates.tpz"* ]]; then
+              MONO_GITHUB_TEMPLATE="$u"
+            elif [[ "$u" == *"_export_templates.tpz"* ]]; then
+              GITHUB_TEMPLATE="$u"
+            fi
+          done
 
           # Compute SHA-512 checksums
           BASE_512_CHECKSUM=$(sha512sum "$BASE_FILE" | awk '{print $1}')
@@ -951,7 +967,7 @@ jobs:
                 filesize: $mono_filesize,
                 checksum: {
                   "512": $mono_512_checksum,
-                  "256": $base_256_checksum
+                  "256": $mono_256_checksum
                 },
                 url: $mono_url,
                 timestamp: $mono_timestamp,
@@ -961,13 +977,16 @@ jobs:
                   filesize: $mono_filesize,
                   checksum: {
                     "512": $mono_512_checksum,
-                    "256": $base_256_checksum
+                    "256": $mono_256_checksum
                   },
                   url: $mono_github_url,
                   timestamp: $mono_timestamp
                 }]
               }
             }' > "$OUTPUT_FILE"
+
+          # Keep Godot-compatible templates.json in sync for older website deployments
+          cp "$OUTPUT_FILE" "${TARGET_DIR}/templates.json"
 
           # Log the generated JSON
           echo "Generated JSON file: $OUTPUT_FILE" >> $GITHUB_STEP_SUMMARY
@@ -990,4 +1009,13 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: export/details.json
+          out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+
+      - uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: export/templates.json
           out_dir: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
