@@ -33,6 +33,7 @@ env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
   BLAZIUM_BASE_BRANCH: blazium-dev
+  EDITOR_BUILD_ID: ${{ inputs.build_sha }}
   SCONSFLAGS: verbose=yes warnings=no progress=no module_text_server_fb_enabled=yes d3d12=yes strict_checks=yes module_xbox_module_enabled=no use_mingw=no "angle_libs=${{ github.workspace }}/"
   SCONS_CACHE_MSVC_CONFIG: true
   DEPLOY_TYPE: windows

@@ -32,8 +32,6 @@ runs:
       env:
         SCONSFLAGS: ${{ inputs.sconsflags }}
       run: |
-        echo "Building with flags:" platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }} "cache_path=${{ inputs.scons-cache }}" cache_limit=${{ inputs.scons-cache-limit }}
-
         if [ "${{ inputs.target }}" != "editor" ]; then
           # Ensure we don't include editor code in export template builds.
           rm -rf editor
@@ -47,5 +45,15 @@ runs:
           export BUILD_NAME="gh"
         fi
 
-        scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }} "cache_path=${{ inputs.scons-cache }}" cache_limit=${{ inputs.scons-cache-limit }}
+        EDITOR_IDENTITY=""
+        if [ "${{ inputs.target }}" = "editor" ]; then
+          EDITOR_IDENTITY="editor_crash_reporter=yes editor_analytics=yes editor_app_id=blazium-editor editor_crash_reporter_endpoint=https://crash.blazium.app/v1/reports editor_analytics_endpoint=https://crash.blazium.app/v1/events"
+          if [ -n "${EDITOR_BUILD_ID:-}" ]; then
+            EDITOR_IDENTITY="$EDITOR_IDENTITY editor_build_id=${EDITOR_BUILD_ID}"
+          fi
+        fi
+
+        echo "Building with flags:" platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }} $EDITOR_IDENTITY "cache_path=${{ inputs.scons-cache }}" cache_limit=${{ inputs.scons-cache-limit }}
+
+        scons platform=${{ inputs.platform }} target=${{ inputs.target }} tests=${{ inputs.tests }} ${{ env.SCONSFLAGS }} $EDITOR_IDENTITY "cache_path=${{ inputs.scons-cache }}" cache_limit=${{ inputs.scons-cache-limit }}
         ls -l bin/
