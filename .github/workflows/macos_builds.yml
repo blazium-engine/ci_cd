@@ -31,6 +31,7 @@ on:
 env:
   # Used for the cache key. Add version suffix to force clean build.
   GODOT_BASE_BRANCH: blazium-dev
+  EDITOR_BUILD_ID: ${{ inputs.build_sha }}
   SCONSFLAGS: verbose=yes warnings=no progress=no
   DEPLOY_TYPE: macos
   DEBUG_SCONSFLAGS: debug_symbols=yes separate_debug_symbols=yes debug_paths_relative=yes
