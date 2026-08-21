@@ -46,6 +46,8 @@ runs:
         fi
 
         EDITOR_IDENTITY=""
+        # Editor identity is passed on the CLI to the crash reporter sidecar and must stay non-empty.
+        # Do not stamp reporter_sha256 on official editors; Hub resolves the sidecar by filename only.
         if [ "${{ inputs.target }}" = "editor" ]; then
           EDITOR_IDENTITY="editor_crash_reporter=yes editor_analytics=yes editor_app_id=blazium-editor editor_crash_reporter_endpoint=https://crash.blazium.app/v1/reports editor_analytics_endpoint=https://crash.blazium.app/v1/events"
           if [ -n "${EDITOR_BUILD_ID:-}" ]; then
