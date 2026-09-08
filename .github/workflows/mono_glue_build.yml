@@ -175,7 +175,7 @@ jobs:
         run: |
           mkdir -p nupkgs
           python modules/mono/build_scripts/build_assemblies.py --godot-output-dir ./bin --push-nupkgs-local "./nupkgs"
-      # - uses: bioblaze/sslcom-code-signer@v5
+      # - uses: bioblaze/sslcom-code-signer@v6
       #   with:
       #     command: sign
       #     username: ${{ secrets.ES_USERNAME }}
