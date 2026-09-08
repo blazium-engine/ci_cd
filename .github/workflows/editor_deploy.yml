@@ -327,7 +327,7 @@ jobs:
           echo "All six Windows editor folders present under ${INPUT_DIR}"
 
       - name: Sign windows-editor-mono-64bit
-        uses: ./.github/actions/sslcom-code-sign-local
+        uses: bioblaze/sslcom-code-signer@v5
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -339,7 +339,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-64bit
-        uses: ./.github/actions/sslcom-code-sign-local
+        uses: bioblaze/sslcom-code-signer@v5
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -351,7 +351,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-mono-32bit
-        uses: ./.github/actions/sslcom-code-sign-local
+        uses: bioblaze/sslcom-code-signer@v5
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -363,7 +363,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-32bit
-        uses: ./.github/actions/sslcom-code-sign-local
+        uses: bioblaze/sslcom-code-signer@v5
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -375,7 +375,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-arm64
-        uses: ./.github/actions/sslcom-code-sign-local
+        uses: bioblaze/sslcom-code-signer@v5
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -387,7 +387,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-mono-arm64
-        uses: ./.github/actions/sslcom-code-sign-local
+        uses: bioblaze/sslcom-code-signer@v5
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
