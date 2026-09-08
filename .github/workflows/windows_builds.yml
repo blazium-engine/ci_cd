@@ -366,7 +366,7 @@ jobs:
       #  run: |
       #    /entrypoint.sh
 
-      # - uses: bioblaze/sslcom-code-signer@v5
+      # - uses: bioblaze/sslcom-code-signer@v6
       #   with:
       #     command: sign
       #     username: ${{ secrets.ES_USERNAME }}
