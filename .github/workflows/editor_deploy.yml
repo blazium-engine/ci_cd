@@ -38,6 +38,11 @@ on:
         description: "Build Status for Android"
         required: true
         type: string
+      web-build:
+        description: "Build Status for Web"
+        required: false
+        default: ""
+        type: string
       release_url:
         description: "Release URL to upload files to the Release URL"
         required: true
@@ -69,26 +74,39 @@ jobs:
           echo "  - macos-build: ${{ inputs.macos-build }}"
           echo "  - linux-build: ${{ inputs.linux-build }}"
           echo "  - android-build: ${{ inputs.android-build }}"
+          echo "  - web-build: ${{ inputs.web-build }}"
           echo "--- End of Inputs ---"
 
       - name: Are we Deploying?
         id: evaluate
         run: |
-          result_ok() {
-            case "$1" in
-              success|skipped) return 0 ;;
-              *) return 1 ;;
-            esac
+          BUILD="${{ join(github.event.client_payload.build, ',') }}"
+
+          requested() {
+            printf '%s\n' "$BUILD" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qx "$1"
+          }
+
+          platform_ok() {
+            local platform="$1"
+            local result="$2"
+            if requested "$platform"; then
+              if [ "$result" != "success" ]; then
+                echo "Requested platform $platform result=$result (need success)." >> $GITHUB_STEP_SUMMARY
+                return 1
+              fi
+            fi
+            return 0
           }
 
           echo "Evaluating Deployment Condition..." >> $GITHUB_STEP_SUMMARY
-          echo "build: ${{ join(github.event.client_payload.build, ',') }}" >> $GITHUB_STEP_SUMMARY
+          echo "build: $BUILD" >> $GITHUB_STEP_SUMMARY
           echo "deploy: ${{ join(github.event.client_payload.deploy, ',') }}" >> $GITHUB_STEP_SUMMARY
           echo "monoglue-build=${{ inputs.monoglue-build }}" >> $GITHUB_STEP_SUMMARY
           echo "windows-build=${{ inputs.windows-build }}" >> $GITHUB_STEP_SUMMARY
           echo "macos-build=${{ inputs.macos-build }}" >> $GITHUB_STEP_SUMMARY
           echo "linux-build=${{ inputs.linux-build }}" >> $GITHUB_STEP_SUMMARY
           echo "android-build=${{ inputs.android-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "web-build=${{ inputs.web-build }}" >> $GITHUB_STEP_SUMMARY
 
           if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
             echo "Force deploy is true. Proceeding." >> $GITHUB_STEP_SUMMARY
@@ -96,12 +114,13 @@ jobs:
           elif [[ -n "${{ github.event.client_payload.run_id }}" ]]; then
             echo "Resuming prior run_id. Proceeding." >> $GITHUB_STEP_SUMMARY
             echo "proceed=true" >> $GITHUB_OUTPUT
-          elif result_ok "${{ inputs.monoglue-build }}" &&
-               result_ok "${{ inputs.windows-build }}" &&
-               result_ok "${{ inputs.macos-build }}" &&
-               result_ok "${{ inputs.linux-build }}" &&
-               result_ok "${{ inputs.android-build }}"; then
-            echo "All builds succeeded or were skipped (reuse). Proceeding." >> $GITHUB_STEP_SUMMARY
+          elif platform_ok monoglue "${{ inputs.monoglue-build }}" &&
+               platform_ok windows "${{ inputs.windows-build }}" &&
+               platform_ok macos "${{ inputs.macos-build }}" &&
+               platform_ok linux "${{ inputs.linux-build }}" &&
+               platform_ok android "${{ inputs.android-build }}" &&
+               platform_ok web "${{ inputs.web-build }}"; then
+            echo "Requested builds succeeded. Proceeding." >> $GITHUB_STEP_SUMMARY
             echo "proceed=true" >> $GITHUB_OUTPUT
           else
             echo "A requested build failed or was cancelled. Refusing deploy." >> $GITHUB_STEP_SUMMARY
@@ -119,6 +138,7 @@ jobs:
           echo "  - macos-build: ${{ inputs.macos-build }}" >> $GITHUB_STEP_SUMMARY
           echo "  - linux-build: ${{ inputs.linux-build }}" >> $GITHUB_STEP_SUMMARY
           echo "  - android-build: ${{ inputs.android-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - web-build: ${{ inputs.web-build }}" >> $GITHUB_STEP_SUMMARY
           echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if we cannot deploy
@@ -142,6 +162,26 @@ jobs:
           repository: blazium-games/ci_cd
           ref: ${{ github.sha }}
           submodules: recursive
+
+      - name: Resolve deploy platforms
+        id: platforms
+        uses: ./.github/actions/resolve-deploy-platforms
+        with:
+          build: ${{ join(github.event.client_payload.build, ',') }}
+          run_id: ${{ github.event.client_payload.run_id }}
+
+      - name: Resolve editor artifact names
+        id: artifacts
+        uses: ./.github/actions/resolve-editor-artifacts
+        with:
+          suffix: ${{ github.event.client_payload.type || 'nightly' }}
+          base_name: ${{ env.BASE_NAME }}
+          editors_dir: ${{ github.workspace }}/editors
+          linux: ${{ steps.platforms.outputs.linux }}
+          macos: ${{ steps.platforms.outputs.macos }}
+          windows: ${{ steps.platforms.outputs.windows }}
+          android: ${{ steps.platforms.outputs.android }}
+          web: ${{ steps.platforms.outputs.web }}
 
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -169,26 +209,10 @@ jobs:
           echo "$PWD/linux-amd64" >> $GITHUB_PATH
           linux-amd64/butler -V
 
-      - name: Download All Template Files
+      - name: Download Editor Files
         uses: ./.github/actions/cerebro-download-multi-build
         with:
-          names: |
-            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
-            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+          names: ${{ steps.artifacts.outputs.names }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
@@ -200,130 +224,22 @@ jobs:
       - name: Uncompress Editors
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
-          names: |
-            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
-            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+          names: ${{ steps.artifacts.outputs.names }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
       - name: Edit Editor Filenames in-Place
         uses: ./.github/actions/multi-rename-inplace
         with:
-          names: |
-            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
-            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            blazium.linuxbsd.editor.x86_64
-            blazium.linuxbsd.editor.x86_64.mono
-            blazium.linuxbsd.editor.x86_32.mono
-            blazium.linuxbsd.editor.x86_32
-            blazium.windows.editor.x86_64.mono.exe
-            blazium.windows.editor.x86_64.mono.console.exe
-            blazium.windows.editor.x86_64.exe
-            blazium.windows.editor.x86_64.console.exe
-            blazium.windows.editor.x86_32.mono.exe
-            blazium.windows.editor.x86_32.mono.console.exe
-            blazium.windows.editor.x86_32.exe
-            blazium.windows.editor.x86_32.console.exe
-            blazium.web.editor.wasm32.zip
-            Blazium_macos.universal.zip
-            Blazium_macos.universal.zip
-            android_editor-android-debug.aab
-            android_editor-android-debug.apk
-            android_editor-horizonos-debug.aab
-            android_editor-horizonos-debug.apk
-            android_editor-picoos-debug.aab
-            android_editor-picoos-debug.apk
-            blazium.windows.editor.arm64.exe
-            blazium.windows.editor.arm64.console.exe
-            blazium.windows.editor.arm64.mono.exe
-            blazium.windows.editor.arm64.mono.console.exe
-          filename_new: |
-            ${{ env.BASE_NAME }}_linux.x86_64
-            ${{ env.BASE_NAME }}_linux.mono.x86_64
-            ${{ env.BASE_NAME }}_linux.mono.x86_32
-            ${{ env.BASE_NAME }}_linux.x86_32
-            ${{ env.BASE_NAME }}_windows.mono.64bit.exe
-            ${{ env.BASE_NAME }}_windows.mono.64bit.console.exe
-            ${{ env.BASE_NAME }}_windows.64bit.exe
-            ${{ env.BASE_NAME }}_windows.64bit.console.exe
-            ${{ env.BASE_NAME }}_windows.mono.32bit.exe
-            ${{ env.BASE_NAME }}_windows.mono.32bit.console.exe
-            ${{ env.BASE_NAME }}_windows.32bit.exe
-            ${{ env.BASE_NAME }}_windows.32bit.console.exe
-            ${{ env.BASE_NAME }}_web.wasm32.zip
-            ${{ env.BASE_NAME }}_macos.universal.zip
-            ${{ env.BASE_NAME }}_macos.universal.mono.zip
-            ${{ env.BASE_NAME }}_android.aab
-            ${{ env.BASE_NAME }}_android.apk
-            ${{ env.BASE_NAME }}_android.meta.aab
-            ${{ env.BASE_NAME }}_android.meta.apk
-            ${{ env.BASE_NAME }}_android.pico.aab
-            ${{ env.BASE_NAME }}_android.pico.apk
-            ${{ env.BASE_NAME }}_windows.arm64.exe
-            ${{ env.BASE_NAME }}_windows.arm64.console.exe
-            ${{ env.BASE_NAME }}_windows.mono.arm64.exe
-            ${{ env.BASE_NAME }}_windows.mono.arm64.console.exe
+          names: ${{ steps.artifacts.outputs.rename_names }}
+          filename_old: ${{ steps.artifacts.outputs.rename_old }}
+          filename_new: ${{ steps.artifacts.outputs.rename_new }}
           input_dir: ${{ github.workspace }}/extracted
-
 
       - name: Delete Editor Filenames/Folders in-Place
         uses: ./.github/actions/multi-delete-inplace
         with:
-          names: |
-            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
-            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
+          names: ${{ steps.artifacts.outputs.names }}
           input_dir: ${{ github.workspace }}/extracted
           items_to_delete: |
             build_deps/
@@ -335,6 +251,7 @@ jobs:
 
       # Sign Windows .exe trees with SSL.com (same inputs as windows_builds.yml), then merge outputs before zip.
       - name: Verify Windows editor folders exist
+        if: steps.platforms.outputs.windows == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -357,6 +274,7 @@ jobs:
           echo "All six Windows editor folders present under ${INPUT_DIR}"
 
       - name: Sign windows-editor-mono-64bit
+        if: steps.platforms.outputs.windows == 'true'
         uses: bioblaze/sslcom-code-signer@v6
         with:
           command: sign
@@ -369,6 +287,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-64bit
+        if: steps.platforms.outputs.windows == 'true'
         uses: bioblaze/sslcom-code-signer@v6
         with:
           command: sign
@@ -381,6 +300,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-mono-32bit
+        if: steps.platforms.outputs.windows == 'true'
         uses: bioblaze/sslcom-code-signer@v6
         with:
           command: sign
@@ -393,6 +313,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-32bit
+        if: steps.platforms.outputs.windows == 'true'
         uses: bioblaze/sslcom-code-signer@v6
         with:
           command: sign
@@ -405,6 +326,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-arm64
+        if: steps.platforms.outputs.windows == 'true'
         uses: bioblaze/sslcom-code-signer@v6
         with:
           command: sign
@@ -417,6 +339,7 @@ jobs:
           environment_name: PROD
 
       - name: Sign windows-editor-mono-arm64
+        if: steps.platforms.outputs.windows == 'true'
         uses: bioblaze/sslcom-code-signer@v6
         with:
           command: sign
@@ -429,6 +352,7 @@ jobs:
           environment_name: PROD
 
       - name: Move signed Windows outputs into editor folders
+        if: steps.platforms.outputs.windows == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -459,41 +383,8 @@ jobs:
       - name: Rename Folders then Zip/Move Folders
         uses: ./.github/actions/multi-folder-zip
         with:
-          names: |
-            linux-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-${{ github.event.client_payload.type || 'nightly' }}
-            macos-editor-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-meta
-            android-editor-${{ github.event.client_payload.type || 'nightly' }}-pico
-            windows-editor-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-editor-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-          filename_new: |
-            ${{ env.BASE_NAME }}_linux.x86_64
-            ${{ env.BASE_NAME }}_linux.mono.x86_64
-            ${{ env.BASE_NAME }}_linux.mono.x86_32
-            ${{ env.BASE_NAME }}_linux.x86_32
-            ${{ env.BASE_NAME }}_windows.mono.64bit
-            ${{ env.BASE_NAME }}_windows.64bit
-            ${{ env.BASE_NAME }}_windows.mono.32bit
-            ${{ env.BASE_NAME }}_windows.32bit
-            ${{ env.BASE_NAME }}_web
-            ${{ env.BASE_NAME }}_macos
-            ${{ env.BASE_NAME }}_macos.mono
-            ${{ env.BASE_NAME }}_android
-            ${{ env.BASE_NAME }}_android.meta
-            ${{ env.BASE_NAME }}_android.pico
-            ${{ env.BASE_NAME }}_windows.arm64
-            ${{ env.BASE_NAME }}_windows.mono.arm64
-
+          names: ${{ steps.artifacts.outputs.zip_names }}
+          filename_new: ${{ steps.artifacts.outputs.zip_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/editors
 
@@ -507,6 +398,7 @@ jobs:
         env:
           BASE_NAME: ${{ env.BASE_NAME }}
           URL_BASE: ${{ secrets.CDN_URL }}/${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
+          ZIP_FILES: ${{ steps.artifacts.outputs.zip_files }}
         run: |
           # Define the editors directory and output file
           EDITORS_DIR="${GITHUB_WORKSPACE}/editors"
@@ -521,25 +413,7 @@ jobs:
           # Initialize JSON array
           JSON_ARRAY="[]"
 
-          # List of files to process
-          FILE_NAMES=(
-            "${BASE_NAME}_linux.x86_64.zip"
-            "${BASE_NAME}_linux.mono.x86_64.zip"
-            "${BASE_NAME}_linux.mono.x86_32.zip"
-            "${BASE_NAME}_linux.x86_32.zip"
-            "${BASE_NAME}_windows.mono.64bit.zip"
-            "${BASE_NAME}_windows.64bit.zip"
-            "${BASE_NAME}_windows.mono.32bit.zip"
-            "${BASE_NAME}_windows.32bit.zip"
-            "${BASE_NAME}_web.zip"
-            "${BASE_NAME}_macos.zip"
-            "${BASE_NAME}_macos.mono.zip"
-            "${BASE_NAME}_android.zip" 
-            "${BASE_NAME}_android.meta.zip"
-            "${BASE_NAME}_android.pico.zip"
-            "${BASE_NAME}_windows.arm64.zip"
-            "${BASE_NAME}_windows.mono.arm64.zip"
-          )
+          mapfile -t FILE_NAMES < <(printf '%s\n' "$ZIP_FILES" | awk NF)
 
           # Process each file
           for FILE_NAME in "${FILE_NAMES[@]}"; do
@@ -585,24 +459,7 @@ jobs:
       - uses: ./.github/actions/multi-do-upload
         name: Upload Editors to CDN
         with:
-          files: |
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.64bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.32bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.32bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_web.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.meta.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.pico.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
-            ${{ github.workspace }}/editors/editors.json
+          files: ${{ steps.artifacts.outputs.upload_files }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           access_key: ${{ secrets.DO_ACCESS_KEY }}
@@ -610,12 +467,10 @@ jobs:
           space_path: ${{ github.event.client_payload.type || 'nightly' }}/${{ inputs.new_version }}
 
       - uses: ./.github/actions/multi-itch.io-upload
+        if: steps.platforms.outputs.linux == 'true' || steps.platforms.outputs.windows == 'true' || steps.platforms.outputs.macos == 'true'
         name: Upload Editors to Itch.io
         with:
-          names: |
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
+          names: ${{ steps.artifacts.outputs.itch_files }}
           itch_username: blaziumengine
           itch_game: blazium-engine
           version: ${{ inputs.new_version }}
@@ -628,21 +483,5 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_PAT }}
           UPLOAD_URL: ${{ inputs.release_url }}
-          FILES: |
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.mono.x86_32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_linux.x86_32.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.64bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.64bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.32bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.32bit.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_web.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_macos.mono.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.meta.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_android.pico.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.arm64.zip
-            ${{ github.workspace }}/editors/${{ env.BASE_NAME }}_windows.mono.arm64.zip
+          FILES: ${{ steps.artifacts.outputs.github_files }}
           DEBUG: "true"

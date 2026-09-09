@@ -1,0 +1,198 @@
+name: Resolve editor artifact lists
+description: Build aligned editor download, rename, zip, and upload lists for requested platforms.
+
+inputs:
+  suffix:
+    description: Deploy type suffix (nightly, prerelease, release)
+    required: true
+  base_name:
+    description: Editor zip prefix such as BlaziumEditor_v0.1.2
+    required: true
+  editors_dir:
+    description: Directory that will hold packaged editor zips
+    required: true
+  linux:
+    required: true
+  macos:
+    required: true
+  windows:
+    required: true
+  android:
+    required: true
+  web:
+    required: true
+
+outputs:
+  names:
+    description: Artifact names to download, uncompress, and delete
+    value: ${{ steps.build.outputs.names }}
+  rename_names:
+    value: ${{ steps.build.outputs.rename_names }}
+  rename_old:
+    value: ${{ steps.build.outputs.rename_old }}
+  rename_new:
+    value: ${{ steps.build.outputs.rename_new }}
+  zip_names:
+    value: ${{ steps.build.outputs.zip_names }}
+  zip_new:
+    value: ${{ steps.build.outputs.zip_new }}
+  zip_files:
+    description: Zip basenames for editors.json
+    value: ${{ steps.build.outputs.zip_files }}
+  upload_files:
+    description: Full paths for CDN and GitHub upload
+    value: ${{ steps.build.outputs.upload_files }}
+  itch_files:
+    description: Full paths for itch.io upload
+    value: ${{ steps.build.outputs.itch_files }}
+  github_files:
+    description: Full paths for GitHub release upload
+    value: ${{ steps.build.outputs.github_files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build editor lists
+      id: build
+      shell: bash
+      env:
+        SUFFIX: ${{ inputs.suffix }}
+        BASE_NAME: ${{ inputs.base_name }}
+        EDITORS_DIR: ${{ inputs.editors_dir }}
+        LINUX: ${{ inputs.linux }}
+        MACOS: ${{ inputs.macos }}
+        WINDOWS: ${{ inputs.windows }}
+        ANDROID: ${{ inputs.android }}
+        WEB: ${{ inputs.web }}
+      run: |
+        set -euo pipefail
+
+        NAMES=()
+        RENAME_NAMES=()
+        RENAME_OLD=()
+        RENAME_NEW=()
+        ZIP_NAMES=()
+        ZIP_NEW=()
+        ZIP_FILES=()
+        ITCH_FILES=()
+
+        add_name() { NAMES+=("$1"); }
+        add_rename() {
+          RENAME_NAMES+=("$1")
+          RENAME_OLD+=("$2")
+          RENAME_NEW+=("$3")
+        }
+        add_zip() {
+          ZIP_NAMES+=("$1")
+          ZIP_NEW+=("$2")
+          ZIP_FILES+=("$2.zip")
+        }
+
+        if [ "$LINUX" = "true" ]; then
+          add_name "linux-editor-64bit-${SUFFIX}"
+          add_name "linux-editor-mono-64bit-${SUFFIX}"
+          add_name "linux-editor-mono-32bit-${SUFFIX}"
+          add_name "linux-editor-32bit-${SUFFIX}"
+          add_rename "linux-editor-64bit-${SUFFIX}" "blazium.linuxbsd.editor.x86_64" "${BASE_NAME}_linux.x86_64"
+          add_rename "linux-editor-mono-64bit-${SUFFIX}" "blazium.linuxbsd.editor.x86_64.mono" "${BASE_NAME}_linux.mono.x86_64"
+          add_rename "linux-editor-mono-32bit-${SUFFIX}" "blazium.linuxbsd.editor.x86_32.mono" "${BASE_NAME}_linux.mono.x86_32"
+          add_rename "linux-editor-32bit-${SUFFIX}" "blazium.linuxbsd.editor.x86_32" "${BASE_NAME}_linux.x86_32"
+          add_zip "linux-editor-64bit-${SUFFIX}" "${BASE_NAME}_linux.x86_64"
+          add_zip "linux-editor-mono-64bit-${SUFFIX}" "${BASE_NAME}_linux.mono.x86_64"
+          add_zip "linux-editor-mono-32bit-${SUFFIX}" "${BASE_NAME}_linux.mono.x86_32"
+          add_zip "linux-editor-32bit-${SUFFIX}" "${BASE_NAME}_linux.x86_32"
+          ITCH_FILES+=("${EDITORS_DIR}/${BASE_NAME}_linux.x86_64.zip")
+        fi
+
+        if [ "$WINDOWS" = "true" ]; then
+          add_name "windows-editor-mono-64bit-${SUFFIX}"
+          add_name "windows-editor-64bit-${SUFFIX}"
+          add_name "windows-editor-mono-32bit-${SUFFIX}"
+          add_name "windows-editor-32bit-${SUFFIX}"
+          add_name "windows-editor-arm64-${SUFFIX}"
+          add_name "windows-editor-mono-arm64-${SUFFIX}"
+          add_rename "windows-editor-mono-64bit-${SUFFIX}" "blazium.windows.editor.x86_64.mono.exe" "${BASE_NAME}_windows.mono.64bit.exe"
+          add_rename "windows-editor-mono-64bit-${SUFFIX}" "blazium.windows.editor.x86_64.mono.console.exe" "${BASE_NAME}_windows.mono.64bit.console.exe"
+          add_rename "windows-editor-64bit-${SUFFIX}" "blazium.windows.editor.x86_64.exe" "${BASE_NAME}_windows.64bit.exe"
+          add_rename "windows-editor-64bit-${SUFFIX}" "blazium.windows.editor.x86_64.console.exe" "${BASE_NAME}_windows.64bit.console.exe"
+          add_rename "windows-editor-mono-32bit-${SUFFIX}" "blazium.windows.editor.x86_32.mono.exe" "${BASE_NAME}_windows.mono.32bit.exe"
+          add_rename "windows-editor-mono-32bit-${SUFFIX}" "blazium.windows.editor.x86_32.mono.console.exe" "${BASE_NAME}_windows.mono.32bit.console.exe"
+          add_rename "windows-editor-32bit-${SUFFIX}" "blazium.windows.editor.x86_32.exe" "${BASE_NAME}_windows.32bit.exe"
+          add_rename "windows-editor-32bit-${SUFFIX}" "blazium.windows.editor.x86_32.console.exe" "${BASE_NAME}_windows.32bit.console.exe"
+          add_rename "windows-editor-arm64-${SUFFIX}" "blazium.windows.editor.arm64.exe" "${BASE_NAME}_windows.arm64.exe"
+          add_rename "windows-editor-arm64-${SUFFIX}" "blazium.windows.editor.arm64.console.exe" "${BASE_NAME}_windows.arm64.console.exe"
+          add_rename "windows-editor-mono-arm64-${SUFFIX}" "blazium.windows.editor.arm64.mono.exe" "${BASE_NAME}_windows.mono.arm64.exe"
+          add_rename "windows-editor-mono-arm64-${SUFFIX}" "blazium.windows.editor.arm64.mono.console.exe" "${BASE_NAME}_windows.mono.arm64.console.exe"
+          add_zip "windows-editor-mono-64bit-${SUFFIX}" "${BASE_NAME}_windows.mono.64bit"
+          add_zip "windows-editor-64bit-${SUFFIX}" "${BASE_NAME}_windows.64bit"
+          add_zip "windows-editor-mono-32bit-${SUFFIX}" "${BASE_NAME}_windows.mono.32bit"
+          add_zip "windows-editor-32bit-${SUFFIX}" "${BASE_NAME}_windows.32bit"
+          add_zip "windows-editor-arm64-${SUFFIX}" "${BASE_NAME}_windows.arm64"
+          add_zip "windows-editor-mono-arm64-${SUFFIX}" "${BASE_NAME}_windows.mono.arm64"
+          ITCH_FILES+=("${EDITORS_DIR}/${BASE_NAME}_windows.64bit.zip")
+        fi
+
+        if [ "$WEB" = "true" ]; then
+          add_name "web-editor-${SUFFIX}"
+          add_rename "web-editor-${SUFFIX}" "blazium.web.editor.wasm32.zip" "${BASE_NAME}_web.wasm32.zip"
+          add_zip "web-editor-${SUFFIX}" "${BASE_NAME}_web"
+        fi
+
+        if [ "$MACOS" = "true" ]; then
+          add_name "macos-editor-${SUFFIX}"
+          add_name "macos-editor-mono-${SUFFIX}"
+          add_rename "macos-editor-${SUFFIX}" "Blazium_macos.universal.zip" "${BASE_NAME}_macos.universal.zip"
+          add_rename "macos-editor-mono-${SUFFIX}" "Blazium_macos.universal.zip" "${BASE_NAME}_macos.universal.mono.zip"
+          add_zip "macos-editor-${SUFFIX}" "${BASE_NAME}_macos"
+          add_zip "macos-editor-mono-${SUFFIX}" "${BASE_NAME}_macos.mono"
+          ITCH_FILES+=("${EDITORS_DIR}/${BASE_NAME}_macos.zip")
+        fi
+
+        if [ "$ANDROID" = "true" ]; then
+          add_name "android-editor-${SUFFIX}"
+          add_name "android-editor-${SUFFIX}-meta"
+          add_name "android-editor-${SUFFIX}-pico"
+          add_rename "android-editor-${SUFFIX}" "android_editor-android-debug.aab" "${BASE_NAME}_android.aab"
+          add_rename "android-editor-${SUFFIX}" "android_editor-android-debug.apk" "${BASE_NAME}_android.apk"
+          add_rename "android-editor-${SUFFIX}-meta" "android_editor-horizonos-debug.aab" "${BASE_NAME}_android.meta.aab"
+          add_rename "android-editor-${SUFFIX}-meta" "android_editor-horizonos-debug.apk" "${BASE_NAME}_android.meta.apk"
+          add_rename "android-editor-${SUFFIX}-pico" "android_editor-picoos-debug.aab" "${BASE_NAME}_android.pico.aab"
+          add_rename "android-editor-${SUFFIX}-pico" "android_editor-picoos-debug.apk" "${BASE_NAME}_android.pico.apk"
+          add_zip "android-editor-${SUFFIX}" "${BASE_NAME}_android"
+          add_zip "android-editor-${SUFFIX}-meta" "${BASE_NAME}_android.meta"
+          add_zip "android-editor-${SUFFIX}-pico" "${BASE_NAME}_android.pico"
+        fi
+
+        write_list() {
+          local key="$1"
+          shift
+          {
+            echo "${key}<<EOF"
+            if [ "$#" -gt 0 ]; then
+              printf '%s\n' "$@"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        }
+
+        write_list names "${NAMES[@]+"${NAMES[@]}"}"
+        write_list rename_names "${RENAME_NAMES[@]+"${RENAME_NAMES[@]}"}"
+        write_list rename_old "${RENAME_OLD[@]+"${RENAME_OLD[@]}"}"
+        write_list rename_new "${RENAME_NEW[@]+"${RENAME_NEW[@]}"}"
+        write_list zip_names "${ZIP_NAMES[@]+"${ZIP_NAMES[@]}"}"
+        write_list zip_new "${ZIP_NEW[@]+"${ZIP_NEW[@]}"}"
+        write_list zip_files "${ZIP_FILES[@]+"${ZIP_FILES[@]}"}"
+
+        UPLOAD=()
+        for z in "${ZIP_FILES[@]+"${ZIP_FILES[@]}"}"; do
+          [ -n "$z" ] || continue
+          UPLOAD+=("${EDITORS_DIR}/${z}")
+        done
+        write_list github_files "${UPLOAD[@]+"${UPLOAD[@]}"}"
+        UPLOAD+=("${EDITORS_DIR}/editors.json")
+        write_list upload_files "${UPLOAD[@]+"${UPLOAD[@]}"}"
+        write_list itch_files "${ITCH_FILES[@]+"${ITCH_FILES[@]}"}"
+
+        echo "### Editor artifact names" >> "$GITHUB_STEP_SUMMARY"
+        echo "download:" >> "$GITHUB_STEP_SUMMARY"
+        printf '%s\n' "${NAMES[@]+"${NAMES[@]}"}" >> "$GITHUB_STEP_SUMMARY"

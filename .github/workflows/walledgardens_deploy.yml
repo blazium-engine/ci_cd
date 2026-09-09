@@ -34,6 +34,11 @@ on:
         description: "Build Status for Android"
         required: true
         type: string
+      web-build:
+        description: "Build Status for Web"
+        required: false
+        default: ""
+        type: string
       release_url:
         description: "Release URL to upload files to the Release URL"
         required: true
@@ -52,6 +57,7 @@ concurrency:
 jobs:
   do-we-deploy-lol:
     name: Should we Deploy, to Walled Gardens? 
+    if: github.event.client_payload.run_id || contains(github.event.client_payload.build, 'macos')
     runs-on: ubuntu-latest
     outputs:
       proceed: ${{ steps.evaluate.outputs.proceed }}
@@ -65,26 +71,39 @@ jobs:
           echo "  - macos-build: ${{ inputs.macos-build }}"
           echo "  - linux-build: ${{ inputs.linux-build }}"
           echo "  - android-build: ${{ inputs.android-build }}"
+          echo "  - web-build: ${{ inputs.web-build }}"
           echo "--- End of Inputs ---"
 
       - name: Are we Deploying?
         id: evaluate
         run: |
-          result_ok() {
-            case "$1" in
-              success|skipped) return 0 ;;
-              *) return 1 ;;
-            esac
+          BUILD="${{ join(github.event.client_payload.build, ',') }}"
+
+          requested() {
+            printf '%s\n' "$BUILD" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qx "$1"
+          }
+
+          platform_ok() {
+            local platform="$1"
+            local result="$2"
+            if requested "$platform"; then
+              if [ "$result" != "success" ]; then
+                echo "Requested platform $platform result=$result (need success)." >> $GITHUB_STEP_SUMMARY
+                return 1
+              fi
+            fi
+            return 0
           }
 
           echo "Evaluating Deployment Condition..." >> $GITHUB_STEP_SUMMARY
-          echo "build: ${{ join(github.event.client_payload.build, ',') }}" >> $GITHUB_STEP_SUMMARY
+          echo "build: $BUILD" >> $GITHUB_STEP_SUMMARY
           echo "deploy: ${{ join(github.event.client_payload.deploy, ',') }}" >> $GITHUB_STEP_SUMMARY
           echo "monoglue-build=${{ inputs.monoglue-build }}" >> $GITHUB_STEP_SUMMARY
           echo "windows-build=${{ inputs.windows-build }}" >> $GITHUB_STEP_SUMMARY
           echo "macos-build=${{ inputs.macos-build }}" >> $GITHUB_STEP_SUMMARY
           echo "linux-build=${{ inputs.linux-build }}" >> $GITHUB_STEP_SUMMARY
           echo "android-build=${{ inputs.android-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "web-build=${{ inputs.web-build }}" >> $GITHUB_STEP_SUMMARY
 
           if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
             echo "Force deploy is true. Proceeding." >> $GITHUB_STEP_SUMMARY
@@ -92,12 +111,13 @@ jobs:
           elif [[ -n "${{ github.event.client_payload.run_id }}" ]]; then
             echo "Resuming prior run_id. Proceeding." >> $GITHUB_STEP_SUMMARY
             echo "proceed=true" >> $GITHUB_OUTPUT
-          elif result_ok "${{ inputs.monoglue-build }}" &&
-               result_ok "${{ inputs.windows-build }}" &&
-               result_ok "${{ inputs.macos-build }}" &&
-               result_ok "${{ inputs.linux-build }}" &&
-               result_ok "${{ inputs.android-build }}"; then
-            echo "All builds succeeded or were skipped (reuse). Proceeding." >> $GITHUB_STEP_SUMMARY
+          elif platform_ok monoglue "${{ inputs.monoglue-build }}" &&
+               platform_ok windows "${{ inputs.windows-build }}" &&
+               platform_ok macos "${{ inputs.macos-build }}" &&
+               platform_ok linux "${{ inputs.linux-build }}" &&
+               platform_ok android "${{ inputs.android-build }}" &&
+               platform_ok web "${{ inputs.web-build }}"; then
+            echo "Requested builds succeeded. Proceeding." >> $GITHUB_STEP_SUMMARY
             echo "proceed=true" >> $GITHUB_OUTPUT
           else
             echo "A requested build failed or was cancelled. Refusing deploy." >> $GITHUB_STEP_SUMMARY
@@ -115,6 +135,7 @@ jobs:
           echo "  - macos-build: ${{ inputs.macos-build }}" >> $GITHUB_STEP_SUMMARY
           echo "  - linux-build: ${{ inputs.linux-build }}" >> $GITHUB_STEP_SUMMARY
           echo "  - android-build: ${{ inputs.android-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - web-build: ${{ inputs.web-build }}" >> $GITHUB_STEP_SUMMARY
           echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if we cannot deploy

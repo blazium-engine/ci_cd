@@ -42,6 +42,11 @@ on:
         description: "Build Status for iOS"
         required: true
         type: string
+      web-build:
+        description: "Build Status for Web"
+        required: false
+        default: ""
+        type: string
       release_url:
         description: "Release URL to upload files to the Release URL"
         required: true
@@ -74,20 +79,32 @@ jobs:
           echo "  - linux-build: ${{ inputs.linux-build }}"
           echo "  - android-build: ${{ inputs.android-build }}"
           echo "  - ios-build: ${{ inputs.ios-build }}"
+          echo "  - web-build: ${{ inputs.web-build }}"
           echo "--- End of Inputs ---"
 
       - name: Are we Deploying?
         id: evaluate
         run: |
-          result_ok() {
-            case "$1" in
-              success|skipped) return 0 ;;
-              *) return 1 ;;
-            esac
+          BUILD="${{ join(github.event.client_payload.build, ',') }}"
+
+          requested() {
+            printf '%s\n' "$BUILD" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qx "$1"
+          }
+
+          platform_ok() {
+            local platform="$1"
+            local result="$2"
+            if requested "$platform"; then
+              if [ "$result" != "success" ]; then
+                echo "Requested platform $platform result=$result (need success)." >> $GITHUB_STEP_SUMMARY
+                return 1
+              fi
+            fi
+            return 0
           }
 
           echo "Evaluating Deployment Condition..." >> $GITHUB_STEP_SUMMARY
-          echo "build: ${{ join(github.event.client_payload.build, ',') }}" >> $GITHUB_STEP_SUMMARY
+          echo "build: $BUILD" >> $GITHUB_STEP_SUMMARY
           echo "deploy: ${{ join(github.event.client_payload.deploy, ',') }}" >> $GITHUB_STEP_SUMMARY
           echo "monoglue-build=${{ inputs.monoglue-build }}" >> $GITHUB_STEP_SUMMARY
           echo "windows-build=${{ inputs.windows-build }}" >> $GITHUB_STEP_SUMMARY
@@ -95,6 +112,7 @@ jobs:
           echo "linux-build=${{ inputs.linux-build }}" >> $GITHUB_STEP_SUMMARY
           echo "android-build=${{ inputs.android-build }}" >> $GITHUB_STEP_SUMMARY
           echo "ios-build=${{ inputs.ios-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "web-build=${{ inputs.web-build }}" >> $GITHUB_STEP_SUMMARY
 
           if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
             echo "Force deploy is true. Proceeding." >> $GITHUB_STEP_SUMMARY
@@ -102,13 +120,14 @@ jobs:
           elif [[ -n "${{ github.event.client_payload.run_id }}" ]]; then
             echo "Resuming prior run_id. Proceeding." >> $GITHUB_STEP_SUMMARY
             echo "proceed=true" >> $GITHUB_OUTPUT
-          elif result_ok "${{ inputs.monoglue-build }}" &&
-               result_ok "${{ inputs.windows-build }}" &&
-               result_ok "${{ inputs.macos-build }}" &&
-               result_ok "${{ inputs.linux-build }}" &&
-               result_ok "${{ inputs.android-build }}" &&
-               result_ok "${{ inputs.ios-build }}"; then
-            echo "All builds succeeded or were skipped (reuse). Proceeding." >> $GITHUB_STEP_SUMMARY
+          elif platform_ok monoglue "${{ inputs.monoglue-build }}" &&
+               platform_ok windows "${{ inputs.windows-build }}" &&
+               platform_ok macos "${{ inputs.macos-build }}" &&
+               platform_ok linux "${{ inputs.linux-build }}" &&
+               platform_ok android "${{ inputs.android-build }}" &&
+               platform_ok ios "${{ inputs.ios-build }}" &&
+               platform_ok web "${{ inputs.web-build }}"; then
+            echo "Requested builds succeeded. Proceeding." >> $GITHUB_STEP_SUMMARY
             echo "proceed=true" >> $GITHUB_OUTPUT
           else
             echo "A requested build failed or was cancelled. Refusing deploy." >> $GITHUB_STEP_SUMMARY
@@ -127,6 +146,7 @@ jobs:
           echo "  - linux-build: ${{ inputs.linux-build }}" >> $GITHUB_STEP_SUMMARY
           echo "  - android-build: ${{ inputs.android-build }}" >> $GITHUB_STEP_SUMMARY
           echo "  - ios-build: ${{ inputs.ios-build }}" >> $GITHUB_STEP_SUMMARY
+          echo "  - web-build: ${{ inputs.web-build }}" >> $GITHUB_STEP_SUMMARY
           echo "Proceed Output: ${{ steps.evaluate.outputs.proceed }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if we cannot deploy
@@ -150,6 +170,25 @@ jobs:
           ref: ${{ github.sha }}
           submodules: recursive
 
+      - name: Resolve deploy platforms
+        id: platforms
+        uses: ./.github/actions/resolve-deploy-platforms
+        with:
+          build: ${{ join(github.event.client_payload.build, ',') }}
+          run_id: ${{ github.event.client_payload.run_id }}
+
+      - name: Resolve template artifact names
+        id: artifacts
+        uses: ./.github/actions/resolve-template-artifacts
+        with:
+          suffix: ${{ github.event.client_payload.type || 'nightly' }}
+          linux: ${{ steps.platforms.outputs.linux }}
+          macos: ${{ steps.platforms.outputs.macos }}
+          windows: ${{ steps.platforms.outputs.windows }}
+          android: ${{ steps.platforms.outputs.android }}
+          web: ${{ steps.platforms.outputs.web }}
+          ios: ${{ steps.platforms.outputs.ios }}
+
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
         with:
@@ -169,41 +208,7 @@ jobs:
       - name: Download All Template Files
         uses: ./.github/actions/cerebro-download-multi-build
         with:
-          names: |
-            linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            macos-template-${{ github.event.client_payload.type || 'nightly' }}
-            macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-            ios-template-${{ github.event.client_payload.type || 'nightly' }}
-            ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-mono-${{ github.event.client_payload.type || 'nightly' }}
+          names: ${{ steps.artifacts.outputs.names }}
           run_id: ${{ inputs.runner_id }}
           cerebro_url: ${{ secrets.CEREBRO_URL }}
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
@@ -215,272 +220,117 @@ jobs:
       - name: Uncompress Templates
         uses: ./.github/actions/multi-uncompress-tar-gz
         with:
-          names: |
-            linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            web-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            macos-template-${{ github.event.client_payload.type || 'nightly' }}
-            macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-            ios-template-${{ github.event.client_payload.type || 'nightly' }}
-            ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-mono-${{ github.event.client_payload.type || 'nightly' }}
+          names: ${{ steps.artifacts.outputs.names }}
           input_dir: ${{ github.workspace }}/downloads
           output_dir: ${{ github.workspace }}/extracted
 
       - name: Copy & Rename Web Templates
+        if: steps.platforms.outputs.web == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            web-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-dlink-template-${{ github.event.client_payload.type || 'nightly' }}
-            web-nothreads-dlink-debug-template-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            blazium.web.template_release.wasm32.zip
-            blazium.web.template_debug.wasm32.zip
-            blazium.web.template_release.wasm32.nothreads.zip
-            blazium.web.template_debug.wasm32.nothreads.zip
-            blazium.web.template_release.wasm32.dlink.zip
-            blazium.web.template_debug.wasm32.dlink.zip
-            blazium.web.template_release.wasm32.nothreads.dlink.zip
-            blazium.web.template_debug.wasm32.nothreads.dlink.zip
-          filename_new: |
-            web_release.zip
-            web_debug.zip
-            web_nothreads_release.zip
-            web_nothreads_debug.zip
-            web_dlink_release.zip
-            web_dlink_debug.zip
-            web_dlink_nothreads_release.zip
-            web_dlink_nothreads_debug.zip
+          names: ${{ steps.artifacts.outputs.web_names }}
+          filename_old: ${{ steps.artifacts.outputs.web_old }}
+          filename_new: ${{ steps.artifacts.outputs.web_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates
 
       - name: Copy & Rename Windows Templates
+        if: steps.platforms.outputs.windows == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-arm64-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            blazium.windows.template_release.x86_64.exe
-            blazium.windows.template_release.x86_64.console.exe
-            blazium.windows.template_debug.x86_64.exe
-            blazium.windows.template_debug.x86_64.console.exe
-            blazium.windows.template_release.x86_32.exe
-            blazium.windows.template_release.x86_32.console.exe
-            blazium.windows.template_debug.x86_32.exe
-            blazium.windows.template_debug.x86_32.console.exe
-            blazium.windows.template_release.arm64.exe
-            blazium.windows.template_release.arm64.console.exe
-            blazium.windows.template_debug.arm64.exe
-            blazium.windows.template_debug.arm64.console.exe
-          filename_new: |
-            windows_release_x86_64.exe
-            windows_release_x86_64_console.exe
-            windows_debug_x86_64.exe
-            windows_debug_x86_64_console.exe
-            windows_release_x86_32.exe
-            windows_release_x86_32_console.exe
-            windows_debug_x86_32.exe
-            windows_debug_x86_32_console.exe
-            windows_release_arm64.exe
-            windows_release_arm64_console.exe
-            windows_debug_arm64.exe
-            windows_debug_arm64_console.exe
+          names: ${{ steps.artifacts.outputs.windows_names }}
+          filename_old: ${{ steps.artifacts.outputs.windows_old }}
+          filename_new: ${{ steps.artifacts.outputs.windows_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates
 
       - name: Copy & Rename Windows Templates (mono)
+        if: steps.platforms.outputs.windows == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-            windows-debug-template-mono-arm64-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            blazium.windows.template_release.x86_64.mono.exe
-            blazium.windows.template_debug.x86_64.mono.exe
-            blazium.windows.template_release.x86_32.mono.exe
-            blazium.windows.template_debug.x86_32.mono.exe
-            blazium.windows.template_release.x86_64.mono.console.exe
-            blazium.windows.template_debug.x86_64.mono.console.exe
-            blazium.windows.template_release.x86_32.mono.console.exe
-            blazium.windows.template_debug.x86_32.mono.console.exe
-            blazium.windows.template_release.arm64.mono.exe
-            blazium.windows.template_release.arm64.mono.console.exe
-            blazium.windows.template_debug.arm64.mono.exe
-            blazium.windows.template_debug.arm64.mono.console.exe
-          filename_new: |
-            windows_release_x86_64.exe
-            windows_debug_x86_64.exe
-            windows_release_x86_32.exe
-            windows_debug_x86_32.exe
-            windows_release_x86_64_console.exe
-            windows_debug_x86_64_console.exe
-            windows_release_x86_32_console.exe
-            windows_debug_x86_32_console.exe
-            windows_release_arm64.exe
-            windows_release_arm64_console.exe
-            windows_debug_arm64.exe
-            windows_debug_arm64_console.exe
+          names: ${{ steps.artifacts.outputs.windows_mono_names }}
+          filename_old: ${{ steps.artifacts.outputs.windows_mono_old }}
+          filename_new: ${{ steps.artifacts.outputs.windows_mono_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates/mono
 
       - name: Copy & Rename Linux Templates
+        if: steps.platforms.outputs.linux == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            linux-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-32bit-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            blazium.linuxbsd.template_release.x86_64
-            blazium.linuxbsd.template_debug.x86_64
-            blazium.linuxbsd.template_release.x86_32
-            blazium.linuxbsd.template_debug.x86_32
-          filename_new: |
-            linux_release.x86_64
-            linux_debug.x86_64
-            linux_release.x86_32
-            linux_debug.x86_32
+          names: ${{ steps.artifacts.outputs.linux_names }}
+          filename_old: ${{ steps.artifacts.outputs.linux_old }}
+          filename_new: ${{ steps.artifacts.outputs.linux_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates
 
       - name: Copy & Rename Linux Templates (mono)
+        if: steps.platforms.outputs.linux == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            linux-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-mono-64bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-            linux-debug-template-mono-32bit-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            blazium.linuxbsd.template_release.x86_64.mono
-            blazium.linuxbsd.template_debug.x86_64.mono
-            blazium.linuxbsd.template_release.x86_32.mono
-            blazium.linuxbsd.template_debug.x86_32.mono
-          filename_new: |
-            linux_release.x86_64
-            linux_debug.x86_64
-            linux_release.x86_32
-            linux_debug.x86_32
+          names: ${{ steps.artifacts.outputs.linux_mono_names }}
+          filename_old: ${{ steps.artifacts.outputs.linux_mono_old }}
+          filename_new: ${{ steps.artifacts.outputs.linux_mono_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates/mono
 
-      - name: Copy & Rename MacOS/iOS Templates
+      - name: Copy & Rename MacOS Templates
+        if: steps.platforms.outputs.macos == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            macos-template-${{ github.event.client_payload.type || 'nightly' }}
-            ios-template-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            macos-template-${{ github.event.client_payload.type || 'nightly' }}.zip
-            ios-template-${{ github.event.client_payload.type || 'nightly' }}.zip
-          filename_new: |
-            macos.zip
-            ios.zip
+          names: ${{ steps.artifacts.outputs.macos_names }}
+          filename_old: ${{ steps.artifacts.outputs.macos_old }}
+          filename_new: ${{ steps.artifacts.outputs.macos_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates
 
-      - name: Copy & Rename MacOS/iOS Templates (mono)
+      - name: Copy & Rename iOS Templates
+        if: steps.platforms.outputs.ios == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-            ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            macos-template-mono-${{ github.event.client_payload.type || 'nightly' }}.zip
-            ios-template-mono-${{ github.event.client_payload.type || 'nightly' }}.zip
-          filename_new: |
-            macos.zip
-            ios.zip
+          names: ${{ steps.artifacts.outputs.ios_names }}
+          filename_old: ${{ steps.artifacts.outputs.ios_old }}
+          filename_new: ${{ steps.artifacts.outputs.ios_new }}
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/templates
+
+      - name: Copy & Rename MacOS Templates (mono)
+        if: steps.platforms.outputs.macos == 'true'
+        uses: ./.github/actions/multi-copy-rename
+        with:
+          names: ${{ steps.artifacts.outputs.macos_mono_names }}
+          filename_old: ${{ steps.artifacts.outputs.macos_mono_old }}
+          filename_new: ${{ steps.artifacts.outputs.macos_mono_new }}
+          input_dir: ${{ github.workspace }}/extracted
+          output_dir: ${{ github.workspace }}/templates/mono
+
+      - name: Copy & Rename iOS Templates (mono)
+        if: steps.platforms.outputs.ios == 'true'
+        uses: ./.github/actions/multi-copy-rename
+        with:
+          names: ${{ steps.artifacts.outputs.ios_mono_names }}
+          filename_old: ${{ steps.artifacts.outputs.ios_mono_old }}
+          filename_new: ${{ steps.artifacts.outputs.ios_mono_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates/mono
 
       - name: Copy & Rename Android Templates
+        if: steps.platforms.outputs.android == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            android-template-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            android_source.zip
-            android_debug.apk
-            android_release.apk
-          filename_new: |
-            android_source.zip
-            android_debug.apk
-            android_release.apk
+          names: ${{ steps.artifacts.outputs.android_names }}
+          filename_old: ${{ steps.artifacts.outputs.android_old }}
+          filename_new: ${{ steps.artifacts.outputs.android_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates
 
       - name: Copy & Rename Android Templates (mono)
+        if: steps.platforms.outputs.android == 'true'
         uses: ./.github/actions/multi-copy-rename
         with:
-          names: |
-            android-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-            android-template-mono-${{ github.event.client_payload.type || 'nightly' }}
-          filename_old: |
-            android_source.zip
-            android_monoDebug.apk
-            android_monoRelease.apk
-          filename_new: |
-            android_source.zip
-            android_debug.apk
-            android_release.apk
+          names: ${{ steps.artifacts.outputs.android_mono_names }}
+          filename_old: ${{ steps.artifacts.outputs.android_mono_old }}
+          filename_new: ${{ steps.artifacts.outputs.android_mono_new }}
           input_dir: ${{ github.workspace }}/extracted
           output_dir: ${{ github.workspace }}/templates/mono
 

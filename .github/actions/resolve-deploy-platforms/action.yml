@@ -1,0 +1,77 @@
+name: Resolve deploy platforms
+description: Decide which platforms belong in this deploy from the build list or a resume run_id.
+
+inputs:
+  build:
+    description: Comma-separated platforms from client_payload.build
+    required: false
+    default: ""
+  run_id:
+    description: Prior runner id; when set, include every platform
+    required: false
+    default: ""
+
+outputs:
+  linux:
+    description: Whether Linux artifacts are in this deploy
+    value: ${{ steps.resolve.outputs.linux }}
+  macos:
+    description: Whether macOS artifacts are in this deploy
+    value: ${{ steps.resolve.outputs.macos }}
+  windows:
+    description: Whether Windows artifacts are in this deploy
+    value: ${{ steps.resolve.outputs.windows }}
+  android:
+    description: Whether Android artifacts are in this deploy
+    value: ${{ steps.resolve.outputs.android }}
+  web:
+    description: Whether Web artifacts are in this deploy
+    value: ${{ steps.resolve.outputs.web }}
+  ios:
+    description: Whether iOS artifacts are in this deploy
+    value: ${{ steps.resolve.outputs.ios }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Resolve platforms
+      id: resolve
+      shell: bash
+      env:
+        BUILD: ${{ inputs.build }}
+        RUN_ID: ${{ inputs.run_id }}
+      run: |
+        set -euo pipefail
+
+        requested() {
+          printf '%s\n' "$BUILD" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qx "$1"
+        }
+
+        include() {
+          local name="$1"
+          if [ -n "$RUN_ID" ]; then
+            echo "true"
+          elif requested "$name"; then
+            echo "true"
+          else
+            echo "false"
+          fi
+        }
+
+        LINUX=$(include linux)
+        MACOS=$(include macos)
+        WINDOWS=$(include windows)
+        ANDROID=$(include android)
+        WEB=$(include web)
+        IOS=$(include ios)
+
+        echo "linux=$LINUX" >> "$GITHUB_OUTPUT"
+        echo "macos=$MACOS" >> "$GITHUB_OUTPUT"
+        echo "windows=$WINDOWS" >> "$GITHUB_OUTPUT"
+        echo "android=$ANDROID" >> "$GITHUB_OUTPUT"
+        echo "web=$WEB" >> "$GITHUB_OUTPUT"
+        echo "ios=$IOS" >> "$GITHUB_OUTPUT"
+
+        echo "### Resolved deploy platforms" >> "$GITHUB_STEP_SUMMARY"
+        echo "run_id=${RUN_ID:-<empty>} build=$BUILD" >> "$GITHUB_STEP_SUMMARY"
+        echo "linux=$LINUX macos=$MACOS windows=$WINDOWS android=$ANDROID web=$WEB ios=$IOS" >> "$GITHUB_STEP_SUMMARY"
