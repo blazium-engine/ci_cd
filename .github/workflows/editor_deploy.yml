@@ -376,6 +376,7 @@ jobs:
             sudo rm -rf "${SRC}/build_deps" "${DST}/build_deps"
             sudo cp -a "${SRC}/." "${DST}/"
             sudo rm -rf "$SRC"
+            sudo chown -R "$(id -u):$(id -g)" "$DST"
           done
           sudo rm -rf "${INPUT_DIR}/.__sign_out"
           echo "Merged signed Windows binaries back into editor folders."
