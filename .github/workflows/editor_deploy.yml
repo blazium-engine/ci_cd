@@ -420,14 +420,12 @@ jobs:
               echo "::error::Expected signed output directory missing: $SRC"
               exit 1
             fi
-            sudo chown -R "$(whoami)" "$SRC" "$DST" 2>/dev/null || true
-            sudo chmod -R u+rw "$SRC" "$DST" 2>/dev/null || true
-            rm -rf "${SRC}/build_deps" 2>/dev/null || true
-            rm -rf "${DST}/build_deps" 2>/dev/null || true
-            mv -f "$SRC"/* "$DST"/
-            rm -rf "$SRC"
+            # Signer container writes as root; merge and delete with sudo.
+            sudo rm -rf "${SRC}/build_deps" "${DST}/build_deps"
+            sudo cp -a "${SRC}/." "${DST}/"
+            sudo rm -rf "$SRC"
           done
-          rm -rf "${INPUT_DIR}/.__sign_out"
+          sudo rm -rf "${INPUT_DIR}/.__sign_out"
           echo "Merged signed Windows binaries back into editor folders."
 
       - name: Rename Folders then Zip/Move Folders
