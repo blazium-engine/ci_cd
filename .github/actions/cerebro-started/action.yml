@@ -96,21 +96,64 @@ runs:
           + (if ($version | length) > 0 then {version: $version} else {} end)
           + (if ($build_sha | length) > 0 then {build_sha: $build_sha} else {} end)')
 
-        RESP_FILE="${RUNNER_TEMP:-/tmp}/cerebro_started_response.json"
-        HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" \
-          -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds" \
-          -H "Content-Type: application/json" \
-          -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}" \
-          -d "$BODY")
+        should_retry_http() {
+          local code="${1:-000}"
+          case "$code" in
+            000|408|429|500|502|503|504|520|521|522|523|524) return 0 ;;
+          esac
+          [ "$code" -ge 500 ] 2>/dev/null
+        }
 
-        response=$(cat "$RESP_FILE")
+        MAX_ATTEMPTS=5
+        SLEEP_SECS=2
+        HTTP_CODE=""
+        response=""
+        curl_exit=0
+        attempt=1
+        while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
+          RESP_FILE="${RUNNER_TEMP:-/tmp}/cerebro_started_response.json"
+          set +e
+          HTTP_CODE=$(curl -sS --retry 0 --connect-timeout 15 --max-time 30 \
+            -o "$RESP_FILE" -w "%{http_code}" \
+            -X POST "${{ inputs.cerebro_url }}/api/v1/enginebuilds" \
+            -H "Content-Type: application/json" \
+            -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}" \
+            -d "$BODY")
+          curl_exit=$?
+          set -e
+          if [ -z "$HTTP_CODE" ]; then
+            HTTP_CODE=000
+          fi
+          response=$(cat "$RESP_FILE" 2>/dev/null || true)
+          echo "Attempt $attempt/$MAX_ATTEMPTS HTTP $HTTP_CODE curl_exit=$curl_exit"
+          echo "Response: $response"
+
+          if [ "$curl_exit" -eq 0 ] && [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            if echo "$response" | jq -e '.success == true' >/dev/null 2>&1; then
+              break
+            fi
+          fi
+
+          if [ "$attempt" -eq "$MAX_ATTEMPTS" ]; then
+            break
+          fi
+          if [ "$curl_exit" -ne 0 ] || should_retry_http "$HTTP_CODE"; then
+            echo "Retrying Cerebro start notify in ${SLEEP_SECS}s..."
+            sleep "$SLEEP_SECS"
+            SLEEP_SECS=$((SLEEP_SECS * 2))
+            attempt=$((attempt + 1))
+            continue
+          fi
+          break
+        done
+
         echo "## Build (Started)" >> "$GITHUB_STEP_SUMMARY"
         echo "HTTP $HTTP_CODE" >> "$GITHUB_STEP_SUMMARY"
         echo "Response: $response" >> "$GITHUB_STEP_SUMMARY"
         echo "HTTP $HTTP_CODE"
         echo "Response: $response"
 
-        if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+        if [ "$curl_exit" -ne 0 ] || [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
           log_err "Error: Cerebro update failed with HTTP $HTTP_CODE."
           exit 1
         fi

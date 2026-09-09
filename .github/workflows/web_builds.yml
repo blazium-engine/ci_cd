@@ -98,7 +98,7 @@ jobs:
     needs: editor-check
     if: ${{ contains(github.event.client_payload.build_type, 'editors') && github.event.client_payload.production != true }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
 
@@ -267,7 +267,7 @@ jobs:
     needs: editor-check
     if: ${{ contains(github.event.client_payload.build_type, 'editors') && github.event.client_payload.production == true }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
 
@@ -473,7 +473,7 @@ jobs:
     needs: template-check
     if: ${{ contains(github.event.client_payload.build_type, 'templates') && github.event.client_payload.production != true }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       max-parallel: 4
       matrix:
         include:
@@ -678,7 +678,7 @@ jobs:
     needs: template-check
     if: ${{ contains(github.event.client_payload.build_type, 'templates') && github.event.client_payload.production == true }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       max-parallel: 4
       matrix:
         include:
