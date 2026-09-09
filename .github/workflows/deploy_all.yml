@@ -205,8 +205,14 @@ jobs:
     if: >-
       always() &&
       needs.changelog-deploy.result == 'success' &&
-      (needs.editor-deploy.result == 'success' || needs.editor-deploy.result == 'skipped') &&
-      (needs.template-deploy.result == 'success' || needs.template-deploy.result == 'skipped') &&
+      (
+        needs.editor-deploy.result == 'skipped' ||
+        (needs.editor-deploy.result == 'success' && needs.editor-deploy.outputs.deployed == 'true')
+      ) &&
+      (
+        needs.template-deploy.result == 'skipped' ||
+        (needs.template-deploy.result == 'success' && needs.template-deploy.outputs.deployed == 'true')
+      ) &&
       (needs.editor-deploy.result == 'success' || needs.template-deploy.result == 'success')
     runs-on: ubuntu-latest
     steps:

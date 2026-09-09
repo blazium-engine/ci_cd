@@ -171,7 +171,13 @@ jobs:
   android-build:
     name: 🤖 Android
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'android') && !github.event.client_payload.run_id
+    if: >-
+      always() &&
+      !cancelled() &&
+      contains(github.event.client_payload.build, 'android') &&
+      !github.event.client_payload.run_id &&
+      needs.get-latest-sha.result == 'success' &&
+      needs.monoglue-build.result != 'failure'
     uses: ./.github/workflows/android_builds.yml
     secrets: inherit
     with:
@@ -185,7 +191,13 @@ jobs:
   ios-build:
     name: 🍏 iOS
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'ios') && !github.event.client_payload.run_id
+    if: >-
+      always() &&
+      !cancelled() &&
+      contains(github.event.client_payload.build, 'ios') &&
+      !github.event.client_payload.run_id &&
+      needs.get-latest-sha.result == 'success' &&
+      needs.monoglue-build.result != 'failure'
     uses: ./.github/workflows/ios_builds.yml
     secrets: inherit
     with:
@@ -199,7 +211,13 @@ jobs:
   linux-build:
     name: 🐧 Linux
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'linux') && !github.event.client_payload.run_id
+    if: >-
+      always() &&
+      !cancelled() &&
+      contains(github.event.client_payload.build, 'linux') &&
+      !github.event.client_payload.run_id &&
+      needs.get-latest-sha.result == 'success' &&
+      needs.monoglue-build.result != 'failure'
     uses: ./.github/workflows/linux_builds.yml
     secrets: inherit
     with:
@@ -213,7 +231,13 @@ jobs:
   macos-build:
     name: 🍎 macOS
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'macos') && !github.event.client_payload.run_id
+    if: >-
+      always() &&
+      !cancelled() &&
+      contains(github.event.client_payload.build, 'macos') &&
+      !github.event.client_payload.run_id &&
+      needs.get-latest-sha.result == 'success' &&
+      needs.monoglue-build.result != 'failure'
     uses: ./.github/workflows/macos_builds.yml
     secrets: inherit
     with:
@@ -227,7 +251,13 @@ jobs:
   windows-build:
     name: 🏁 Windows
     needs: [monoglue-build, get-latest-sha]
-    if: contains(github.event.client_payload.build, 'windows') && !github.event.client_payload.run_id
+    if: >-
+      always() &&
+      !cancelled() &&
+      contains(github.event.client_payload.build, 'windows') &&
+      !github.event.client_payload.run_id &&
+      needs.get-latest-sha.result == 'success' &&
+      needs.monoglue-build.result != 'failure'
     uses: ./.github/workflows/windows_builds.yml
     secrets: inherit
     with:

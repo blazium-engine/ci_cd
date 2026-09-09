@@ -52,12 +52,12 @@ jobs:
       - name: Send Repository Dispatch Event
         run: |
           # Convert the comma-separated string inputs into arrays
-          build_type=$(printf '%s' '${{ inputs.build_type }}' | jq -R -c 'split(",")')
-          build=$(printf '%s' '${{ inputs.build }}' | jq -R -c 'split(",")')
+          build_type=$(printf '%s' '${{ inputs.build_type }}' | jq -R -c 'split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length > 0))')
+          build=$(printf '%s' '${{ inputs.build }}' | jq -R -c 'split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length > 0))')
           if [ -z '${{ inputs.deploy }}' ]; then
             deploy='[]'
           else
-            deploy=$(printf '%s' '${{ inputs.deploy }}' | jq -R -c 'split(",") | map(select(length > 0))')
+            deploy=$(printf '%s' '${{ inputs.deploy }}' | jq -R -c 'split(",") | map(gsub("^\\s+|\\s+$";"")) | map(select(length > 0))')
           fi
           run_id_json='null'
           if [ -n '${{ inputs.run_id }}' ]; then
