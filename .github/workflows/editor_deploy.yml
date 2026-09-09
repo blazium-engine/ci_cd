@@ -131,7 +131,9 @@ jobs:
           dotnet: true
           haskell: true
           large-packages: true
-          docker-images: true
+          # Keep the locally built sslcom-code-signer image. Pruning it makes
+          # later docker run treat the short tag as a Hub repo and fail.
+          docker-images: false
           swap-storage: true
 
       - name: Install and Verify Butler
