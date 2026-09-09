@@ -1,0 +1,172 @@
+name: Reuse completed Cerebro assets
+description: Check each artifact name independently and adopt completed CDN files onto this run.
+
+inputs:
+  names:
+    description: Artifact names, one per line.
+    required: true
+  version:
+    description: Semver to match when build_sha is not enough.
+    required: false
+    default: ""
+  build_sha:
+    description: Git commit SHA that produced the artifact.
+    required: false
+    default: ""
+  deploy_type:
+    description: Channel (nightly, prerelease, release).
+    required: true
+  run_id:
+    description: Current runner / workflow run id.
+    required: true
+  cerebro_url:
+    description: Cerebro base URL.
+    required: true
+  cerebro_auth:
+    description: Cerebro BLAZIUM_AUTH header.
+    required: true
+
+outputs:
+  reused:
+    description: JSON array of reused artifact names.
+    value: ${{ steps.reuse.outputs.reused }}
+  missing:
+    description: JSON array of artifact names that still need a compile.
+    value: ${{ steps.reuse.outputs.missing }}
+  should_compile:
+    description: true if any requested name is missing; false if every name was reused.
+    value: ${{ steps.reuse.outputs.should_compile }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check and reuse each asset
+      id: reuse
+      shell: bash
+      env:
+        CEREBRO_URL: ${{ inputs.cerebro_url }}
+        CEREBRO_AUTH: ${{ inputs.cerebro_auth }}
+        DEPLOY_TYPE: ${{ inputs.deploy_type }}
+        VERSION: ${{ inputs.version }}
+        BUILD_SHA: ${{ inputs.build_sha }}
+        RUN_ID: ${{ inputs.run_id }}
+      run: |
+        set -euo pipefail
+
+        NAMES=$(printf '%s\n' "${{ inputs.names }}" | awk 'NF { gsub(/\r/, ""); print }')
+        REUSED=()
+        MISSING=()
+
+        echo "## Reuse completed assets" >> "$GITHUB_STEP_SUMMARY"
+        echo "deploy_type=$DEPLOY_TYPE version=$VERSION build_sha=$BUILD_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+        file_reachable() {
+          local url="$1"
+          local code
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --head --max-time 30 "$url" || true)
+          if [ "$code" = "200" ] || [ "$code" = "206" ]; then
+            return 0
+          fi
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 -r 0-0 "$url" || true)
+          [ "$code" = "200" ] || [ "$code" = "206" ]
+        }
+
+        while IFS= read -r NAME; do
+          [ -n "$NAME" ] || continue
+          echo "Checking $NAME" >> "$GITHUB_STEP_SUMMARY"
+
+          QS="deploy_type=$(printf '%s' "$DEPLOY_TYPE" | jq -sRr @uri)"
+          if [ -n "$VERSION" ]; then
+            QS="${QS}&version=$(printf '%s' "$VERSION" | jq -sRr @uri)"
+          fi
+          if [ -n "$BUILD_SHA" ]; then
+            QS="${QS}&build_sha=$(printf '%s' "$BUILD_SHA" | jq -sRr @uri)"
+          fi
+          QS="${QS}&name=$(printf '%s' "$NAME" | jq -sRr @uri)"
+
+          RESP_FILE="${RUNNER_TEMP:-/tmp}/cerebro_completed_${NAME//\//_}.json"
+          HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -H "BLAZIUM_AUTH: $CEREBRO_AUTH" \
+            "$CEREBRO_URL/api/v1/enginebuilds/completed?$QS" || echo "000")
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Cerebro lookup HTTP $HTTP_CODE for $NAME; will compile." >> "$GITHUB_STEP_SUMMARY"
+            MISSING+=("$NAME")
+            continue
+          fi
+
+          if ! jq -e '.success == true' "$RESP_FILE" >/dev/null 2>&1; then
+            echo "Cerebro lookup unsuccessful for $NAME; will compile." >> "$GITHUB_STEP_SUMMARY"
+            MISSING+=("$NAME")
+            continue
+          fi
+
+          FILE_URL=$(jq -r '
+            if (.data | type) == "array" then
+              .data[0].file_url // empty
+            else
+              .data.file_url // empty
+            end
+          ' "$RESP_FILE")
+
+          if [ -z "$FILE_URL" ] || [ "$FILE_URL" = "null" ]; then
+            echo "No completed file_url for $NAME; will compile." >> "$GITHUB_STEP_SUMMARY"
+            MISSING+=("$NAME")
+            continue
+          fi
+
+          if ! file_reachable "$FILE_URL"; then
+            echo "CDN miss for $NAME ($FILE_URL); will compile." >> "$GITHUB_STEP_SUMMARY"
+            MISSING+=("$NAME")
+            continue
+          fi
+
+          echo "Reusable: $NAME -> $FILE_URL" >> "$GITHUB_STEP_SUMMARY"
+          REUSED+=("$NAME")
+        done <<< "$NAMES"
+
+        if [ ${#REUSED[@]} -gt 0 ]; then
+          BODY=$(jq -n \
+            --arg version "$VERSION" \
+            --arg build_sha "$BUILD_SHA" \
+            --arg deploy_type "$DEPLOY_TYPE" \
+            --args '{version: $version, build_sha: $build_sha, deploy_type: $deploy_type, names: $ARGS.positional}' \
+            "${REUSED[@]}")
+          REUSE_FILE="${RUNNER_TEMP:-/tmp}/cerebro_reuse_response.json"
+          REUSE_CODE=$(curl -sS -o "$REUSE_FILE" -w "%{http_code}" \
+            -X POST "$CEREBRO_URL/api/v1/enginebuilds/$RUN_ID/reuse" \
+            -H "Content-Type: application/json" \
+            -H "BLAZIUM_AUTH: $CEREBRO_AUTH" \
+            -d "$BODY" || echo "000")
+          echo "Reuse POST HTTP $REUSE_CODE" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$REUSE_CODE" != "200" ] || ! jq -e '.success == true' "$REUSE_FILE" >/dev/null 2>&1; then
+            echo "Reuse POST failed; compiling reused names." >> "$GITHUB_STEP_SUMMARY"
+            MISSING+=("${REUSED[@]}")
+            REUSED=()
+          else
+            while IFS= read -r LEFT; do
+              [ -n "$LEFT" ] || continue
+              MISSING+=("$LEFT")
+              NEXT=()
+              for n in "${REUSED[@]}"; do
+                [ "$n" = "$LEFT" ] && continue
+                NEXT+=("$n")
+              done
+              REUSED=("${NEXT[@]+"${NEXT[@]}"}")
+            done < <(jq -r '.data.missing[]?' "$REUSE_FILE")
+          fi
+        fi
+
+        REUSED_JSON=$(printf '%s\n' "${REUSED[@]+"${REUSED[@]}"}" | awk 'NF' | jq -R . | jq -s -c .)
+        MISSING_JSON=$(printf '%s\n' "${MISSING[@]+"${MISSING[@]}"}" | awk 'NF' | jq -R . | jq -s -c .)
+        SHOULD_COMPILE=true
+        if [ "$MISSING_JSON" = "[]" ] && [ "$REUSED_JSON" != "[]" ]; then
+          SHOULD_COMPILE=false
+        fi
+
+        echo "reused=$REUSED_JSON" >> "$GITHUB_OUTPUT"
+        echo "missing=$MISSING_JSON" >> "$GITHUB_OUTPUT"
+        echo "should_compile=$SHOULD_COMPILE" >> "$GITHUB_OUTPUT"
+        echo "reused=$REUSED_JSON missing=$MISSING_JSON should_compile=$SHOULD_COMPILE" >> "$GITHUB_STEP_SUMMARY"
+        echo "reused=$REUSED_JSON missing=$MISSING_JSON should_compile=$SHOULD_COMPILE"

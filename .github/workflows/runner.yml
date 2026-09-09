@@ -50,6 +50,48 @@ jobs:
         with:
           file_path: version.py
 
+      - name: Freeze version if this SHA already has completed assets
+        id: freeze
+        env:
+          CEREBRO_URL: ${{ secrets.CEREBRO_URL }}
+          CEREBRO_AUTH: ${{ secrets.BLAZIUM_AUTH }}
+          BUILD_SHA: ${{ steps.get_sha.outputs.sha }}
+          DEPLOY_TYPE: ${{ github.event.client_payload.type || 'nightly' }}
+          FALLBACK_MAJOR: ${{ steps.version.outputs.external_major }}
+          FALLBACK_MINOR: ${{ steps.version.outputs.external_minor }}
+          FALLBACK_PATCH: ${{ steps.version.outputs.external_patch }}
+        run: |
+          echo "freeze=0" >> "$GITHUB_OUTPUT"
+          echo "major=$FALLBACK_MAJOR" >> "$GITHUB_OUTPUT"
+          echo "minor=$FALLBACK_MINOR" >> "$GITHUB_OUTPUT"
+          echo "patch=$FALLBACK_PATCH" >> "$GITHUB_OUTPUT"
+          if [ -z "$CEREBRO_URL" ]; then
+            echo "Cerebro URL unset; not freezing version."
+            exit 0
+          fi
+          QS="deploy_type=$(printf '%s' "$DEPLOY_TYPE" | jq -sRr @uri)&build_sha=$(printf '%s' "$BUILD_SHA" | jq -sRr @uri)"
+          HTTP=$(curl -sS -o /tmp/cerebro_completed.json -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -H "BLAZIUM_AUTH: $CEREBRO_AUTH" \
+            "$CEREBRO_URL/api/v1/enginebuilds/completed?$QS" || echo "000")
+          if [ "$HTTP" != "200" ] || ! jq -e '.success == true and (.data | length) > 0' /tmp/cerebro_completed.json >/dev/null 2>&1; then
+            echo "No completed assets for this SHA (HTTP $HTTP)."
+            exit 0
+          fi
+          VER=$(jq -r '.data[0].version // empty' /tmp/cerebro_completed.json)
+          if [ -z "$VER" ] || [ "$VER" = "null" ]; then
+            echo "Completed assets have no version; not freezing."
+            exit 0
+          fi
+          IFS=. read -r MAJ MIN PAT <<EOF
+          $VER
+          EOF
+          echo "freeze=1" >> "$GITHUB_OUTPUT"
+          echo "major=$MAJ" >> "$GITHUB_OUTPUT"
+          echo "minor=$MIN" >> "$GITHUB_OUTPUT"
+          echo "patch=$PAT" >> "$GITHUB_OUTPUT"
+          echo "Frozen version $VER from existing Cerebro assets."
+
       - name: Generate Changelog.json
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -57,10 +99,11 @@ jobs:
           GITHUB_REPO: blazium
           BASE_BRANCH: ${{ steps.version.outputs.external_sha }}
           CURRENT_BRANCH: ${{ steps.get_sha.outputs.sha }}
-          MAJOR_VERSION: ${{ steps.version.outputs.external_major }}
-          MINOR_VERSION: ${{ steps.version.outputs.external_minor }}
-          PATCH_VERSION: ${{ steps.version.outputs.external_patch }}
+          MAJOR_VERSION: ${{ steps.freeze.outputs.major }}
+          MINOR_VERSION: ${{ steps.freeze.outputs.minor }}
+          PATCH_VERSION: ${{ steps.freeze.outputs.patch }}
           BUILD_TYPE: ${{ github.event.client_payload.type || 'nightly' }}
+          FREEZE_VERSION: ${{ steps.freeze.outputs.freeze }}
         run: |
           node ./cicd/scripts/changelog.js $(pwd)
 

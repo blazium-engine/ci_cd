@@ -17,6 +17,18 @@ inputs:
   folder:
     description: The folder where the file should be saved.
     required: true
+  version:
+    description: Semver used to fall back when this run_id has no completed row.
+    required: false
+    default: ""
+  build_sha:
+    description: Git SHA used to fall back when this run_id has no completed row.
+    required: false
+    default: ""
+  deploy_type:
+    description: Channel used for the completed-asset fallback lookup.
+    required: false
+    default: ""
 
 outputs:
   build_data:
@@ -45,14 +57,36 @@ runs:
         echo "Raw Response: $RESPONSE" >> $GITHUB_STEP_SUMMARY
 
 
-        # Check if the request succeeded
         if [[ $(echo "$RESPONSE" | jq -r '.success') != "true" ]]; then
+          echo "Run-id lookup failed for ${{ inputs.name }}; trying version/SHA fallback."
+          echo "Run-id lookup failed for ${{ inputs.name }}; trying version/SHA fallback." >> "$GITHUB_STEP_SUMMARY"
+          RESPONSE=""
+        fi
+
+        if [ -z "$RESPONSE" ] || [[ $(echo "$RESPONSE" | jq -r '.data.completed_at // empty') == "" ]]; then
+          if [ -n "${{ inputs.deploy_type }}" ] && { [ -n "${{ inputs.version }}" ] || [ -n "${{ inputs.build_sha }}" ]; }; then
+            QS="deploy_type=$(printf '%s' "${{ inputs.deploy_type }}" | jq -sRr @uri)"
+            [ -n "${{ inputs.version }}" ] && QS="${QS}&version=$(printf '%s' "${{ inputs.version }}" | jq -sRr @uri)"
+            [ -n "${{ inputs.build_sha }}" ] && QS="${QS}&build_sha=$(printf '%s' "${{ inputs.build_sha }}" | jq -sRr @uri)"
+            QS="${QS}&name=$(printf '%s' "${{ inputs.name }}" | jq -sRr @uri)"
+            RESPONSE=$(curl -s -X GET "${{ inputs.cerebro_url }}/api/v1/enginebuilds/completed?$QS" \
+              -H "Content-Type: application/json" \
+              -H "BLAZIUM_AUTH: ${{ inputs.cerebro_auth }}")
+            if [[ $(echo "$RESPONSE" | jq -r '.success // false') == "true" ]]; then
+              DATA=$(echo "$RESPONSE" | jq -c 'if (.data | type) == "array" then .data[0] else .data end')
+              if [ -n "$DATA" ] && [ "$DATA" != "null" ]; then
+                RESPONSE=$(jq -n --argjson data "$DATA" '{success: true, data: $data}')
+              fi
+            fi
+          fi
+        fi
+
+        if [ -z "$RESPONSE" ] || [[ $(echo "$RESPONSE" | jq -r '.success // false') != "true" ]]; then
           echo "Error: Failed to fetch build data. Response: $RESPONSE"
           echo "Error: Failed to fetch build data. Response: $RESPONSE" >> "$GITHUB_STEP_SUMMARY"
           exit 1
         fi
 
-        # Set the response data to an output for further processing
         echo "build_data=$(echo "$RESPONSE" | jq -c '.data' | sed 's/\"/\\\"/g')" >> $GITHUB_OUTPUT
 
     - name: Parse Build Data and Check Completion

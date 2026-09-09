@@ -98,7 +98,7 @@ jobs:
     runs-on: ${{ matrix.arm && 'ubuntu-22.04' || 'windows-latest' }}
     name: ${{ matrix.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ contains(github.event.client_payload.build_type, 'editors') }}
     strategy:
       fail-fast: false
       matrix:
@@ -157,7 +157,28 @@ jobs:
           echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
           exit 0
 
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -166,11 +187,13 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         shell: bash
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         shell: bash
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
@@ -178,6 +201,7 @@ jobs:
           rm -rf ci_cd_repo
 
       - name: Normalize path
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         id: normalize
         shell: bash
         run: |
@@ -185,6 +209,7 @@ jobs:
           echo "normalized_workspace=$normalized_workspace" >> "$GITHUB_OUTPUT"
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ steps.normalize.outputs.normalized_workspace }}/version.py
@@ -195,6 +220,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -212,16 +238,18 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Install llvm-mingw
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         shell: bash
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
@@ -230,7 +258,7 @@ jobs:
           echo "MINGW_PREFIX=$(pwd)/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> $GITHUB_ENV
 
       - name: Download and extract llvm-mingw SDK
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         shell: bash
         run: |
           mkdir -p sdks
@@ -242,7 +270,7 @@ jobs:
 
       - name: Download and extract mono-glue
         shell: bash
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -270,15 +298,15 @@ jobs:
 
 
       - name: Download Direct3D 12 SDK components
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download Direct3D 12 SDK components (ARM cross)
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download pre-built ANGLE static libraries
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -287,11 +315,11 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
 
       - name: Download pre-built ANGLE static libraries (ARM cross)
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -300,11 +328,12 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries (ARM cross)
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         shell: bash
         run: unzip -o angle/angle.zip -d .
 
       - name: Download Mesa Libraries
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/download-mesa-action
         with:
           mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
@@ -313,12 +342,13 @@ jobs:
           architectures: ${{ matrix.arm && 'arm64' || 'x86_64,x86_32,arm64' }}
 
       - name: Setup MSVC
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || matrix.arch }}
 
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
@@ -329,11 +359,12 @@ jobs:
 
       - name: Building C# Assemblies
         shell: bash
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           python ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=windows
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
@@ -387,11 +418,13 @@ jobs:
       #     mv -f ./signed/* ./bin/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         shell: bash
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -404,7 +437,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -416,7 +449,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -428,7 +461,7 @@ jobs:
     runs-on: ${{ matrix.arm && 'ubuntu-22.04' || 'windows-latest' }}
     name: ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ contains(github.event.client_payload.build_type, 'templates') }}
     strategy:
       fail-fast: false
       matrix:
@@ -530,7 +563,28 @@ jobs:
           echo "Skipping Build" >> $GITHUB_STEP_SUMMARY
           exit 0
 
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -539,11 +593,13 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         shell: bash
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         shell: bash
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
@@ -551,6 +607,7 @@ jobs:
           rm -rf ci_cd_repo
 
       - name: Normalize path
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         id: normalize
         shell: bash
         run: |
@@ -558,6 +615,7 @@ jobs:
           echo "normalized_workspace=$normalized_workspace" >> "$GITHUB_OUTPUT"
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ steps.normalize.outputs.normalized_workspace }}/version.py
@@ -568,6 +626,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -585,16 +644,18 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Install llvm-mingw
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         shell: bash
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz
@@ -603,7 +664,7 @@ jobs:
           echo "MINGW_PREFIX=$(pwd)/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64" >> $GITHUB_ENV
 
       - name: Download and extract llvm-mingw SDK
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         shell: bash
         run: |
           mkdir -p sdks
@@ -614,11 +675,12 @@ jobs:
           echo "LLVM_MINGW=$(pwd)/llvm-mingw-20241015-msvcrt-ubuntu-20.04-x86_64" >> $GITHUB_ENV
 
       - name: Setup GCC problem matcher
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ammaraskar/gcc-problem-matcher@master
 
       - name: Download and extract mono-glue
         shell: bash
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -648,15 +710,15 @@ jobs:
 
 
       - name: Download Direct3D 12 SDK components
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download Direct3D 12 SDK components (ARM cross)
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         run: python ./misc/scripts/install_d3d12_sdk_windows.py
 
       - name: Download pre-built ANGLE static libraries
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -665,11 +727,11 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         run: Expand-Archive -Force angle/angle.zip ${{ github.workspace }}/
 
       - name: Download pre-built ANGLE static libraries (ARM cross)
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: godotengine/godot-angle-static
@@ -678,11 +740,12 @@ jobs:
           target: angle/angle.zip
 
       - name: Extract pre-built ANGLE static libraries (ARM cross)
-        if: matrix.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.arm) }}
         shell: bash
         run: unzip -o angle/angle.zip -d .
 
       - name: Download Mesa Libraries
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/download-mesa-action
         with:
           mesa_url_base: "https://github.com/godotengine/godot-nir-static/releases/download/23.1.9-1/godot-nir-static"
@@ -691,12 +754,13 @@ jobs:
           architectures: ${{ matrix.arm && 'arm64' || 'x86_64,x86_32,arm64' }}
 
       - name: Setup MSVC
-        if: ${{ !matrix.arm }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.arm) }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch == 'x86' && 'amd64_x86' || matrix.arch }}
 
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ matrix.sconsflags }} ${{ env.SCONSFLAGS }} ${{ github.event.client_payload.production && '' || env.DEBUG_SCONSFLAGS }} "mesa_libs=${{ steps.normalize.outputs.normalized_workspace }}/deps/mesa"
@@ -706,17 +770,20 @@ jobs:
           scons-cache: "${{ github.workspace }}/.scons_cache/"
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         shell: bash
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -729,7 +796,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -741,7 +808,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}

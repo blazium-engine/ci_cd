@@ -17,6 +17,18 @@ inputs:
   folder:
     description: The folder where files should be saved.
     required: true
+  version:
+    description: Semver used to fall back when this run_id has no completed row.
+    required: false
+    default: ""
+  build_sha:
+    description: Git SHA used to fall back when this run_id has no completed row.
+    required: false
+    default: ""
+  deploy_type:
+    description: Channel used for the completed-asset fallback lookup.
+    required: false
+    default: ""
 
 outputs:
   downloaded_files:
@@ -42,6 +54,10 @@ runs:
         CEREBRO_URL=${{ inputs.cerebro_url }}
         CEREBRO_AUTH=${{ inputs.cerebro_auth }}
         RUN_ID=${{ inputs.run_id }}
+        VERSION="${{ inputs.version }}"
+        BUILD_SHA="${{ inputs.build_sha }}"
+        DEPLOY_TYPE="${{ inputs.deploy_type }}"
+        FAILED_NAMES=()
 
         echo "## Processing Build Names" >> $GITHUB_STEP_SUMMARY
         echo "Names to process:" >> $GITHUB_STEP_SUMMARY
@@ -60,28 +76,31 @@ runs:
         while IFS= read -r NAME; do
           echo "Processing build name: $NAME" >> $GITHUB_STEP_SUMMARY
 
-          # Fetch build data
           RESPONSE=$(curl -s -X GET "$CEREBRO_URL/api/v1/enginebuilds/$RUN_ID/$NAME" \
             -H "Content-Type: application/json" \
             -H "BLAZIUM_AUTH: $CEREBRO_AUTH")
 
-          # Check if request succeeded
-          if [[ $(echo "$RESPONSE" | jq -r '.success') != "true" ]]; then
-            echo "Error: Failed to fetch build data for $NAME. Skipping." >> $GITHUB_STEP_SUMMARY
-            continue
-          fi
-          completed_at=$(echo "$RESPONSE" | jq -r '.data.completed_at')
+          FILE_URL=$(echo "$RESPONSE" | jq -r 'if .success == true then .data.file_url // empty else empty end')
+          completed_at=$(echo "$RESPONSE" | jq -r 'if .success == true then .data.completed_at // empty else empty end')
 
-          # Check if completed_at is null
-          if [[ "$completed_at" == "null" || -z "$completed_at" ]]; then
-            echo "Error: Build is not completed yet (completed_at is null). Skipping." >> $GITHUB_STEP_SUMMARY
-            continue
+          if [[ "$completed_at" == "null" || -z "$completed_at" || -z "$FILE_URL" || "$FILE_URL" == "null" ]]; then
+            echo "No completed row for $NAME on run $RUN_ID; trying version/SHA fallback." >> $GITHUB_STEP_SUMMARY
+            FILE_URL=""
+            if [ -n "$DEPLOY_TYPE" ] && { [ -n "$VERSION" ] || [ -n "$BUILD_SHA" ]; }; then
+              QS="deploy_type=$(printf '%s' "$DEPLOY_TYPE" | jq -sRr @uri)"
+              [ -n "$VERSION" ] && QS="${QS}&version=$(printf '%s' "$VERSION" | jq -sRr @uri)"
+              [ -n "$BUILD_SHA" ] && QS="${QS}&build_sha=$(printf '%s' "$BUILD_SHA" | jq -sRr @uri)"
+              QS="${QS}&name=$(printf '%s' "$NAME" | jq -sRr @uri)"
+              FALLBACK=$(curl -s -X GET "$CEREBRO_URL/api/v1/enginebuilds/completed?$QS" \
+                -H "Content-Type: application/json" \
+                -H "BLAZIUM_AUTH: $CEREBRO_AUTH")
+              FILE_URL=$(echo "$FALLBACK" | jq -r 'if .success == true and ((.data | type) == "array") then .data[0].file_url // empty elif .success == true then .data.file_url // empty else empty end')
+            fi
           fi
 
-          # Parse build data
-          FILE_URL=$(echo "$RESPONSE" | jq -r '.data.file_url')
-          if [[ "$FILE_URL" == "null" || -z "$FILE_URL" ]]; then
-            echo "No file URL provided for $NAME. Skipping." >> $GITHUB_STEP_SUMMARY
+          if [[ -z "$FILE_URL" || "$FILE_URL" == "null" ]]; then
+            echo "Error: No file URL for $NAME after run_id and version/SHA lookup." >> $GITHUB_STEP_SUMMARY
+            FAILED_NAMES+=("$NAME")
             continue
           fi
 
@@ -135,14 +154,20 @@ runs:
           done
 
           if [ $ATTEMPT -eq $MAX_RETRIES ]; then
-            echo "Error: Max retries reached for $NAME. Skipping file." >> $GITHUB_STEP_SUMMARY
+            echo "Error: Max retries reached for $NAME." >> $GITHUB_STEP_SUMMARY
+            FAILED_NAMES+=("$NAME")
           fi
 
         done <<< "$NAMES"
 
-        # Convert array to JSON and set output
         echo "Downloaded files: ${FILE_PATHS[@]}" >> $GITHUB_STEP_SUMMARY
         echo "downloaded_files=$(echo "${FILE_PATHS[@]}" | jq -c -R 'split(" ")')" >> $GITHUB_OUTPUT
+
+        if [ ${#FAILED_NAMES[@]} -gt 0 ]; then
+          echo "Error: missing required artifacts: ${FAILED_NAMES[*]}" >> $GITHUB_STEP_SUMMARY
+          echo "Error: missing required artifacts: ${FAILED_NAMES[*]}"
+          exit 1
+        fi
 
     - name: List All Downloaded Files
       shell: bash

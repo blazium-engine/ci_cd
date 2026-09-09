@@ -74,6 +74,9 @@ jobs:
           if [[ "${{ github.event.client_payload.force }}" == "true" ]]; then
             echo "Force deploy is true. Proceeding."  >> $GITHUB_STEP_SUMMARY
             echo "proceed=true" >> $GITHUB_OUTPUT
+          elif [[ -n "${{ github.event.client_payload.run_id }}" ]]; then
+            echo "Resuming prior run_id. Proceeding."  >> $GITHUB_STEP_SUMMARY
+            echo "proceed=true" >> $GITHUB_OUTPUT
           elif [[ "${{ inputs.monoglue-build }}" == "success" && 
                   "${{ inputs.windows-build }}" == "success" && 
                   "${{ inputs.macos-build }}" == "success" && 
@@ -168,6 +171,9 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
           folder: ${{ github.workspace }}/downloads
           run_id: ${{ inputs.runner_id }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
 
       - name: Uncompress Editors
         uses: ./.github/actions/multi-uncompress-tar-gz

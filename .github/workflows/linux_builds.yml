@@ -98,7 +98,7 @@ jobs:
     runs-on: "ubuntu-22.04"
     name: ${{ matrix.config.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ contains(github.event.client_payload.build_type, 'editors') }}
     strategy:
       fail-fast: false
       matrix:
@@ -164,7 +164,28 @@ jobs:
               skip: true
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -173,16 +194,19 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -193,6 +217,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -211,6 +236,7 @@ jobs:
 
       # TODO: Figure out somehow how to embed this one.
       - name: Distro-specific Deps Install
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           # Remove all existing third-party repositories
           #sudo rm -f /etc/apt/sources.list.d/*
@@ -262,7 +288,7 @@ jobs:
             binutils
 
       - name: Install llvm-mingw
-        if: matrix.config.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.config.arm) }}
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
@@ -271,25 +297,29 @@ jobs:
           echo "MINGW_PREFIX=$(pwd)" >> $GITHUB_ENV
 
       - name: Free disk space on runner
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           echo "Disk usage before:" && df -h
           sudo rm -rf /usr/local/lib/android
           echo "Disk usage after:" && df -h
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Setup GCC problem matcher
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ammaraskar/gcc-problem-matcher@master
 
       - name: Download and extract mono-glue
-        if: matrix.config.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.config.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -316,6 +346,7 @@ jobs:
           rm -rf temp_extract monoglue.tar.gz
 
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.config.sconsflags }}
@@ -323,22 +354,25 @@ jobs:
           target: ${{ matrix.config.target }}
 
       - name: Building C# Assemblies
-        if: matrix.config.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.config.mono) }}
         run: |
           ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --godot-platform=linuxbsd
 
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.config.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -350,7 +384,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -362,7 +396,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -393,7 +427,7 @@ jobs:
     runs-on: "ubuntu-22.04"
     name: ${{ matrix.config.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ contains(github.event.client_payload.build_type, 'templates') }}
     strategy:
       fail-fast: false
       matrix:
@@ -515,7 +549,28 @@ jobs:
               skip: true
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -524,16 +579,19 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -544,6 +602,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -562,6 +621,7 @@ jobs:
 
 
       - name: Distro-specific Deps Install
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           # Remove all existing third-party repositories
           #sudo rm -f /etc/apt/sources.list.d/*
@@ -613,6 +673,7 @@ jobs:
 
       # Install Linux dependencies for tests
       - name: Linux dependencies for tests
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EB8B81E14DA65431D7504EA8F63F0F2B90935439
@@ -620,7 +681,7 @@ jobs:
           sudo apt-get install -qq mesa-vulkan-drivers
 
       - name: Install llvm-mingw
-        if: matrix.config.arm
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.config.arm) }}
         run: |
           curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
           tar xf llvm-mingw-20240619-ucrt-ubuntu-20.04-x86_64.tar.xz && \
@@ -630,25 +691,29 @@ jobs:
 
 
       - name: Free disk space on runner
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           echo "Disk usage before:" && df -h
           sudo rm -rf /usr/local/lib/android
           echo "Disk usage after:" && df -h
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.config.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Setup GCC problem matcher
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ammaraskar/gcc-problem-matcher@master
 
       - name: Download and extract mono-glue
-        if: matrix.config.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.config.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -675,6 +740,7 @@ jobs:
           rm -rf temp_extract monoglue.tar.gz
       
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.config.sconsflags }}
@@ -682,16 +748,19 @@ jobs:
           target: ${{ matrix.config.target }}
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.config.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -703,7 +772,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -715,7 +784,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.config.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}

@@ -71,7 +71,7 @@ jobs:
     runs-on: macos-15
     name: Building ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force }}
+    if: ${{ contains(github.event.client_payload.build_type, 'templates') }}
     strategy:
       fail-fast: false
       matrix:
@@ -88,7 +88,28 @@ jobs:
 
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -97,10 +118,12 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           git -C ci_cd_repo fetch --depth=1 origin ${{ github.sha }}
@@ -109,9 +132,11 @@ jobs:
           rm -rf ci_cd_repo
 
       - name: Install sevenzip
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: brew install sevenzip
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -122,6 +147,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -140,14 +166,17 @@ jobs:
 
 
       - name: Select Xcode 16.2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
 
       - name: Verify Xcode selection
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           xcode-select -p
           xcodebuild -version
 
       - name: Download and extract MoltenVK
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           mkdir -p deps/moltenvk
           pushd deps/moltenvk
@@ -158,18 +187,21 @@ jobs:
           popd
           
       - name: Setup Vulkan SDK
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           sh misc/scripts/install_vulkan_sdk_macos.sh
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Download and extract mono-glue
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -196,6 +228,7 @@ jobs:
           rm -rf temp_extract monoglue.tar.gz
       
       - name: Compilation (template_release, arm64)
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: arch=arm64 ios_simulator=no ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -204,6 +237,7 @@ jobs:
           tests: false
 
       - name: Compilation (template_debug, arm64)
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: arch=arm64 ios_simulator=no ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -212,6 +246,7 @@ jobs:
           tests: false
 
       - name: Compilation (template_release, x86_64)
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: arch=x86_64 ios_simulator=yes ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -220,6 +255,7 @@ jobs:
           tests: false
 
       - name: Compilation (template_debug, x86_64)
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: arch=x86_64 ios_simulator=yes ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -228,10 +264,12 @@ jobs:
           tests: false
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         continue-on-error: true
 
       - name: Setup Template
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
             mkdir -p ./ios/${{ github.event.client_payload.type || 'nightly' }}/templates
             cp bin/libgodot.ios.template_release.arm64.a ./ios/${{ github.event.client_payload.type || 'nightly' }}/templates/libgodot.ios.a
@@ -240,6 +278,7 @@ jobs:
             cp bin/libgodot.ios.template_debug.x86_64.simulator.a ./ios/${{ github.event.client_payload.type || 'nightly' }}/templates/libgodot.ios.debug.simulator.a
 
       - name: Create Template
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf ios_xcode
           HERE=$(pwd)
@@ -256,6 +295,7 @@ jobs:
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.zip
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -267,7 +307,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -279,7 +319,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}

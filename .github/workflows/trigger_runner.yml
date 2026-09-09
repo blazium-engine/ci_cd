@@ -27,10 +27,15 @@ on:
         type: string
         default: 'linux,ios,macos,android,web,windows,monoglue'
       force:
-        description: 'Force build?'
+        description: 'Force a full rebuild even when artifacts already exist'
         required: true
         type: boolean
-        default: true
+        default: false
+      run_id:
+        description: 'Optional prior runner id to skip compile workflows and deploy those Cerebro rows'
+        required: false
+        type: string
+        default: ''
       deploy:
         description: 'Deploy (comma-separated list like templates, editors)'
         required: true
@@ -54,9 +59,14 @@ jobs:
           else
             deploy=$(printf '%s' '${{ inputs.deploy }}' | jq -R -c 'split(",") | map(select(length > 0))')
           fi
+          run_id_json='null'
+          if [ -n '${{ inputs.run_id }}' ]; then
+            run_id_json=$(printf '%s' '${{ inputs.run_id }}' | jq -R -c .)
+          fi
           echo $build_type
           echo $build
           echo $deploy
+          echo $run_id_json
           # Send the repository dispatch event
           curl -X POST \
           -v \
@@ -73,6 +83,7 @@ jobs:
               \"build_type\": $build_type,
               \"force\": ${{ inputs.force }},
               \"build\": $build,
-              \"deploy\": $deploy
+              \"deploy\": $deploy,
+              \"run_id\": $run_id_json
             }
           }"

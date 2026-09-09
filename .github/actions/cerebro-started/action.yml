@@ -39,6 +39,10 @@ inputs:
   version:
     description: The version of the build.
     required: false
+  build_sha:
+    description: Git commit SHA for this artifact. Defaults to checksum when that value is a git SHA.
+    required: false
+    default: ""
   cerebro_url:
     description: The full URL to send the update.
     required: true
@@ -59,6 +63,11 @@ runs:
           echo "$1" >> "$GITHUB_STEP_SUMMARY"
         }
 
+        BUILD_SHA="${{ inputs.build_sha }}"
+        if [ -z "$BUILD_SHA" ]; then
+          BUILD_SHA="${{ inputs.checksum }}"
+        fi
+
         BODY=$(jq -n \
           --arg name "${{ inputs.name }}" \
           --arg run_id "${{ inputs.run_id }}" \
@@ -68,6 +77,7 @@ runs:
           --arg branch "${{ inputs.branch }}" \
           --arg build_os "${{ inputs.build_os }}" \
           --arg checksum "${{ inputs.checksum }}" \
+          --arg build_sha "$BUILD_SHA" \
           --arg arch "${{ inputs.arch }}" \
           --arg version "${{ inputs.version }}" \
           --argjson production ${{ inputs.production }} \
@@ -83,7 +93,8 @@ runs:
             production: $production
           }
           + (if ($arch | length) > 0 then {arch: $arch} else {} end)
-          + (if ($version | length) > 0 then {version: $version} else {} end)')
+          + (if ($version | length) > 0 then {version: $version} else {} end)
+          + (if ($build_sha | length) > 0 then {build_sha: $build_sha} else {} end)')
 
         RESP_FILE="${RUNNER_TEMP:-/tmp}/cerebro_started_response.json"
         HTTP_CODE=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" \

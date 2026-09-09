@@ -96,7 +96,7 @@ jobs:
     runs-on: "ubuntu-22.04"
     name: ${{ matrix.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'editors') && github.event.client_payload.production != true }}
     strategy:
       fail-fast: true
       matrix:
@@ -108,7 +108,28 @@ jobs:
             sconsflags: use_closure_compiler=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} 
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -117,16 +138,19 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -137,6 +161,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -154,6 +179,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Set up Emscripten latest
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: ${{env.EM_VERSION}}
@@ -161,24 +187,29 @@ jobs:
           cache-key: emsdk-${{ matrix.cache-name }}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}-${{github.sha}}
 
       - name: Verify Emscripten setup
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           emcc -v
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Install p7zip for web template ZIP compression
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y p7zip-full
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -186,16 +217,19 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -206,7 +240,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -218,7 +252,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -231,7 +265,7 @@ jobs:
     runs-on:  
       group: release-builder
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production == true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'editors') && github.event.client_payload.production == true }}
     strategy:
       fail-fast: true
       matrix:
@@ -243,7 +277,28 @@ jobs:
             sconsflags: use_closure_compiler=yes ${{ github.event.client_payload.production && 'production=yes' || '' }} 
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -252,16 +307,19 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -272,6 +330,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -289,6 +348,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Set up Emscripten latest
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: ${{env.EM_VERSION}}
@@ -296,24 +356,29 @@ jobs:
           cache-key: emsdk-${{ matrix.cache-name }}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}-${{github.sha}}
 
       - name: Verify Emscripten setup
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           emcc -v
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Install p7zip for web template ZIP compression
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y p7zip-full
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -321,16 +386,19 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -341,7 +409,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -353,7 +421,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -403,7 +471,7 @@ jobs:
     runs-on:  "ubuntu-22.04"
     name: ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'templates') && github.event.client_payload.production != true }}
     strategy:
       fail-fast: true
       max-parallel: 4
@@ -451,7 +519,28 @@ jobs:
             sconsflags: threads=no dlink_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -460,16 +549,19 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -480,6 +572,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -497,6 +590,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Set up Emscripten latest
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: ${{env.EM_VERSION}}
@@ -504,24 +598,29 @@ jobs:
           cache-key: emsdk-${{ matrix.cache-name }}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}-${{github.sha}}
 
       - name: Verify Emscripten setup
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           emcc -v
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Install p7zip for web template ZIP compression
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y p7zip-full
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -529,16 +628,19 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -549,7 +651,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -561,7 +663,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -574,7 +676,7 @@ jobs:
       group: "release-builder"
     name: "Prod-Template: ${{ matrix.name }}"
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production == true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'templates') && github.event.client_payload.production == true }}
     strategy:
       fail-fast: true
       max-parallel: 4
@@ -622,7 +724,28 @@ jobs:
             sconsflags: threads=no dlink_enabled=yes ${{ github.event.client_payload.production && 'production=yes' || '' }}
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -631,16 +754,19 @@ jobs:
           fetch-depth: 2
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -651,6 +777,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -668,6 +795,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Set up Emscripten latest
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: ${{env.EM_VERSION}}
@@ -675,24 +803,29 @@ jobs:
           cache-key: emsdk-${{ matrix.cache-name }}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}-${{github.sha}}
 
       - name: Verify Emscripten setup
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           emcc -v
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Install p7zip for web template ZIP compression
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y p7zip-full
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Compilation
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} ${{ matrix.sconsflags }}
@@ -700,16 +833,19 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -720,7 +856,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -732,7 +868,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}

@@ -103,7 +103,7 @@ jobs:
       group: release-builder
     name: Building Development Android ${{ matrix.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'editors') && github.event.client_payload.production != true }}
     strategy:
       fail-fast: false
       matrix:
@@ -113,7 +113,31 @@ jobs:
             mono: false
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: |
+            ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+            ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
+            ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -122,22 +146,26 @@ jobs:
           fetch-depth: 2
 
       - name: Decode the keystore
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           echo "$GODOT_ANDROID_SIGN_KEYSTORE_BAS64" | base64 --decode > godot.keystore
           export KEYSTORE_PATH=$PWD/godot.keystore
           echo "GODOT_ANDROID_SIGN_KEYSTORE=$KEYSTORE_PATH" >> $GITHUB_ENV
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -148,12 +176,14 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Set up Java 17
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
       - name: Download pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: darksylinc/godot-swappy
@@ -162,22 +192,26 @@ jobs:
           target: swappy/godot-swappy.7z
 
       - name: Extract pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
       - name: Setup Android SDK
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: amyu/setup-android@v4
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Download and extract mono-glue
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -204,6 +238,7 @@ jobs:
           rm -rf temp_extract monoglue.tar.gz
 
       - name: Compilation (target=editor,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -211,6 +246,7 @@ jobs:
           target: editor
 
       - name: Compilation (target=editor,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -218,6 +254,7 @@ jobs:
           target: editor
 
       - name: Compilation (target=editor,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -225,6 +262,7 @@ jobs:
           target: editor
 
       - name: Compilation (target=editor,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -232,12 +270,14 @@ jobs:
           target: editor
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -255,6 +295,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Generate Blazium editor
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotEditor
@@ -262,10 +303,12 @@ jobs:
           ls -l bin/android_editor_builds/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin/android_editor_builds/ .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -276,7 +319,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -288,7 +331,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -297,10 +340,12 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Clear folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf bin/android_editor_builds/*
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
@@ -318,6 +363,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Generate Godot Meta editor
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotHorizonOSEditor
@@ -325,10 +371,12 @@ jobs:
           ls -l bin/android_editor_builds/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta.tar.gz -C ./bin/android_editor_builds/ .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -339,7 +387,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-completed-meta
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
@@ -351,7 +399,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-completed-meta.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-completed-meta.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
@@ -360,10 +408,12 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Clear folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf bin/android_editor_builds/*
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
@@ -381,6 +431,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Generate Godot PicoOS editor
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotPicoOSEditor
@@ -388,10 +439,12 @@ jobs:
           ls -l bin/android_editor_builds/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico.tar.gz -C ./bin/android_editor_builds/ .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -402,7 +455,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-completed-pico
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
@@ -414,7 +467,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-completed-pico.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-completed-pico.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
@@ -427,7 +480,7 @@ jobs:
       group: "release-builder"
     name: Building Production Android ${{ matrix.name }}
     needs: editor-check
-    if: ${{ needs.editor-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production == true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'editors') && github.event.client_payload.production == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -437,7 +490,31 @@ jobs:
             mono: false
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: |
+            ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+            ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
+            ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -446,16 +523,19 @@ jobs:
           fetch-depth: 2
 
       - name: Decode the keystore
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           echo "$GODOT_ANDROID_SIGN_KEYSTORE_BAS64" | base64 --decode > godot.keystore
           export KEYSTORE_PATH=$PWD/godot.keystore
           echo "GODOT_ANDROID_SIGN_KEYSTORE=$KEYSTORE_PATH" >> $GITHUB_ENV
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
@@ -463,6 +543,7 @@ jobs:
 
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -473,12 +554,14 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Set up Java 17
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
       - name: Download pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: darksylinc/godot-swappy
@@ -487,22 +570,26 @@ jobs:
           target: swappy/godot-swappy.7z
 
       - name: Extract pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
       - name: Setup Android SDK
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: amyu/setup-android@v4
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Download and extract mono-glue
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -529,6 +616,7 @@ jobs:
           rm -rf temp_extract monoglue.tar.gz
 
       - name: Compilation (target=editor,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -536,6 +624,7 @@ jobs:
           target: editor
 
       - name: Compilation (target=editor,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -543,6 +632,7 @@ jobs:
           target: editor
 
       - name: Compilation (target=editor,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -550,6 +640,7 @@ jobs:
           target: editor
 
       - name: Compilation (target=editor,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -557,12 +648,14 @@ jobs:
           target: editor
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -582,6 +675,7 @@ jobs:
 
 
       - name: Generate Godot Meta editor
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotEditor
@@ -589,10 +683,12 @@ jobs:
           ls -l bin/android_editor_builds/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin/android_editor_builds/ .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -604,7 +700,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -616,7 +712,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -625,10 +721,12 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Clear folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf bin/android_editor_builds/*
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
@@ -646,6 +744,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Generate Godot Meta editor
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotHorizonOSEditor
@@ -653,10 +752,12 @@ jobs:
           ls -l bin/android_editor_builds/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta.tar.gz -C ./bin/android_editor_builds/ .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -668,7 +769,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-completed-meta
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
@@ -680,7 +781,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-completed-meta.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-completed-meta.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-meta
@@ -689,10 +790,12 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Clear folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf bin/android_editor_builds/*
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
@@ -710,6 +813,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Generate Godot PicoOS editor
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotPicoOSEditor
@@ -717,10 +821,12 @@ jobs:
           ls -l bin/android_editor_builds/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico.tar.gz -C ./bin/android_editor_builds/ .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -731,7 +837,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-completed-pico
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
@@ -743,7 +849,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-completed-pico.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-completed-pico.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}-pico
@@ -795,7 +901,7 @@ jobs:
     runs-on: "ubuntu-22.04"
     name: Building Development Android ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production != true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'templates') && github.event.client_payload.production != true }}
     strategy:
       fail-fast: false
       matrix:
@@ -809,7 +915,28 @@ jobs:
             mono: true
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -818,6 +945,7 @@ jobs:
           fetch-depth: 2
 
       - name: Free Disk Space (Ubuntu)
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
@@ -829,16 +957,19 @@ jobs:
           swap-storage: true
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -856,6 +987,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -866,6 +998,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Download pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: darksylinc/godot-swappy
@@ -874,27 +1007,32 @@ jobs:
           target: swappy/godot-swappy.7z
 
       - name: Extract pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
       - name: Set up Java 17
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
       - name: Setup Android SDK
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: amyu/setup-android@v4
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Download and extract mono-glue
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -921,6 +1059,7 @@ jobs:
           rm -rf temp_extract monoglue.tar.gz
 
       - name: Compilation (target=template_release,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -928,6 +1067,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -935,6 +1075,7 @@ jobs:
           target: template_debug
 
       - name: Compilation (target=template_release,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -942,6 +1083,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -949,6 +1091,7 @@ jobs:
           target: template_debug
 
       - name: Compilation (target=template_release,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -956,6 +1099,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -963,6 +1107,7 @@ jobs:
           target: template_debug
 
       - name: Compilation (target=template_release,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -970,6 +1115,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -977,13 +1123,14 @@ jobs:
           target: template_debug
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Generate Godot templates
-        if: ${{ !matrix.mono }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.mono) }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotTemplates
@@ -991,7 +1138,7 @@ jobs:
           ls -l bin/
 
       - name: Generate Godot templates
-        if: ${{ matrix.mono }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotMonoTemplates
@@ -999,10 +1146,12 @@ jobs:
           ls -l bin/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -1014,7 +1163,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -1026,7 +1175,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -1039,7 +1188,7 @@ jobs:
       group: "release-builder"
     name: Building Production Android ${{ matrix.name }}
     needs: template-check
-    if: ${{ needs.template-check.outputs.compile == 'true' || github.event.client_payload.force && github.event.client_payload.production == true }}
+    if: ${{ contains(github.event.client_payload.build_type, 'templates') && github.event.client_payload.production == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1053,7 +1202,28 @@ jobs:
             mono: true
 
     steps:
+      - name: Checkout CI actions
+        if: ${{ !matrix.skip }}
+        uses: actions/checkout@v4
+        with:
+          repository: blazium-games/ci_cd
+          fetch-depth: 1
+
+      - name: Reuse completed asset
+        if: ${{ !matrix.skip && github.event.client_payload.force != true }}
+        id: reuse
+        uses: ./.github/actions/cerebro-reuse-assets
+        with:
+          names: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
+          version: ${{ inputs.new_version }}
+          build_sha: ${{ inputs.build_sha }}
+          deploy_type: ${{ github.event.client_payload.type || 'nightly' }}
+          run_id: ${{ inputs.runner_id }}
+          cerebro_url: ${{ secrets.CEREBRO_URL }}
+          cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
+
       - name: Checkout Repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/checkout@v4
         with:
           repository: blazium-games/blazium
@@ -1062,6 +1232,7 @@ jobs:
           fetch-depth: 2
 
       - name: Free Disk Space (Ubuntu)
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
@@ -1073,16 +1244,19 @@ jobs:
           swap-storage: true
 
       - name: Remove existing workflows folder
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           rm -rf .github/workflows
 
       - name: Pull .github folder from ci_cd repository
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           git clone --depth=1 https://github.com/blazium-games/ci_cd.git ci_cd_repo
           cp -r ci_cd_repo/.github/* .github/
           rm -rf ci_cd_repo
 
       - name: Notify Cerebro of Build Starting
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-started
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -1100,6 +1274,7 @@ jobs:
           version: ${{ inputs.new_version }}
 
       - name: Update new Version Information to version.py
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/set-repos-version
         with:
           file_path: ${{ github.workspace }}/version.py
@@ -1110,6 +1285,7 @@ jobs:
           external_sha: ${{ inputs.build_sha }}
 
       - name: Download pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
           repo: darksylinc/godot-swappy
@@ -1118,27 +1294,32 @@ jobs:
           target: swappy/godot-swappy.7z
 
       - name: Extract pre-built Android Swappy Frame Pacing Library
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: 7za x -y swappy/godot-swappy.7z -o${{github.workspace}}/thirdparty/swappy-frame-pacing
 
       - name: Set up Java 17
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
       - name: Setup Android SDK
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: amyu/setup-android@v4
 
       - name: Restore Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-restore
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Setup Python and SCons
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-deps
 
       - name: Download and extract mono-glue
-        if: matrix.mono
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           TYPE=${{ github.event.client_payload.type || 'nightly' }}
           URL="https://cdn.blazium.app/monoglue/${TYPE}/monoglue-${TYPE}.tar.gz"
@@ -1165,6 +1346,7 @@ jobs:
           rm -rf temp_extract monoglue.tar.gz
 
       - name: Compilation (target=template_release,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1172,6 +1354,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=arm64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1179,6 +1362,7 @@ jobs:
           target: template_debug
 
       - name: Compilation (target=template_release,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1186,6 +1370,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=arm32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=arm32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1193,6 +1378,7 @@ jobs:
           target: template_debug
 
       - name: Compilation (target=template_release,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1200,6 +1386,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=x86_64,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_64 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1207,6 +1394,7 @@ jobs:
           target: template_debug
 
       - name: Compilation (target=template_release,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1214,6 +1402,7 @@ jobs:
           target: template_release
 
       - name: Compilation (target=template_debug,arch=x86_32,${{ matrix.mono && 'mono=yes' || 'mono=no' }})
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-build
         with:
           sconsflags: ${{ env.SCONSFLAGS }} arch=x86_32 ${{ matrix.mono && 'module_mono_enabled=yes' || '' }}
@@ -1221,13 +1410,14 @@ jobs:
           target: template_debug
 
       - name: Save Godot build cache
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/godot-cache-save
         with:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
 
       - name: Generate Godot templates
-        if: ${{ !matrix.mono }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (!matrix.mono) }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotTemplates
@@ -1235,7 +1425,7 @@ jobs:
           ls -l bin/
 
       - name: Generate Godot templates
-        if: ${{ matrix.mono }}
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && (matrix.mono) }}
         run: |
           cd platform/android/java
           ./gradlew generateGodotMonoTemplates
@@ -1243,10 +1433,12 @@ jobs:
           ls -l bin/
 
       - name: Create tar.gz Archive
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         run: |
           tar -czvf ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}.tar.gz -C ./bin .
 
       - uses: BetaHuhn/do-spaces-action@v2
+        if: ${{ steps.reuse.outputs.should_compile != 'false' }}
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -1258,7 +1450,7 @@ jobs:
 
       - name: Notify Cerebro of Build Success
         id: cerebro-notify-completed
-        if: success() # Only runs if the job was successful
+        if: ${{ success() && steps.reuse.outputs.should_compile != 'false' }}
         uses: ./.github/actions/cerebro-completed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
@@ -1270,7 +1462,7 @@ jobs:
           cerebro_auth: ${{ secrets.BLAZIUM_AUTH }}
 
       - name: Notify Cerebro of Build Failure
-        if: (failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure'
+        if: ${{ steps.reuse.outputs.should_compile != 'false' && ((failure() || cancelled()) && steps.cerebro-notify-completed.outcome != 'failure') }}
         uses: ./.github/actions/cerebro-failed
         with:
           name: ${{ matrix.cache-name }}-${{ github.event.client_payload.type || 'nightly' }}
