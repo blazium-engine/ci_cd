@@ -1,0 +1,281 @@
+name: Resolve template artifact lists
+description: Build aligned template download and copy-rename lists for requested platforms.
+
+inputs:
+  suffix:
+    description: Deploy type suffix (nightly, prerelease, release)
+    required: true
+  linux:
+    required: true
+  macos:
+    required: true
+  windows:
+    required: true
+  android:
+    required: true
+  web:
+    required: true
+  ios:
+    required: true
+
+outputs:
+  names:
+    description: Artifact names to download and uncompress
+    value: ${{ steps.build.outputs.names }}
+  web_names:
+    value: ${{ steps.build.outputs.web_names }}
+  web_old:
+    value: ${{ steps.build.outputs.web_old }}
+  web_new:
+    value: ${{ steps.build.outputs.web_new }}
+  windows_names:
+    value: ${{ steps.build.outputs.windows_names }}
+  windows_old:
+    value: ${{ steps.build.outputs.windows_old }}
+  windows_new:
+    value: ${{ steps.build.outputs.windows_new }}
+  windows_mono_names:
+    value: ${{ steps.build.outputs.windows_mono_names }}
+  windows_mono_old:
+    value: ${{ steps.build.outputs.windows_mono_old }}
+  windows_mono_new:
+    value: ${{ steps.build.outputs.windows_mono_new }}
+  linux_names:
+    value: ${{ steps.build.outputs.linux_names }}
+  linux_old:
+    value: ${{ steps.build.outputs.linux_old }}
+  linux_new:
+    value: ${{ steps.build.outputs.linux_new }}
+  linux_mono_names:
+    value: ${{ steps.build.outputs.linux_mono_names }}
+  linux_mono_old:
+    value: ${{ steps.build.outputs.linux_mono_old }}
+  linux_mono_new:
+    value: ${{ steps.build.outputs.linux_mono_new }}
+  macos_names:
+    value: ${{ steps.build.outputs.macos_names }}
+  macos_old:
+    value: ${{ steps.build.outputs.macos_old }}
+  macos_new:
+    value: ${{ steps.build.outputs.macos_new }}
+  macos_mono_names:
+    value: ${{ steps.build.outputs.macos_mono_names }}
+  macos_mono_old:
+    value: ${{ steps.build.outputs.macos_mono_old }}
+  macos_mono_new:
+    value: ${{ steps.build.outputs.macos_mono_new }}
+  ios_names:
+    value: ${{ steps.build.outputs.ios_names }}
+  ios_old:
+    value: ${{ steps.build.outputs.ios_old }}
+  ios_new:
+    value: ${{ steps.build.outputs.ios_new }}
+  ios_mono_names:
+    value: ${{ steps.build.outputs.ios_mono_names }}
+  ios_mono_old:
+    value: ${{ steps.build.outputs.ios_mono_old }}
+  ios_mono_new:
+    value: ${{ steps.build.outputs.ios_mono_new }}
+  android_names:
+    value: ${{ steps.build.outputs.android_names }}
+  android_old:
+    value: ${{ steps.build.outputs.android_old }}
+  android_new:
+    value: ${{ steps.build.outputs.android_new }}
+  android_mono_names:
+    value: ${{ steps.build.outputs.android_mono_names }}
+  android_mono_old:
+    value: ${{ steps.build.outputs.android_mono_old }}
+  android_mono_new:
+    value: ${{ steps.build.outputs.android_mono_new }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build template lists
+      id: build
+      shell: bash
+      env:
+        SUFFIX: ${{ inputs.suffix }}
+        LINUX: ${{ inputs.linux }}
+        MACOS: ${{ inputs.macos }}
+        WINDOWS: ${{ inputs.windows }}
+        ANDROID: ${{ inputs.android }}
+        WEB: ${{ inputs.web }}
+        IOS: ${{ inputs.ios }}
+      run: |
+        set -euo pipefail
+
+        NAMES=()
+        WEB_NAMES=(); WEB_OLD=(); WEB_NEW=()
+        WIN_NAMES=(); WIN_OLD=(); WIN_NEW=()
+        WINM_NAMES=(); WINM_OLD=(); WINM_NEW=()
+        LIN_NAMES=(); LIN_OLD=(); LIN_NEW=()
+        LINM_NAMES=(); LINM_OLD=(); LINM_NEW=()
+        MAC_NAMES=(); MAC_OLD=(); MAC_NEW=()
+        MACM_NAMES=(); MACM_OLD=(); MACM_NEW=()
+        IOS_NAMES=(); IOS_OLD=(); IOS_NEW=()
+        IOSM_NAMES=(); IOSM_OLD=(); IOSM_NEW=()
+        AND_NAMES=(); AND_OLD=(); AND_NEW=()
+        ANDM_NAMES=(); ANDM_OLD=(); ANDM_NEW=()
+
+        add_name() { NAMES+=("$1"); }
+        add3() {
+          local -n _n=$1 _o=$2 _w=$3
+          _n+=("$4")
+          _o+=("$5")
+          _w+=("$6")
+        }
+
+        if [ "$LINUX" = "true" ]; then
+          add_name "linux-template-64bit-${SUFFIX}"
+          add_name "linux-template-mono-64bit-${SUFFIX}"
+          add_name "linux-debug-template-mono-64bit-${SUFFIX}"
+          add_name "linux-debug-template-64bit-${SUFFIX}"
+          add_name "linux-template-mono-32bit-${SUFFIX}"
+          add_name "linux-template-32bit-${SUFFIX}"
+          add_name "linux-debug-template-mono-32bit-${SUFFIX}"
+          add_name "linux-debug-template-32bit-${SUFFIX}"
+          add3 LIN_NAMES LIN_OLD LIN_NEW "linux-template-64bit-${SUFFIX}" "blazium.linuxbsd.template_release.x86_64" "linux_release.x86_64"
+          add3 LIN_NAMES LIN_OLD LIN_NEW "linux-debug-template-64bit-${SUFFIX}" "blazium.linuxbsd.template_debug.x86_64" "linux_debug.x86_64"
+          add3 LIN_NAMES LIN_OLD LIN_NEW "linux-template-32bit-${SUFFIX}" "blazium.linuxbsd.template_release.x86_32" "linux_release.x86_32"
+          add3 LIN_NAMES LIN_OLD LIN_NEW "linux-debug-template-32bit-${SUFFIX}" "blazium.linuxbsd.template_debug.x86_32" "linux_debug.x86_32"
+          add3 LINM_NAMES LINM_OLD LINM_NEW "linux-template-mono-64bit-${SUFFIX}" "blazium.linuxbsd.template_release.x86_64.mono" "linux_release.x86_64"
+          add3 LINM_NAMES LINM_OLD LINM_NEW "linux-debug-template-mono-64bit-${SUFFIX}" "blazium.linuxbsd.template_debug.x86_64.mono" "linux_debug.x86_64"
+          add3 LINM_NAMES LINM_OLD LINM_NEW "linux-template-mono-32bit-${SUFFIX}" "blazium.linuxbsd.template_release.x86_32.mono" "linux_release.x86_32"
+          add3 LINM_NAMES LINM_OLD LINM_NEW "linux-debug-template-mono-32bit-${SUFFIX}" "blazium.linuxbsd.template_debug.x86_32.mono" "linux_debug.x86_32"
+        fi
+
+        if [ "$WINDOWS" = "true" ]; then
+          add_name "windows-template-mono-64bit-${SUFFIX}"
+          add_name "windows-template-64bit-${SUFFIX}"
+          add_name "windows-debug-template-mono-64bit-${SUFFIX}"
+          add_name "windows-debug-template-64bit-${SUFFIX}"
+          add_name "windows-template-mono-32bit-${SUFFIX}"
+          add_name "windows-template-32bit-${SUFFIX}"
+          add_name "windows-debug-template-mono-32bit-${SUFFIX}"
+          add_name "windows-debug-template-32bit-${SUFFIX}"
+          add_name "windows-template-mono-arm64-${SUFFIX}"
+          add_name "windows-template-arm64-${SUFFIX}"
+          add_name "windows-debug-template-mono-arm64-${SUFFIX}"
+          add_name "windows-debug-template-arm64-${SUFFIX}"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-template-64bit-${SUFFIX}" "blazium.windows.template_release.x86_64.exe" "windows_release_x86_64.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-template-64bit-${SUFFIX}" "blazium.windows.template_release.x86_64.console.exe" "windows_release_x86_64_console.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-debug-template-64bit-${SUFFIX}" "blazium.windows.template_debug.x86_64.exe" "windows_debug_x86_64.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-debug-template-64bit-${SUFFIX}" "blazium.windows.template_debug.x86_64.console.exe" "windows_debug_x86_64_console.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-template-32bit-${SUFFIX}" "blazium.windows.template_release.x86_32.exe" "windows_release_x86_32.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-template-32bit-${SUFFIX}" "blazium.windows.template_release.x86_32.console.exe" "windows_release_x86_32_console.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-debug-template-32bit-${SUFFIX}" "blazium.windows.template_debug.x86_32.exe" "windows_debug_x86_32.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-debug-template-32bit-${SUFFIX}" "blazium.windows.template_debug.x86_32.console.exe" "windows_debug_x86_32_console.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-template-arm64-${SUFFIX}" "blazium.windows.template_release.arm64.exe" "windows_release_arm64.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-template-arm64-${SUFFIX}" "blazium.windows.template_release.arm64.console.exe" "windows_release_arm64_console.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-debug-template-arm64-${SUFFIX}" "blazium.windows.template_debug.arm64.exe" "windows_debug_arm64.exe"
+          add3 WIN_NAMES WIN_OLD WIN_NEW "windows-debug-template-arm64-${SUFFIX}" "blazium.windows.template_debug.arm64.console.exe" "windows_debug_arm64_console.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-template-mono-64bit-${SUFFIX}" "blazium.windows.template_release.x86_64.mono.exe" "windows_release_x86_64.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-debug-template-mono-64bit-${SUFFIX}" "blazium.windows.template_debug.x86_64.mono.exe" "windows_debug_x86_64.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-template-mono-32bit-${SUFFIX}" "blazium.windows.template_release.x86_32.mono.exe" "windows_release_x86_32.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-debug-template-mono-32bit-${SUFFIX}" "blazium.windows.template_debug.x86_32.mono.exe" "windows_debug_x86_32.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-template-mono-64bit-${SUFFIX}" "blazium.windows.template_release.x86_64.mono.console.exe" "windows_release_x86_64_console.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-debug-template-mono-64bit-${SUFFIX}" "blazium.windows.template_debug.x86_64.mono.console.exe" "windows_debug_x86_64_console.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-template-mono-32bit-${SUFFIX}" "blazium.windows.template_release.x86_32.mono.console.exe" "windows_release_x86_32_console.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-debug-template-mono-32bit-${SUFFIX}" "blazium.windows.template_debug.x86_32.mono.console.exe" "windows_debug_x86_32_console.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-template-mono-arm64-${SUFFIX}" "blazium.windows.template_release.arm64.mono.exe" "windows_release_arm64.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-template-mono-arm64-${SUFFIX}" "blazium.windows.template_release.arm64.mono.console.exe" "windows_release_arm64_console.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-debug-template-mono-arm64-${SUFFIX}" "blazium.windows.template_debug.arm64.mono.exe" "windows_debug_arm64.exe"
+          add3 WINM_NAMES WINM_OLD WINM_NEW "windows-debug-template-mono-arm64-${SUFFIX}" "blazium.windows.template_debug.arm64.mono.console.exe" "windows_debug_arm64_console.exe"
+        fi
+
+        if [ "$WEB" = "true" ]; then
+          add_name "web-template-${SUFFIX}"
+          add_name "web-nothreads-template-${SUFFIX}"
+          add_name "web-debug-template-${SUFFIX}"
+          add_name "web-nothreads-debug-template-${SUFFIX}"
+          add_name "web-dlink-template-${SUFFIX}"
+          add_name "web-nothreads-dlink-template-${SUFFIX}"
+          add_name "web-dlink-debug-template-${SUFFIX}"
+          add_name "web-nothreads-dlink-debug-template-${SUFFIX}"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-template-${SUFFIX}" "blazium.web.template_release.wasm32.zip" "web_release.zip"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-debug-template-${SUFFIX}" "blazium.web.template_debug.wasm32.zip" "web_debug.zip"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-nothreads-template-${SUFFIX}" "blazium.web.template_release.wasm32.nothreads.zip" "web_nothreads_release.zip"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-nothreads-debug-template-${SUFFIX}" "blazium.web.template_debug.wasm32.nothreads.zip" "web_nothreads_debug.zip"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-dlink-template-${SUFFIX}" "blazium.web.template_release.wasm32.dlink.zip" "web_dlink_release.zip"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-dlink-debug-template-${SUFFIX}" "blazium.web.template_debug.wasm32.dlink.zip" "web_dlink_debug.zip"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-nothreads-dlink-template-${SUFFIX}" "blazium.web.template_release.wasm32.nothreads.dlink.zip" "web_dlink_nothreads_release.zip"
+          add3 WEB_NAMES WEB_OLD WEB_NEW "web-nothreads-dlink-debug-template-${SUFFIX}" "blazium.web.template_debug.wasm32.nothreads.dlink.zip" "web_dlink_nothreads_debug.zip"
+        fi
+
+        if [ "$MACOS" = "true" ]; then
+          add_name "macos-template-${SUFFIX}"
+          add_name "macos-template-mono-${SUFFIX}"
+          add3 MAC_NAMES MAC_OLD MAC_NEW "macos-template-${SUFFIX}" "macos-template-${SUFFIX}.zip" "macos.zip"
+          add3 MACM_NAMES MACM_OLD MACM_NEW "macos-template-mono-${SUFFIX}" "macos-template-mono-${SUFFIX}.zip" "macos.zip"
+        fi
+
+        if [ "$IOS" = "true" ]; then
+          add_name "ios-template-${SUFFIX}"
+          add_name "ios-template-mono-${SUFFIX}"
+          add3 IOS_NAMES IOS_OLD IOS_NEW "ios-template-${SUFFIX}" "ios-template-${SUFFIX}.zip" "ios.zip"
+          add3 IOSM_NAMES IOSM_OLD IOSM_NEW "ios-template-mono-${SUFFIX}" "ios-template-mono-${SUFFIX}.zip" "ios.zip"
+        fi
+
+        if [ "$ANDROID" = "true" ]; then
+          add_name "android-template-${SUFFIX}"
+          add_name "android-template-mono-${SUFFIX}"
+          add3 AND_NAMES AND_OLD AND_NEW "android-template-${SUFFIX}" "android_source.zip" "android_source.zip"
+          add3 AND_NAMES AND_OLD AND_NEW "android-template-${SUFFIX}" "android_debug.apk" "android_debug.apk"
+          add3 AND_NAMES AND_OLD AND_NEW "android-template-${SUFFIX}" "android_release.apk" "android_release.apk"
+          add3 ANDM_NAMES ANDM_OLD ANDM_NEW "android-template-mono-${SUFFIX}" "android_source.zip" "android_source.zip"
+          add3 ANDM_NAMES ANDM_OLD ANDM_NEW "android-template-mono-${SUFFIX}" "android_monoDebug.apk" "android_debug.apk"
+          add3 ANDM_NAMES ANDM_OLD ANDM_NEW "android-template-mono-${SUFFIX}" "android_monoRelease.apk" "android_release.apk"
+        fi
+
+        write_list() {
+          local key="$1"
+          shift
+          {
+            echo "${key}<<EOF"
+            if [ "$#" -gt 0 ]; then
+              printf '%s\n' "$@"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        }
+
+        write_list names "${NAMES[@]+"${NAMES[@]}"}"
+        write_list web_names "${WEB_NAMES[@]+"${WEB_NAMES[@]}"}"
+        write_list web_old "${WEB_OLD[@]+"${WEB_OLD[@]}"}"
+        write_list web_new "${WEB_NEW[@]+"${WEB_NEW[@]}"}"
+        write_list windows_names "${WIN_NAMES[@]+"${WIN_NAMES[@]}"}"
+        write_list windows_old "${WIN_OLD[@]+"${WIN_OLD[@]}"}"
+        write_list windows_new "${WIN_NEW[@]+"${WIN_NEW[@]}"}"
+        write_list windows_mono_names "${WINM_NAMES[@]+"${WINM_NAMES[@]}"}"
+        write_list windows_mono_old "${WINM_OLD[@]+"${WINM_OLD[@]}"}"
+        write_list windows_mono_new "${WINM_NEW[@]+"${WINM_NEW[@]}"}"
+        write_list linux_names "${LIN_NAMES[@]+"${LIN_NAMES[@]}"}"
+        write_list linux_old "${LIN_OLD[@]+"${LIN_OLD[@]}"}"
+        write_list linux_new "${LIN_NEW[@]+"${LIN_NEW[@]}"}"
+        write_list linux_mono_names "${LINM_NAMES[@]+"${LINM_NAMES[@]}"}"
+        write_list linux_mono_old "${LINM_OLD[@]+"${LINM_OLD[@]}"}"
+        write_list linux_mono_new "${LINM_NEW[@]+"${LINM_NEW[@]}"}"
+        write_list macos_names "${MAC_NAMES[@]+"${MAC_NAMES[@]}"}"
+        write_list macos_old "${MAC_OLD[@]+"${MAC_OLD[@]}"}"
+        write_list macos_new "${MAC_NEW[@]+"${MAC_NEW[@]}"}"
+        write_list macos_mono_names "${MACM_NAMES[@]+"${MACM_NAMES[@]}"}"
+        write_list macos_mono_old "${MACM_OLD[@]+"${MACM_OLD[@]}"}"
+        write_list macos_mono_new "${MACM_NEW[@]+"${MACM_NEW[@]}"}"
+        write_list ios_names "${IOS_NAMES[@]+"${IOS_NAMES[@]}"}"
+        write_list ios_old "${IOS_OLD[@]+"${IOS_OLD[@]}"}"
+        write_list ios_new "${IOS_NEW[@]+"${IOS_NEW[@]}"}"
+        write_list ios_mono_names "${IOSM_NAMES[@]+"${IOSM_NAMES[@]}"}"
+        write_list ios_mono_old "${IOSM_OLD[@]+"${IOSM_OLD[@]}"}"
+        write_list ios_mono_new "${IOSM_NEW[@]+"${IOSM_NEW[@]}"}"
+        write_list android_names "${AND_NAMES[@]+"${AND_NAMES[@]}"}"
+        write_list android_old "${AND_OLD[@]+"${AND_OLD[@]}"}"
+        write_list android_new "${AND_NEW[@]+"${AND_NEW[@]}"}"
+        write_list android_mono_names "${ANDM_NAMES[@]+"${ANDM_NAMES[@]}"}"
+        write_list android_mono_old "${ANDM_OLD[@]+"${ANDM_OLD[@]}"}"
+        write_list android_mono_new "${ANDM_NEW[@]+"${ANDM_NEW[@]}"}"
+
+        echo "### Template artifact names" >> "$GITHUB_STEP_SUMMARY"
+        echo "download:" >> "$GITHUB_STEP_SUMMARY"
+        printf '%s\n' "${NAMES[@]+"${NAMES[@]}"}" >> "$GITHUB_STEP_SUMMARY"

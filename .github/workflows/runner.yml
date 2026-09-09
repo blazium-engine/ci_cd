@@ -270,7 +270,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, get-latest-sha, static-checks]
+    needs: [monoglue-build, windows-build, macos-build, linux-build, android-build, ios-build, web-build, get-latest-sha, static-checks]
     if: >-
       join(github.event.client_payload.deploy, '') != '' &&
       !failure() && 
@@ -288,6 +288,7 @@ jobs:
       linux-build: ${{ needs.linux-build.result }}
       android-build: ${{ needs.android-build.result }}
       ios-build: ${{ needs.ios-build.result }}
+      web-build: ${{ needs.web-build.result }}
       new_major: ${{ needs.get-latest-sha.outputs.major }}
       new_minor: ${{ needs.get-latest-sha.outputs.minor }}
       new_patch: ${{ needs.get-latest-sha.outputs.patch }}
